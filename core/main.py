@@ -15,9 +15,7 @@ import logging
 import os
 import re
 import uuid
-from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -68,15 +66,6 @@ _runner = Runner(
 
 SHIFT_SESSION_ID = "shift-001"
 SYSTEM_USER_ID = "iris-system"
-
-# ── Python-level failure tracker ──────────────────────────────────────────────
-# Tracks failures per (agent_name, query_type) independently of Phoenix MCP.
-# Triggers healing when pattern_min_samples threshold is reached.
-# The MCP-based self_healer agent is the deep path (reads Phoenix spans);
-# this is the reliable fast path that works without Phoenix export latency.
-_failure_buffer: dict[str, list[dict]] = defaultdict(list)
-_healing_in_progress: set[str] = set()  # prevents duplicate healing runs
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 @asynccontextmanager
@@ -147,16 +136,14 @@ async def submit_event(event: IrisEvent) -> dict:
         }
         recent_traces.appendleft(trace_summary)
 
-        # Low-confidence escalation: evaluator is uncertain → flag for human review
-        low_confidence = [e for e in evaluations if e.get("confidence", 1.0) < 0.6 and not e.get("skipped")]
+        # Low-confidence escalation: evaluator uncertain → flag for human review
+        # Guard against Gemini returning null for confidence field
+        low_confidence = [
+            e for e in evaluations
+            if (e.get("confidence") or 1.0) < 0.6 and not e.get("skipped")
+        ]
         if low_confidence:
             shift_stats["human_escalations"] = shift_stats.get("human_escalations", 0) + 1
-
-        # Python-level pattern tracking — triggers healing independently of MCP timing
-        if final_severity in ("warning", "critical"):
-            asyncio.create_task(
-                _track_failure_and_maybe_heal(event, evaluations, final_severity)
-            )
 
         return {
             "trace_id": event.trace_id,
@@ -313,107 +300,6 @@ def _parse_result(result_text: str) -> dict:
 
     data["final_severity"] = severity
     return data
-
-
-async def _track_failure_and_maybe_heal(
-    event: IrisEvent,
-    evaluations: list[dict],
-    severity: str,
-) -> None:
-    """
-    Python-level failure tracker. Accumulates failures per query_type and
-    triggers the healing pipeline when pattern_min_samples threshold is reached.
-
-    This runs in parallel with the MCP-based self_healer agent path.
-    It doesn't depend on Phoenix export latency — it uses in-process data.
-    """
-    query_type = str(event.query_type)
-    agent_name = event.agent_name
-
-    # Collect per-evaluator flags for context
-    flagged = []
-    for ev in evaluations:
-        if ev.get("severity") in ("warning", "critical") and not ev.get("skipped"):
-            flagged.extend(ev.get("flagged_claims", []))
-            flagged.append(ev.get("rationale", ""))
-
-    entry = {
-        "trace_id": event.trace_id,
-        "agent_name": agent_name,
-        "query_type": query_type,
-        "severity": severity,
-        "score": min((ev.get("score", 10) for ev in evaluations if not ev.get("skipped")), default=5),
-        "output_text": event.output_text,
-        "input_prompt": event.input_prompt,
-        "violation": " | ".join(flagged)[:300],
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-
-    cluster_key = f"{agent_name}:{query_type}"
-    _failure_buffer[cluster_key].append(entry)
-
-    n_failures = len(_failure_buffer[cluster_key])
-    print(f"[PatternTracker] {cluster_key}: {n_failures} failures tracked")
-
-    if (
-        n_failures >= settings.pattern_min_samples
-        and cluster_key not in _healing_in_progress
-    ):
-        _healing_in_progress.add(cluster_key)
-        print(f"[PatternTracker] Threshold reached for {cluster_key} — triggering healing pipeline")
-        try:
-            await _run_python_healing(cluster_key, agent_name, query_type)
-        finally:
-            # Reset after healing so subsequent failures can trigger a new cycle
-            _failure_buffer[cluster_key].clear()
-            _healing_in_progress.discard(cluster_key)
-
-
-async def _run_python_healing(cluster_key: str, agent_name: str, query_type: str) -> None:
-    """
-    Build a HealingDiagnosis from the in-process failure buffer and run the
-    Python healing pipeline (mutation → validation → gate/deploy).
-    """
-    from core.healing.models import HealingDiagnosis
-    from core.healing.pipeline import run_healing_pipeline
-
-    failures = _failure_buffer.get(cluster_key, [])
-    if not failures:
-        return
-
-    n = len(failures)
-    failure_rate = n / max(n, settings.pattern_min_samples)
-    failing_span_ids = [f["trace_id"] for f in failures[:10]]
-
-    # Summarise the dominant failure pattern for the mutation engine
-    all_violations = " | ".join(f.get("violation", "") for f in failures if f.get("violation"))
-    failure_analysis = (
-        f"{n} consecutive {query_type} failures from {agent_name}. "
-        f"Failure rate {failure_rate:.0%}. "
-        f"Common violations: {all_violations[:300]}"
-    )
-
-    diagnosis = HealingDiagnosis(
-        failure_cluster={
-            "query_type": query_type,
-            "agent_name": agent_name,
-            "span_count": n,
-            "hallucination_rate": failure_rate,
-            "worst_score": min(f.get("score", 10) for f in failures),
-            "sample_trace_ids": failing_span_ids[:3],
-        },
-        query_type=query_type,
-        agent_name=agent_name,
-        failing_span_ids=failing_span_ids,
-        hallucination_rate=failure_rate,
-        current_prompt_name=settings.healing_prompt_name,
-        current_prompt_text="",   # mutation_engine uses fallback when empty
-        dataset_name=f"iris-failures-{query_type}",
-        examples_logged=0,
-        failure_analysis=failure_analysis,
-    )
-
-    await run_healing_pipeline(diagnosis)
 
 
 async def _scheduled_pattern_scan():

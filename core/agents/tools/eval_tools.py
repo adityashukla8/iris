@@ -143,6 +143,46 @@ async def run_allergy_contraindication_evaluation(event_json: str) -> dict:
         return {"evaluator": "allergy_contraindication", "error": str(exc), "score": 5.0, "severity": "warning"}
 
 
+async def run_healing_pipeline_tool(diagnosis_json: str) -> dict:
+    """
+    Trigger the Python healing pipeline from a HealingDiagnosis JSON produced by
+    the self_healer MCP agent. This is the bridge between the MCP read path
+    (pattern_detector → self_healer → Phoenix spans/prompts/datasets) and the
+    Python write path (TextGrad mutation → counterfactual validation → Phoenix deploy).
+
+    Call this immediately after self_healer returns its HealingDiagnosis JSON.
+    Runs the pipeline as a background task and returns immediately.
+
+    diagnosis_json: the complete HealingDiagnosis JSON string from self_healer output.
+    """
+    import asyncio
+    import json
+    import re
+    from core.healing.models import HealingDiagnosis
+    from core.healing.pipeline import run_healing_pipeline
+
+    # Strip markdown code fences if Gemini wrapped the JSON
+    clean = re.sub(r"```(?:json)?\s*", "", diagnosis_json)
+    clean = re.sub(r"```\s*", "", clean).strip()
+    start = clean.find("{")
+    if start != -1:
+        clean = clean[start:]
+
+    try:
+        diagnosis = HealingDiagnosis.model_validate_json(clean)
+        asyncio.create_task(run_healing_pipeline(diagnosis))
+        return {
+            "triggered": True,
+            "candidate_id": diagnosis.candidate_id,
+            "query_type": diagnosis.query_type,
+            "agent_name": diagnosis.agent_name,
+            "hallucination_rate": diagnosis.hallucination_rate,
+            "message": "Pipeline started: TextGrad mutation → counterfactual validation → Phoenix prompt deploy",
+        }
+    except Exception as exc:
+        return {"triggered": False, "error": str(exc)}
+
+
 async def write_phoenix_span_annotation(
     trace_id: str,
     agent_name: str,
