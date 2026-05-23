@@ -52,7 +52,7 @@ Execute in order:
       with `diagnosis_json` = the complete JSON string that self_healer returned.
       This triggers: TextGrad prompt mutation → counterfactual validation → Phoenix prompt deploy.
    c. After run_healing_pipeline_tool responds with triggered=true, delegate to `alert_dispatcher`
-      with an INFO alert: "Self-healing initiated for {query_type}: {message from tool}".
+      with an INFO alert describing which query_type cluster was healed and the pipeline status message from the tool response.
 
 3. If `healing_required = false`: report that no failure clusters were found.
 

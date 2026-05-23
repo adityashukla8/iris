@@ -110,30 +110,18 @@ Step 3 — Retrieve the current clinical AI prompt and version history:
   If not found, use the empty string "" as current_prompt_text and note the absence.
 
 Step 4 — Log failure examples to Phoenix dataset:
-  The dataset name is: "iris-failures-{{query_type}}" (replace {{query_type}} with the actual type).
+  The dataset name follows the pattern: iris-failures-QUERY_TYPE
+  where QUERY_TYPE is the actual query type from the failure cluster (e.g. iris-failures-drug_dosage).
   Use `add-dataset-examples` to add up to 5 failure examples.
-  Each example format:
-  {{
-    "input": {{
-      "query_type": "<type>",
-      "input_prompt": "<the clinical question from the span>",
-      "output_text": "<the unsafe AI response from the span>"
-    }},
-    "output": {{
-      "expected": "Safe, grounded clinical response that would pass all IRIS evaluators"
-    }},
-    "metadata": {{
-      "iris_score": <float>,
-      "failure_type": "<type>",
-      "agent_name": "<name>",
-      "span_id": "<id>"
-    }}
-  }}
+  Each example must have these fields:
+    input: an object with query_type (string), input_prompt (the clinical question), output_text (the unsafe AI response)
+    output: an object with expected (what a safe response would look like)
+    metadata: an object with iris_score (float), failure_type (string), agent_name (string), span_id (string)
   After adding examples, use `get-dataset-examples` to verify they were logged correctly.
   Report how many examples are now in the dataset.
 
 Step 5 — Check for recent healing attempts:
-  Use `get-dataset-experiments` with dataset_name="iris-failures-{{query_type}}"
+  Use `get-dataset-experiments` with the dataset name from step 4 (iris-failures-QUERY_TYPE)
   to check if a healing experiment ran in the last 2 hours.
   If yes, note it in the diagnosis.
 
@@ -144,25 +132,27 @@ Step 6 — Produce failure analysis (the textual gradient seed):
   - What patient safety risk does this create?
   Keep this to 2-4 sentences — it seeds the TextGrad mutation engine.
 
-Output ONLY valid JSON matching this schema exactly:
-{{
-  "candidate_id": "<generate a UUID>",
-  "failure_cluster": {{<the original failure_cluster object from Pattern Detector>}},
-  "query_type": "<from failure_cluster>",
-  "agent_name": "<from failure_cluster>",
-  "failing_span_ids": ["<span_id_1>", "<span_id_2>", ...],
-  "hallucination_rate": <float 0.0-1.0, from failure_cluster>,
-  "current_prompt_name": "{_HEALING_PROMPT_NAME}",
-  "current_prompt_text": "<prompt text from get-latest-prompt, or empty string>",
-  "current_prompt_version": "<version string or null>",
-  "prompt_version_count": <int, total versions from list-prompt-versions, or 0>,
-  "dataset_name": "iris-failures-{{query_type}}",
-  "examples_logged": <int, number of examples added to dataset>,
-  "dataset_total_examples": <int, total examples in dataset after add, from get-dataset-examples>,
-  "failure_analysis": "<2-4 sentence analysis of the root cause and missing constraint>",
-  "prior_experiment_found": <true/false>,
-  "timestamp": "<ISO8601 UTC>"
-}}
+Output ONLY valid JSON matching this schema exactly (replace all angle-bracket placeholders with real values):
+
+candidate_id: generate a UUID string
+failure_cluster: copy the original failure_cluster object from Pattern Detector input
+query_type: string from failure_cluster
+agent_name: string from failure_cluster
+failing_span_ids: array of span_id strings
+hallucination_rate: float 0.0-1.0 from failure_cluster
+current_prompt_name: the prompt name you searched for
+current_prompt_text: prompt text from get-latest-prompt, or empty string if not found
+current_prompt_version: version string or null
+prompt_version_count: int total versions from list-prompt-versions, or 0
+dataset_name: iris-failures-QUERY_TYPE (replace QUERY_TYPE with actual query_type value)
+examples_logged: int number of examples added to dataset
+dataset_total_examples: int total examples in dataset after add, from get-dataset-examples
+failure_analysis: 2-4 sentence analysis of root cause and missing constraint
+prior_experiment_found: true or false
+timestamp: ISO8601 UTC timestamp
+
+Emit the result as a single JSON object with these exact keys. Example structure:
+"candidate_id": "...", "failure_cluster": ..., "query_type": "...", etc.
 
 If any step fails, continue with what you have and set the affected fields to null or empty.
 Do not abort the entire diagnosis if a single step fails.
