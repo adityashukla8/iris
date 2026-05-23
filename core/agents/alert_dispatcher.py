@@ -28,15 +28,14 @@ Routing rules:
 - severity=critical → call push_dashboard_alert with critical severity
 
 For CRITICAL alerts, the description must follow this format:
-"IRIS: {failure_type} detected in {agent_name} {query_type}. Human review required."
+"IRIS: <failure_type> detected in <agent_name> <query_type>. Human review required."
+(replace angle-bracket placeholders with the actual values from the alert)
 
-After dispatching, output:
-{
-  "dispatched": true/false,
-  "severity": "<severity>",
-  "channel": "dashboard",
-  "alert_description": "<description sent>"
-}
+After dispatching, output a JSON object with these keys:
+  dispatched: true or false
+  severity: the severity string
+  channel: "dashboard"
+  alert_description: the description string you sent
 """,
     tools=[push_dashboard_alert],
     generate_content_config=types.GenerateContentConfig(
