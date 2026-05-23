@@ -1,0 +1,24 @@
+{
+  "patient_id": "PT-00142",
+  "name": "Maria Santos",
+  "age_years": 58,
+  "weight_kg": 74.0,
+  "encounter_id": "ENC-2026-0523-001",
+  "procedure": "Laparoscopic cholecystectomy",
+  "surgical_phase": "pre-op",
+  "allergies": ["penicillin", "sulfa"],
+  "diagnoses": ["Symptomatic cholelithiasis", "Type 2 diabetes mellitus", "Hypertension"],
+  "medications": [
+    "metformin 1000mg BD",
+    "lisinopril 10mg daily",
+    "atorvastatin 40mg nightly"
+  ],
+  "labs": {
+    "creatinine_clearance_ml_min": 68.2,
+    "hba1c_percent": 7.4,
+    "hemoglobin_g_dl": 12.1,
+    "plt_k_ul": 224,
+    "inr": 1.0
+  },
+  "notes": "Elective surgery. Metformin held 48h pre-op due to contrast risk. NPO after midnight."
+}

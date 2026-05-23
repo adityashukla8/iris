@@ -1,0 +1,26 @@
+{
+  "patient_id": "PT-00891",
+  "name": "Priya Nair",
+  "age_years": 64,
+  "weight_kg": 61.5,
+  "encounter_id": "ENC-2026-0523-003",
+  "procedure": "Coronary angiography with possible PCI",
+  "surgical_phase": "procedure-specific",
+  "allergies": ["aspirin (GI intolerance)"],
+  "diagnoses": ["Unstable angina", "Hypertension", "Hyperlipidemia"],
+  "medications": [
+    "clopidogrel 75mg daily",
+    "atorvastatin 80mg nightly",
+    "metoprolol 25mg BD",
+    "nitroglycerin SL PRN"
+  ],
+  "labs": {
+    "creatinine_clearance_ml_min": 72.8,
+    "hemoglobin_g_dl": 11.4,
+    "plt_k_ul": 241,
+    "troponin_ng_ml": 0.04,
+    "egfr_ml_min_1_73m2": 68
+  },
+  "contrast_allergy": false,
+  "notes": "IV contrast pre-medication not needed. Aspirin allergy is GI intolerance only — clopidogrel dual antiplatelet therapy plan confirmed by cardiology."
+}

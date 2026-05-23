@@ -1,0 +1,30 @@
+# Environment — never commit
+.env
+*.env.local
+*.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Misc
+.DS_Store
+*.log
+
+# Local dev context
+.claude/
+iris_context.md
+docs/

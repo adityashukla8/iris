@@ -1,0 +1,24 @@
+{
+  "patient_id": "PT-00387",
+  "name": "James Whitfield",
+  "age_years": 71,
+  "weight_kg": 92.0,
+  "encounter_id": "ENC-2026-0523-002",
+  "procedure": "Total knee arthroplasty (right)",
+  "surgical_phase": "closure",
+  "allergies": ["cephalosporins", "latex"],
+  "diagnoses": ["Severe osteoarthritis right knee", "Chronic kidney disease stage 3", "Atrial fibrillation"],
+  "medications": [
+    "rivaroxaban 20mg daily (held 48h pre-op)",
+    "metoprolol 50mg BD",
+    "amlodipine 5mg daily"
+  ],
+  "labs": {
+    "creatinine_clearance_ml_min": 34.1,
+    "hemoglobin_g_dl": 10.8,
+    "plt_k_ul": 189,
+    "inr": 1.1,
+    "egfr_ml_min_1_73m2": 38
+  },
+  "notes": "CKD stage 3 — reduce renally-cleared drugs. Latex-free OR required. Bridging anticoagulation per cardiology."
+}
