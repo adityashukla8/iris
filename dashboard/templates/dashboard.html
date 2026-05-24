@@ -9,224 +9,211 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-0: #020817;
-      --bg-1: #0D1528;
-      --bg-2: #111827;
-      --card: rgba(13,21,40,.8);
-      --border: rgba(148,163,184,.08);
-      --emerald: #10B981;
-      --emerald-dim: rgba(16,185,129,.12);
-      --blue: #3B82F6;
-      --blue-dim: rgba(59,130,246,.12);
-      --red: #EF4444;
-      --red-dim: rgba(239,68,68,.12);
-      --amber: #F59E0B;
-      --amber-dim: rgba(245,158,11,.12);
-      --violet: #8B5CF6;
-      --text: #F1F5F9;
-      --text-2: #94A3B8;
-      --text-3: #475569;
-      --r: 12px;
-      --font: 'Poppins', system-ui, sans-serif;
-      --mono: 'JetBrains Mono', monospace;
+      --white:    #FFFFFF;
+      --gray-50:  #F8FAFC;
+      --gray-100: #F1F5F9;
+      --gray-200: #E2E8F0;
+      --gray-300: #CBD5E1;
+      --gray-400: #94A3B8;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1E293B;
+      --gray-900: #0F172A;
+
+      --blue-50:  #EFF6FF;
+      --blue-100: #DBEAFE;
+      --blue-600: #2563EB;
+      --blue-700: #1D4ED8;
+
+      --red-50:     #FEF2F2;
+      --red-100:    #FEE2E2;
+      --red-600:    #DC2626;
+      --red-700:    #B91C1C;
+      --green-50:   #F0FDF4;
+      --green-100:  #DCFCE7;
+      --green-700:  #15803D;
+      --amber-50:   #FFFBEB;
+      --amber-100:  #FEF3C7;
+      --amber-700:  #B45309;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow:    0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+
+      --font: 'Poppins', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
     }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-    body {
-      font-family: var(--font); background: var(--bg-0);
-      color: var(--text); overflow-x: hidden;
-    }
+    body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
 
     /* ── Layout ─────────────────────────────────────────────────── */
-    .layout { display: grid; grid-template-rows: 60px 1fr; min-height: 100vh; }
+    .layout { display: grid; grid-template-rows: 58px 1fr; min-height: 100vh; }
 
     /* ── Top Bar ────────────────────────────────────────────────── */
     .topbar {
+      background: var(--white); border-bottom: 1px solid var(--gray-200);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px;
-      background: rgba(2,8,23,.9); backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 50;
+      padding: 0 24px; position: sticky; top: 0; z-index: 50;
+      box-shadow: var(--shadow-sm);
     }
-    .topbar-left { display: flex; align-items: center; gap: 20px; }
-    .tb-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
-    .tb-logo-icon {
-      width: 30px; height: 30px;
-      background: linear-gradient(135deg, var(--emerald), var(--blue));
-      border-radius: 7px; display: flex; align-items: center; justify-content: center;
-    }
-    .tb-divider { width: 1px; height: 20px; background: var(--border); }
-    .tb-title { font-size: .8125rem; color: var(--text-2); font-weight: 500; }
+    .tb-left  { display: flex; align-items: center; gap: 16px; }
+    .tb-right { display: flex; align-items: center; gap: 12px; }
 
-    .topbar-right { display: flex; align-items: center; gap: 16px; }
-    .tb-status { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 500; color: var(--emerald); }
-    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); animation: pulse 2s infinite; }
-    @keyframes pulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.5); }
-      50%      { box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+    .tb-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .9375rem; color: var(--gray-900); }
+    .tb-logo-mark {
+      width: 28px; height: 28px; background: var(--gray-900);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
     }
-    .tb-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border-radius: 8px;
-      font-size: .8rem; font-weight: 600; font-family: var(--font);
-      cursor: pointer; border: none; transition: all .2s;
+    .tb-sep { width: 1px; height: 18px; background: var(--gray-200); }
+    .tb-page { font-size: .8125rem; font-weight: 500; color: var(--gray-600); }
+
+    .tb-status { display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 500; color: var(--green-700); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green-700); }
+
+    .btn-sm {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 6px; font-size: .8125rem;
+      font-weight: 600; font-family: var(--font); cursor: pointer;
+      border: none; transition: all .15s;
     }
-    .tb-btn-scan { background: var(--emerald); color: #020817; }
-    .tb-btn-scan:hover { background: #34D399; }
-    .tb-btn-scan:disabled { opacity: .5; cursor: not-allowed; }
-    .tb-btn-back { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
-    .tb-btn-back:hover { color: var(--text); border-color: rgba(148,163,184,.2); }
+    .btn-primary { background: var(--blue-700); color: var(--white); }
+    .btn-primary:hover { background: var(--blue-600); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-ghost { background: var(--white); color: var(--gray-700); border: 1px solid var(--gray-200); }
+    .btn-ghost:hover { border-color: var(--gray-300); background: var(--gray-50); }
 
     /* ── Main ───────────────────────────────────────────────────── */
-    .main { padding: 24px; overflow-y: auto; }
+    .main { padding: 20px 24px; overflow-y: auto; }
 
-    /* ── Stat Cards ─────────────────────────────────────────────── */
-    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+    /* ── Stat Row ───────────────────────────────────────────────── */
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
     .stat-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 20px 24px;
-      display: flex; flex-direction: column; gap: 6px;
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 10px; padding: 16px 20px; box-shadow: var(--shadow-sm);
     }
-    .stat-card-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); }
-    .stat-card-value { font-size: 2rem; font-weight: 700; line-height: 1; }
-    .stat-card-sub { font-size: .75rem; color: var(--text-3); }
-    .stat-card.c-emerald .stat-card-value { color: var(--emerald); }
-    .stat-card.c-red     .stat-card-value { color: var(--red); }
-    .stat-card.c-amber   .stat-card-value { color: var(--amber); }
-    .stat-card.c-violet  .stat-card-value { color: var(--violet); }
-
-    /* ── Grid ───────────────────────────────────────────────────── */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .stat-label { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 6px; }
+    .stat-value { font-size: 1.875rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .stat-sub   { font-size: .75rem; color: var(--gray-400); }
+    .stat-value.neutral { color: var(--gray-900); }
+    .stat-value.danger  { color: var(--red-600); }
+    .stat-value.success { color: var(--green-700); }
+    .stat-value.warn    { color: var(--amber-700); }
 
     /* ── Panel ──────────────────────────────────────────────────── */
     .panel {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--r); overflow: hidden;
-      display: flex; flex-direction: column;
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 10px; overflow: hidden;
+      display: flex; flex-direction: column; box-shadow: var(--shadow-sm);
     }
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      padding: 12px 16px; border-bottom: 1px solid var(--gray-200);
+      background: var(--white);
     }
-    .panel-title {
-      display: flex; align-items: center; gap: 8px;
-      font-size: .875rem; font-weight: 600;
-    }
-    .panel-title-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .dot-emerald { background: var(--emerald); }
-    .dot-blue    { background: var(--blue); }
-    .dot-amber   { background: var(--amber); }
-    .panel-meta { font-size: .75rem; color: var(--text-3); }
-    .panel-body { padding: 0; flex: 1; overflow-y: auto; max-height: 380px; }
-    .panel-body-pad { padding: 16px 20px; flex: 1; }
+    .panel-title { display: flex; align-items: center; gap: 7px; font-size: .8125rem; font-weight: 600; color: var(--gray-800); }
+    .panel-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green-700); }
+    .dot-blue  { background: var(--blue-600); }
+    .dot-amber { background: var(--amber-700); }
+    .panel-meta { font-size: .75rem; color: var(--gray-400); font-family: var(--mono); }
+    .panel-body { flex: 1; overflow-y: auto; max-height: 340px; }
+    .panel-pad  { padding: 14px 16px; flex: 1; }
+
+    /* ── Grid ───────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
 
     /* ── Alert Feed ─────────────────────────────────────────────── */
     .alert-item {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 12px 20px; border-bottom: 1px solid rgba(148,163,184,.05);
-      transition: background .15s;
-      animation: fadeSlide .3s ease;
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 11px 16px; border-bottom: 1px solid var(--gray-100);
+      animation: slidein .25s ease;
     }
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: none; }
-    }
-    .alert-item:hover { background: rgba(255,255,255,.02); }
+    @keyframes slidein { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform:none; } }
+    .alert-item:hover { background: var(--gray-50); }
     .alert-item:last-child { border-bottom: none; }
 
-    .alert-sev {
+    .sev-icon {
+      width: 26px; height: 26px; border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; font-size: .9rem;
+      flex-shrink: 0;
     }
-    .sev-critical { background: var(--red-dim); }
-    .sev-warning  { background: var(--amber-dim); }
-    .sev-info     { background: var(--blue-dim); }
+    .sev-critical { background: var(--red-50);   border: 1px solid var(--red-100);   color: var(--red-600); }
+    .sev-warning  { background: var(--amber-50);  border: 1px solid var(--amber-100); color: var(--amber-700); }
+    .sev-info     { background: var(--blue-50);   border: 1px solid var(--blue-100);  color: var(--blue-600); }
 
-    .alert-body { flex: 1; min-width: 0; }
-    .alert-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-    .alert-agent { font-size: .8rem; font-weight: 600; }
-    .alert-time { font-size: .7rem; color: var(--text-3); font-family: var(--mono); white-space: nowrap; }
-    .alert-desc { font-size: .8rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .alert-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .alert-body    { flex: 1; min-width: 0; }
+    .alert-top     { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+    .alert-agent   { font-size: .8125rem; font-weight: 600; color: var(--gray-900); }
+    .alert-time    { font-size: .6875rem; color: var(--gray-400); font-family: var(--mono); white-space: nowrap; }
+    .alert-desc    { font-size: .8rem; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-badges  { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
 
+    /* ── Badges ─────────────────────────────────────────────────── */
     .badge {
       display: inline-flex; align-items: center;
-      padding: 2px 8px; border-radius: 6px;
-      font-size: .65rem; font-weight: 600; font-family: var(--mono);
+      padding: 1px 8px; border-radius: 4px;
+      font-size: .6875rem; font-weight: 600; font-family: var(--mono);
     }
-    .badge-critical { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(239,68,68,.2); }
-    .badge-warning  { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(245,158,11,.2); }
-    .badge-info     { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(59,130,246,.2); }
-    .badge-emerald  { background: var(--emerald-dim);color: var(--emerald);border: 1px solid rgba(16,185,129,.2); }
+    .badge-critical { background: var(--red-50);   color: var(--red-700);   border: 1px solid var(--red-100); }
+    .badge-warning  { background: var(--amber-50);  color: var(--amber-700); border: 1px solid var(--amber-100); }
+    .badge-info     { background: var(--blue-50);   color: var(--blue-700);  border: 1px solid var(--blue-100); }
+    .badge-neutral  { background: var(--gray-100);  color: var(--gray-600);  border: 1px solid var(--gray-200); }
+    .badge-success  { background: var(--green-50);  color: var(--green-700); border: 1px solid var(--green-100); }
 
-    /* ── Traces Table ───────────────────────────────────────────── */
+    /* ── Trace Table ────────────────────────────────────────────── */
     .trace-table { width: 100%; border-collapse: collapse; }
-    .trace-table th {
-      text-align: left; padding: 10px 20px;
-      font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
-      color: var(--text-3); border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--card);
+    .trace-table thead th {
+      text-align: left; padding: 9px 16px;
+      font-size: .6875rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--gray-400);
+      border-bottom: 1px solid var(--gray-200);
+      background: var(--gray-50); position: sticky; top: 0;
     }
-    .trace-table td {
-      padding: 10px 20px; font-size: .8rem;
-      border-bottom: 1px solid rgba(148,163,184,.05);
-      color: var(--text-2);
-    }
-    .trace-table tr:hover td { background: rgba(255,255,255,.02); }
-    .trace-table tr:last-child td { border-bottom: none; }
-    .trace-id { font-family: var(--mono); font-size: .7rem; color: var(--text-3); }
-    .trace-agent { font-weight: 600; color: var(--text); }
-    .trace-eval-count { font-family: var(--mono); font-size: .75rem; }
+    .trace-table tbody td { padding: 9px 16px; font-size: .8125rem; color: var(--gray-600); border-bottom: 1px solid var(--gray-100); }
+    .trace-table tbody tr:hover td { background: var(--gray-50); }
+    .trace-table tbody tr:last-child td { border-bottom: none; }
+    .trace-agent { font-weight: 600; color: var(--gray-900); font-size: .8125rem; }
 
     /* ── Healing ────────────────────────────────────────────────── */
-    .healing-item {
-      padding: 16px 20px; border-bottom: 1px solid rgba(148,163,184,.05);
-    }
+    .healing-item { padding: 14px 16px; border-bottom: 1px solid var(--gray-100); }
     .healing-item:last-child { border-bottom: none; }
-    .healing-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-    .healing-title { font-size: .875rem; font-weight: 600; }
-    .healing-meta { font-size: .75rem; color: var(--text-3); margin-bottom: 8px; font-family: var(--mono); }
-    .healing-btns { display: flex; gap: 8px; }
+    .healing-top  { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .healing-name { font-size: .875rem; font-weight: 600; color: var(--gray-900); }
+    .healing-meta { font-size: .75rem; color: var(--gray-400); font-family: var(--mono); margin-bottom: 10px; }
+    .healing-btns { display: flex; gap: 7px; }
     .btn-approve {
       padding: 5px 12px; border-radius: 6px; font-size: .75rem; font-weight: 600;
-      background: var(--emerald); color: #020817; border: none; cursor: pointer;
-      font-family: var(--font); transition: background .2s;
+      background: var(--green-700); color: var(--white); border: none;
+      font-family: var(--font); cursor: pointer; transition: background .15s;
     }
-    .btn-approve:hover { background: #34D399; }
+    .btn-approve:hover { background: #166534; }
     .btn-reject {
       padding: 5px 12px; border-radius: 6px; font-size: .75rem; font-weight: 600;
-      background: transparent; color: var(--red);
-      border: 1px solid rgba(239,68,68,.25); cursor: pointer;
-      font-family: var(--font); transition: all .2s;
+      background: var(--white); color: var(--red-600);
+      border: 1px solid var(--red-100); font-family: var(--font); cursor: pointer; transition: all .15s;
     }
-    .btn-reject:hover { background: var(--red-dim); }
-
-    /* ── Empty state ────────────────────────────────────────────── */
-    .empty {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 48px 20px; gap: 8px; color: var(--text-3);
-    }
-    .empty-icon { font-size: 2rem; opacity: .4; }
-    .empty-text { font-size: .8rem; }
+    .btn-reject:hover { background: var(--red-50); }
 
     /* ── Scan log ───────────────────────────────────────────────── */
     #scanLog {
-      font-family: var(--mono); font-size: .75rem; color: var(--text-2);
-      white-space: pre-wrap; line-height: 1.7;
+      font-family: var(--mono); font-size: .75rem; color: var(--gray-600);
+      line-height: 1.7; white-space: pre-wrap;
     }
 
+    /* ── Empty ──────────────────────────────────────────────────── */
+    .empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 6px; padding: 40px 16px; color: var(--gray-400);
+    }
+    .empty-icon { color: var(--gray-300); }
+    .empty-text { font-size: .8125rem; text-align: center; }
+
     /* ── Responsive ─────────────────────────────────────────────── */
-    @media (max-width: 1024px) {
-      .stats-row { grid-template-columns: repeat(2,1fr); }
-      .grid-2    { grid-template-columns: 1fr; }
-      .grid-3    { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 640px) {
-      .stats-row { grid-template-columns: 1fr 1fr; }
-      .main { padding: 16px; }
-    }
+    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(2,1fr); } .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr; } }
+    @media (max-width: 640px)  { .stats-row { grid-template-columns: 1fr 1fr; } .main { padding: 14px; } }
   </style>
 </head>
 <body>
@@ -234,129 +221,124 @@
 
   <!-- Top Bar -->
   <header class="topbar">
-    <div class="topbar-left">
+    <div class="tb-left">
       <a href="/" class="tb-logo">
-        <div class="tb-logo-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <ellipse cx="12" cy="12" rx="11" ry="7" stroke="white" stroke-width="1.8"/>
-            <circle cx="12" cy="12" r="3.2" fill="white"/>
-            <circle cx="12" cy="12" r="1.4" fill="#020817"/>
+        <div class="tb-logo-mark">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </svg>
         </div>
-        <span>IRIS</span>
+        IRIS
       </a>
-      <div class="tb-divider"></div>
-      <span class="tb-title">Live Monitoring Dashboard</span>
+      <div class="tb-sep"></div>
+      <span class="tb-page">Live Monitoring Dashboard</span>
     </div>
-    <div class="topbar-right">
-      <div class="tb-status"><div class="pulse"></div><span id="sseStatus">Connecting…</span></div>
-      <button class="tb-btn tb-btn-scan" id="scanBtn" onclick="triggerScan()">⚡ Trigger Scan</button>
-      <a href="/" class="tb-btn tb-btn-back">← Homepage</a>
+    <div class="tb-right">
+      <div class="tb-status"><div class="status-dot"></div><span id="sseStatus">Connecting</span></div>
+      <button class="btn-sm btn-primary" id="scanBtn" onclick="triggerScan()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Trigger Scan
+      </button>
+      <a href="/" class="btn-sm btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Homepage
+      </a>
     </div>
   </header>
 
   <!-- Main -->
   <main class="main">
 
-    <!-- Stat Cards -->
+    <!-- Stats -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-card-label">Total Traces</div>
-        <div class="stat-card-value" id="statTraces">{{ shift_stats.get('total_traces', 0) }}</div>
-        <div class="stat-card-sub">events evaluated this shift</div>
+        <div class="stat-label">Total Traces</div>
+        <div class="stat-value neutral" id="statTraces">{{ shift_stats.get('total_traces', 0) }}</div>
+        <div class="stat-sub">events evaluated this shift</div>
       </div>
-      <div class="stat-card c-red">
-        <div class="stat-card-label">Hallucinations Caught</div>
-        <div class="stat-card-value" id="statHall">{{ shift_stats.get('hallucinations_caught', 0) }}</div>
-        <div class="stat-card-sub">warning + critical flags</div>
+      <div class="stat-card">
+        <div class="stat-label">Hallucinations Caught</div>
+        <div class="stat-value danger" id="statHall">{{ shift_stats.get('hallucinations_caught', 0) }}</div>
+        <div class="stat-sub">warning + critical flags</div>
       </div>
-      <div class="stat-card c-emerald">
-        <div class="stat-card-label">Self-Heals</div>
-        <div class="stat-card-value" id="statHeals">{{ shift_stats.get('self_heals', 0) }}</div>
-        <div class="stat-card-sub">prompt mutations deployed</div>
+      <div class="stat-card">
+        <div class="stat-label">Self-Heals</div>
+        <div class="stat-value success" id="statHeals">{{ shift_stats.get('self_heals', 0) }}</div>
+        <div class="stat-sub">prompt mutations deployed</div>
       </div>
-      <div class="stat-card c-amber">
-        <div class="stat-card-label">Human Escalations</div>
-        <div class="stat-card-value" id="statEsc">{{ shift_stats.get('human_escalations', 0) }}</div>
-        <div class="stat-card-sub">low-confidence flags</div>
+      <div class="stat-card">
+        <div class="stat-label">Human Escalations</div>
+        <div class="stat-value warn" id="statEsc">{{ shift_stats.get('human_escalations', 0) }}</div>
+        <div class="stat-sub">low-confidence flags</div>
       </div>
     </div>
 
-    <!-- Alerts + Traces -->
-    <div class="grid-2" style="margin-bottom:16px;">
+    <!-- Alert Feed + Traces -->
+    <div class="grid-2">
 
-      <!-- Live Alert Feed -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot dot-emerald pulse"></div>
-            Live Alert Feed
-          </div>
+          <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
           <span class="panel-meta" id="alertCount">0 alerts</span>
         </div>
         <div class="panel-body" id="alertFeed">
           <div class="empty">
-            <div class="empty-icon">📡</div>
-            <div class="empty-text">Waiting for alerts…</div>
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/>
+              </svg>
+            </div>
+            <div class="empty-text">Waiting for alerts via SSE stream</div>
           </div>
         </div>
       </div>
 
-      <!-- Recent Traces -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot dot-blue"></div>
-            Recent Traces
-          </div>
+          <div class="panel-title"><div class="panel-dot dot-blue"></div>Recent Traces</div>
           <span class="panel-meta" id="traceCount">—</span>
         </div>
         <div class="panel-body">
           <table class="trace-table">
-            <thead>
-              <tr>
-                <th>Agent</th>
-                <th>Query Type</th>
-                <th>Severity</th>
-                <th>Time</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Agent</th><th>Query Type</th><th>Severity</th><th>Time</th></tr></thead>
             <tbody id="traceFeed"></tbody>
           </table>
         </div>
       </div>
+
     </div>
 
-    <!-- Healing Candidates + Scan Log -->
+    <!-- Healing + Scan Log -->
     <div class="grid-3">
 
-      <!-- Recent Traces full + Healing Candidates -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot dot-amber"></div>
-            Healing Candidates
-          </div>
+          <div class="panel-title"><div class="panel-dot dot-amber"></div>Healing Candidates</div>
           <span class="panel-meta" id="healingCount">0 pending</span>
         </div>
         <div class="panel-body" id="healingFeed">
           <div class="empty">
-            <div class="empty-icon">🔧</div>
-            <div class="empty-text">No candidates pending — run a scan to detect failure clusters</div>
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+              </svg>
+            </div>
+            <div class="empty-text">No candidates pending — trigger a scan to detect failure clusters and run self-healing</div>
           </div>
         </div>
       </div>
 
-      <!-- Scan Log -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot dot-blue"></div>
-            Scan Log
-          </div>
-          <button class="tb-btn tb-btn-back" style="padding:4px 10px;font-size:.7rem;" onclick="document.getElementById('scanLog').textContent=''">Clear</button>
+          <div class="panel-title"><div class="panel-dot dot-blue"></div>Scan Output</div>
+          <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="document.getElementById('scanLog').textContent='Ready.'">Clear</button>
         </div>
-        <div class="panel-body-pad" style="max-height:300px;overflow-y:auto;">
+        <div class="panel-pad" style="max-height:280px;overflow-y:auto;">
           <div id="scanLog">Ready. Click "Trigger Scan" to query Phoenix spans via MCP and detect failure clusters.</div>
         </div>
       </div>
@@ -366,169 +348,157 @@
 </div>
 
 <script>
-const SEV_ICON = { critical: '🔴', warning: '🟡', info: '🔵', heartbeat: '💚' };
-const SEV_CLASS = { critical: 'sev-critical', warning: 'sev-warning', info: 'sev-info' };
-const BADGE_CLASS = { critical: 'badge-critical', warning: 'badge-warning', info: 'badge-info' };
-
-let alertCount = 0;
-
-// ── SSE Alert Stream ──────────────────────────────────────────────
-function connectSSE() {
-  const sse = new EventSource('/stream/alerts');
-  const status = document.getElementById('sseStatus');
-  const feed = document.getElementById('alertFeed');
-
-  sse.onopen = () => { status.textContent = 'Live'; };
-
-  sse.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === 'heartbeat') { status.textContent = 'Live ·'; setTimeout(() => status.textContent = 'Live', 800); return; }
-
-    alertCount++;
-    document.getElementById('alertCount').textContent = alertCount + ' alert' + (alertCount !== 1 ? 's' : '');
-
-    const sev = data.severity || 'info';
-    const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    const item = document.createElement('div');
-    item.className = 'alert-item';
-    item.innerHTML = `
-      <div class="alert-sev ${SEV_CLASS[sev] || 'sev-info'}">${SEV_ICON[sev] || '🔵'}</div>
-      <div class="alert-body">
-        <div class="alert-top">
-          <span class="alert-agent">${esc(data.agent_name || '—')}</span>
-          <span class="alert-time">${ts}</span>
-        </div>
-        <div class="alert-desc">${esc(data.description || data.failure_type || '')}</div>
-        <div class="alert-tags">
-          <span class="badge ${BADGE_CLASS[sev] || 'badge-info'}">${sev.toUpperCase()}</span>
-          ${data.query_type ? `<span class="badge badge-emerald">${esc(data.query_type)}</span>` : ''}
-          ${data.eval_score != null ? `<span class="badge" style="background:rgba(148,163,184,.08);color:var(--text-2);border:1px solid var(--border);">score: ${Number(data.eval_score).toFixed(1)}</span>` : ''}
-        </div>
-      </div>`;
-
-    if (feed.querySelector('.empty')) feed.innerHTML = '';
-    feed.insertBefore(item, feed.firstChild);
-
-    // Update stat card if critical/warning
-    if (sev === 'critical' || sev === 'warning') {
-      const el = document.getElementById('statHall');
-      el.textContent = parseInt(el.textContent || 0) + 1;
-    }
+  const BADGE = { critical:'badge-critical', warning:'badge-warning', info:'badge-info' };
+  const SEV_ICON = {
+    critical: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    warning:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    info:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   };
 
-  sse.onerror = () => { status.textContent = 'Reconnecting…'; };
-}
+  let alertCount = 0;
 
-// ── Poll recent traces ────────────────────────────────────────────
-async function pollTraces() {
-  try {
-    const r = await fetch('/traces?limit=20');
-    const d = await r.json();
-    const tbody = document.getElementById('traceFeed');
-    const traces = d.traces || [];
-    document.getElementById('traceCount').textContent = traces.length + ' recent';
-
-    tbody.innerHTML = traces.map(t => {
-      const sev = t.severity || 'info';
-      const ts = new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return `<tr>
-        <td><span class="trace-agent">${esc(t.agent_name)}</span></td>
-        <td><span class="badge badge-emerald">${esc(t.query_type)}</span></td>
-        <td><span class="badge ${BADGE_CLASS[sev] || 'badge-info'}">${sev}</span></td>
-        <td style="font-size:.75rem;color:var(--text-3);font-family:var(--mono);">${ts}</td>
-      </tr>`;
-    }).join('');
-  } catch (_) {}
-}
-
-// ── Poll status stats ─────────────────────────────────────────────
-async function pollStatus() {
-  try {
-    const r = await fetch('/status');
-    const d = await r.json();
-    const s = d.stats || {};
-    document.getElementById('statTraces').textContent = s.total_traces || 0;
-    document.getElementById('statHall').textContent   = s.hallucinations_caught || 0;
-    document.getElementById('statHeals').textContent  = s.self_heals || 0;
-    document.getElementById('statEsc').textContent    = s.human_escalations || 0;
-  } catch (_) {}
-}
-
-// ── Poll healing candidates ───────────────────────────────────────
-async function pollHealing() {
-  try {
-    const r = await fetch('/healing/candidates');
-    const d = await r.json();
-    const candidates = d.candidates || [];
-    const feed = document.getElementById('healingFeed');
-    document.getElementById('healingCount').textContent = candidates.length + ' pending';
-
-    if (!candidates.length) {
-      feed.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">No candidates — trigger a scan to detect failure clusters</div></div>';
-      return;
-    }
-
-    feed.innerHTML = candidates.map(c => `
-      <div class="healing-item">
-        <div class="healing-top">
-          <span class="healing-title">${esc(c.query_type)} — ${esc(c.agent_name)}</span>
-          <span class="badge badge-amber">PENDING</span>
-        </div>
-        <div class="healing-meta">ID: ${esc(c.candidate_id?.slice(0,8))}… · hallucination rate: ${((c.hallucination_rate||0)*100).toFixed(0)}%</div>
-        <div class="healing-btns">
-          <button class="btn-approve" onclick="approveCandidate('${esc(c.candidate_id)}')">✓ Approve</button>
-          <button class="btn-reject"  onclick="rejectCandidate('${esc(c.candidate_id)}')">✗ Reject</button>
-        </div>
-      </div>`).join('');
-  } catch (_) {}
-}
-
-// ── Trigger scan ──────────────────────────────────────────────────
-async function triggerScan() {
-  const btn = document.getElementById('scanBtn');
-  const log = document.getElementById('scanLog');
-  btn.disabled = true; btn.textContent = '⏳ Scanning…';
-  log.textContent = '[' + new Date().toLocaleTimeString() + '] Triggering pattern scan via Phoenix MCP…\n';
-  try {
-    const r = await fetch('/scan', { method: 'POST' });
-    const d = await r.json();
-    log.textContent += '[' + new Date().toLocaleTimeString() + '] Scan complete.\n\n';
-    log.textContent += JSON.stringify(d, null, 2);
-    await pollHealing();
-    await pollStatus();
-  } catch (err) {
-    log.textContent += '[ERROR] ' + err.message;
-  } finally {
-    btn.disabled = false; btn.textContent = '⚡ Trigger Scan';
+  // ── SSE ───────────────────────────────────────────────────────
+  function connectSSE() {
+    const sse = new EventSource('/stream/alerts');
+    const statusEl = document.getElementById('sseStatus');
+    sse.onopen = () => { statusEl.textContent = 'Live'; };
+    sse.onerror = () => { statusEl.textContent = 'Reconnecting'; };
+    sse.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.type === 'heartbeat') return;
+      alertCount++;
+      document.getElementById('alertCount').textContent = alertCount + (alertCount === 1 ? ' alert' : ' alerts');
+      const sev = d.severity || 'info';
+      const ts = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const feed = document.getElementById('alertFeed');
+      if (feed.querySelector('.empty')) feed.innerHTML = '';
+      const el = document.createElement('div');
+      el.className = 'alert-item';
+      el.innerHTML = `
+        <div class="sev-icon sev-${sev}">${SEV_ICON[sev] || SEV_ICON.info}</div>
+        <div class="alert-body">
+          <div class="alert-top">
+            <span class="alert-agent">${esc(d.agent_name || '—')}</span>
+            <span class="alert-time">${ts}</span>
+          </div>
+          <div class="alert-desc">${esc(d.description || d.failure_type || '')}</div>
+          <div class="alert-badges">
+            <span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span>
+            ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
+            ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
+          </div>
+        </div>`;
+      feed.insertBefore(el, feed.firstChild);
+      if (sev === 'critical' || sev === 'warning') {
+        const v = document.getElementById('statHall');
+        v.textContent = parseInt(v.textContent || 0) + 1;
+      }
+    };
   }
-}
 
-// ── Approve / reject ──────────────────────────────────────────────
-async function approveCandidate(id) {
-  await fetch(`/healing/approve/${id}`, { method: 'POST' });
-  const el = document.getElementById('statHeals');
-  el.textContent = parseInt(el.textContent || 0) + 1;
+  // ── Traces ───────────────────────────────────────────────────
+  async function pollTraces() {
+    try {
+      const r = await fetch('/traces?limit=25');
+      const d = await r.json();
+      const traces = d.traces || [];
+      document.getElementById('traceCount').textContent = traces.length + ' recent';
+      document.getElementById('traceFeed').innerHTML = traces.map(t => {
+        const sev = t.severity || 'info';
+        const ts = new Date(t.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+        return `<tr>
+          <td><span class="trace-agent">${esc(t.agent_name)}</span></td>
+          <td><span class="badge badge-neutral">${esc(t.query_type)}</span></td>
+          <td><span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span></td>
+          <td style="font-family:var(--mono);font-size:.75rem;color:var(--gray-400);">${ts}</td>
+        </tr>`;
+      }).join('');
+    } catch (_) {}
+  }
+
+  // ── Status ───────────────────────────────────────────────────
+  async function pollStatus() {
+    try {
+      const r = await fetch('/status');
+      const d = await r.json();
+      const s = d.stats || {};
+      document.getElementById('statTraces').textContent = s.total_traces    || 0;
+      document.getElementById('statHall').textContent   = s.hallucinations_caught || 0;
+      document.getElementById('statHeals').textContent  = s.self_heals      || 0;
+      document.getElementById('statEsc').textContent    = s.human_escalations || 0;
+    } catch (_) {}
+  }
+
+  // ── Healing ──────────────────────────────────────────────────
+  async function pollHealing() {
+    try {
+      const r = await fetch('/healing/candidates');
+      const d = await r.json();
+      const candidates = d.candidates || [];
+      document.getElementById('healingCount').textContent = candidates.length + ' pending';
+      const feed = document.getElementById('healingFeed');
+      if (!candidates.length) {
+        feed.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div><div class="empty-text">No candidates — trigger a scan to detect failure clusters</div></div>`;
+        return;
+      }
+      feed.innerHTML = candidates.map(c => `
+        <div class="healing-item">
+          <div class="healing-top">
+            <span class="healing-name">${esc(c.query_type)} &mdash; ${esc(c.agent_name)}</span>
+            <span class="badge badge-warning">pending</span>
+          </div>
+          <div class="healing-meta">id: ${esc((c.candidate_id||'').slice(0,8))}&hellip; &nbsp;&middot;&nbsp; hallucination rate: ${((c.hallucination_rate||0)*100).toFixed(0)}%</div>
+          <div class="healing-btns">
+            <button class="btn-approve" onclick="approveCandidate('${esc(c.candidate_id)}')">Approve</button>
+            <button class="btn-reject"  onclick="rejectCandidate('${esc(c.candidate_id)}')">Reject</button>
+          </div>
+        </div>`).join('');
+    } catch (_) {}
+  }
+
+  // ── Scan ─────────────────────────────────────────────────────
+  async function triggerScan() {
+    const btn = document.getElementById('scanBtn');
+    const log = document.getElementById('scanLog');
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Scanning…`;
+    log.textContent = '[' + new Date().toLocaleTimeString() + '] Querying Phoenix spans via MCP…\n';
+    try {
+      const r = await fetch('/scan', { method: 'POST' });
+      const d = await r.json();
+      log.textContent += '[' + new Date().toLocaleTimeString() + '] Scan complete.\n\n' + JSON.stringify(d, null, 2);
+      await pollHealing();
+      await pollStatus();
+    } catch (err) {
+      log.textContent += '\n[error] ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Trigger Scan`;
+    }
+  }
+
+  async function approveCandidate(id) {
+    await fetch(`/healing/approve/${id}`, { method: 'POST' });
+    const el = document.getElementById('statHeals');
+    el.textContent = parseInt(el.textContent || 0) + 1;
+    pollHealing();
+  }
+  async function rejectCandidate(id) {
+    await fetch(`/healing/reject/${id}`, { method: 'POST' });
+    pollHealing();
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  connectSSE();
+  pollTraces();
+  pollStatus();
   pollHealing();
-}
-async function rejectCandidate(id) {
-  await fetch(`/healing/reject/${id}`, { method: 'POST' });
-  pollHealing();
-}
-
-// ── Escape ────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ── Init ──────────────────────────────────────────────────────────
-connectSSE();
-pollTraces();
-pollStatus();
-pollHealing();
-setInterval(pollTraces,  10000);
-setInterval(pollStatus,  10000);
-setInterval(pollHealing, 15000);
+  setInterval(pollTraces,  10000);
+  setInterval(pollStatus,  10000);
+  setInterval(pollHealing, 15000);
 </script>
 </body>
 </html>
