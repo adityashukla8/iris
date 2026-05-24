@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRIS — Clinical AI Safety Supervisor</title>
+  <meta name="description" content="IRIS is a multi-agent real-time safety supervisor for clinical AI in the operating room. Detects hallucinations, catches drug interactions, self-heals failure patterns.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg-0: #020817;
+      --bg-1: #0D1528;
+      --bg-2: #111827;
+      --card-bg: rgba(13, 21, 40, 0.7);
+      --card-border: rgba(148, 163, 184, 0.08);
+      --card-border-hover: rgba(16, 185, 129, 0.25);
+      --emerald: #10B981;
+      --emerald-light: #34D399;
+      --emerald-glow: rgba(16, 185, 129, 0.12);
+      --blue: #3B82F6;
+      --red: #EF4444;
+      --amber: #F59E0B;
+      --violet: #8B5CF6;
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #475569;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-emerald: 0 0 40px rgba(16, 185, 129, 0.15);
+      --font: 'Poppins', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--bg-0); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ── Utilities ─────────────────────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--emerald); margin-bottom: 16px;
+    }
+    .section-label::before {
+      content: ''; display: block; width: 20px; height: 2px;
+      background: var(--emerald); border-radius: 2px;
+    }
+
+    .section-title {
+      font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 700;
+      line-height: 1.15; color: var(--text-primary); margin-bottom: 16px;
+    }
+
+    .section-body {
+      font-size: 1.0625rem; color: var(--text-secondary);
+      line-height: 1.75; max-width: 640px;
+    }
+
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 500;
+      font-family: var(--mono); white-space: nowrap;
+    }
+    .tag-emerald { background: rgba(16,185,129,.1); color: var(--emerald); border: 1px solid rgba(16,185,129,.2); }
+    .tag-blue    { background: rgba(59,130,246,.1); color: var(--blue);    border: 1px solid rgba(59,130,246,.2); }
+    .tag-violet  { background: rgba(139,92,246,.1); color: var(--violet);  border: 1px solid rgba(139,92,246,.2); }
+    .tag-amber   { background: rgba(245,158,11,.1); color: var(--amber);   border: 1px solid rgba(245,158,11,.2); }
+
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      transition: border-color .3s, transform .3s, box-shadow .3s;
+    }
+    .glass-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-emerald);
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: var(--radius-md);
+      font-family: var(--font); font-size: 0.9375rem; font-weight: 600;
+      cursor: pointer; transition: all .2s; border: none;
+    }
+    .btn-primary { background: var(--emerald); color: #020817; }
+    .btn-primary:hover { background: var(--emerald-light); transform: translateY(-1px); box-shadow: 0 8px 25px rgba(16,185,129,.35); }
+    .btn-secondary { background: transparent; color: var(--text-primary); border: 1px solid rgba(148,163,184,.2); }
+    .btn-secondary:hover { border-color: var(--emerald); color: var(--emerald); transform: translateY(-1px); }
+
+    /* ── Orbs ──────────────────────────────────────────────────── */
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+
+    /* ── Pulse ─────────────────────────────────────────────────── */
+    .pulse-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--emerald); flex-shrink: 0;
+      animation: pulse-glow 2s infinite;
+    }
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.5); }
+      50%      { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+    }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 0; transition: background .3s, backdrop-filter .3s;
+    }
+    .nav.scrolled {
+      background: rgba(2,8,23,.88); backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(148,163,184,.08);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.125rem; }
+    .nav-logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--emerald), var(--blue));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); transition: color .2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-status { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; color: var(--emerald); }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 100px 0 80px; overflow: hidden;
+    }
+    .hero-orb-1 {
+      width: 720px; height: 720px;
+      background: radial-gradient(circle, rgba(16,185,129,.16) 0%, transparent 70%);
+      top: -180px; right: -180px;
+    }
+    .hero-orb-2 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(59,130,246,.1) 0%, transparent 70%);
+      bottom: 0; left: -120px;
+    }
+    .hero-inner {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 64px; align-items: center; width: 100%;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      border-radius: 20px; font-size: 0.8125rem; font-weight: 500;
+      color: var(--emerald); margin-bottom: 24px;
+    }
+    .hero-title {
+      font-size: clamp(2.2rem, 4.5vw, 3.6rem);
+      font-weight: 800; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 24px;
+    }
+    .hero-title .accent { color: var(--emerald); }
+    .hero-subtitle {
+      font-size: 1.125rem; color: var(--text-secondary);
+      line-height: 1.75; margin-bottom: 36px; max-width: 520px;
+    }
+    .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 48px; }
+
+    .hero-stats { display: flex; gap: 32px; flex-wrap: wrap; }
+    .hero-stat { display: flex; flex-direction: column; gap: 2px; }
+    .hero-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .hero-stat-label { font-size: 0.7rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+    .hero-stat-div { width: 1px; height: 36px; background: rgba(148,163,184,.12); align-self: center; }
+
+    .hero-img-wrap { position: relative; }
+    .hero-img-frame {
+      position: relative; border-radius: var(--radius-xl); overflow: hidden;
+      border: 1px solid rgba(16,185,129,.15);
+      box-shadow: 0 0 0 1px rgba(16,185,129,.04), 0 40px 80px rgba(0,0,0,.5), var(--shadow-emerald);
+    }
+    .hero-img-frame img { width: 100%; height: auto; display: block; }
+    .hero-img-frame::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(16,185,129,.04), transparent 50%);
+      z-index: 1; pointer-events: none;
+    }
+    .hero-img-placeholder {
+      aspect-ratio: 16/10;
+      background: linear-gradient(135deg, #0D1528, #111827);
+      border-radius: var(--radius-xl);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+    }
+    .hero-img-placeholder .placeholder-icon { font-size: 2.5rem; opacity: .4; }
+    .hero-img-placeholder span { font-size: 0.8rem; color: var(--text-muted); font-family: var(--mono); }
+
+    /* ── Problem Section ───────────────────────────────────────── */
+    .section-problem {
+      padding: 120px 0; position: relative; overflow: hidden;
+    }
+    .section-problem::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(16,185,129,.025) 50%, transparent);
+    }
+    .problem-header { max-width: 680px; margin-bottom: 64px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-bottom: 56px; }
+
+    .stat-card { padding: 36px 32px; position: relative; overflow: hidden; }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px; background: linear-gradient(90deg, var(--emerald), transparent);
+    }
+    .stat-number {
+      font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 800;
+      line-height: 1; margin-bottom: 14px; letter-spacing: -.03em;
+    }
+    .stat-number.c-emerald { color: var(--emerald); }
+    .stat-number.c-red     { color: var(--red); }
+    .stat-number.c-amber   { color: var(--amber); }
+    .stat-desc { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+    .stat-source { font-size: 0.7rem; color: var(--text-muted); font-family: var(--mono); }
+
+    .problem-points { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .problem-point {
+      display: flex; gap: 16px; padding: 28px;
+      border-radius: var(--radius-md);
+      background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.09);
+    }
+    .problem-point-icon {
+      width: 44px; height: 44px; flex-shrink: 0; font-size: 1.25rem;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(239,68,68,.08); border-radius: var(--radius-sm);
+    }
+    .problem-point-title { font-size: 0.9375rem; font-weight: 600; margin-bottom: 6px; }
+    .problem-point-text { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; }
+
+    /* ── How It Works ──────────────────────────────────────────── */
+    .section-how {
+      padding: 120px 0; background: var(--bg-1); position: relative; overflow: hidden;
+    }
+    .section-how::before, .section-how::after {
+      content: ''; position: absolute; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(148,163,184,.1), transparent);
+    }
+    .section-how::before { top: 0; }
+    .section-how::after  { bottom: 0; }
+
+    .how-header { text-align: center; max-width: 640px; margin: 0 auto 72px; }
+    .how-header .section-body { margin: 0 auto; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+
+    .step-card { padding: 32px 28px; }
+    .step-number { font-size: .6875rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-family: var(--mono); margin-bottom: 16px; }
+    .step-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--emerald-glow); border: 1px solid rgba(16,185,129,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .step-title { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+    .step-body { font-size: .875rem; color: var(--text-secondary); line-height: 1.65; }
+    .step-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    code.inline { font-family: var(--mono); font-size: .8em; color: var(--emerald); }
+
+    /* ── Agents ────────────────────────────────────────────────── */
+    .section-agents { padding: 120px 0; position: relative; overflow: hidden; }
+    .agents-orb {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,.07), transparent 70%);
+      top: 50%; right: -200px; transform: translateY(-50%);
+    }
+    .agents-header { margin-bottom: 64px; }
+    .agents-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(340px,1fr)); gap: 24px; }
+
+    .agent-card { padding: 32px; }
+    .agent-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    .agent-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .ai-orch { background: linear-gradient(135deg, rgba(16,185,129,.2), rgba(59,130,246,.2)); }
+    .ai-eval { background: rgba(16,185,129,.12); }
+    .ai-det  { background: rgba(59,130,246,.12); }
+    .ai-heal { background: rgba(139,92,246,.12); }
+    .ai-disp { background: rgba(245,158,11,.12); }
+
+    .agent-role { font-size: .6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+    .agent-name { font-size: 1rem; font-weight: 700; font-family: var(--mono); }
+    .agent-desc { font-size: .875rem; color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; }
+    .agent-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    /* ── Tech Stack ────────────────────────────────────────────── */
+    .section-tech {
+      padding: 100px 0; background: var(--bg-1); position: relative; overflow: hidden;
+    }
+    .section-tech::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(148,163,184,.1), transparent);
+    }
+    .tech-header { text-align: center; margin-bottom: 64px; }
+    .tech-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+    .tech-card { padding: 28px 24px; text-align: center; cursor: default; }
+    .tech-logo { font-size: 2rem; margin-bottom: 12px; display: block; }
+    .tech-name { font-size: .875rem; font-weight: 700; margin-bottom: 4px; }
+    .tech-role { font-size: .75rem; color: var(--text-muted); }
+
+    /* ── CTA ───────────────────────────────────────────────────── */
+    .section-cta { padding: 120px 0; position: relative; overflow: hidden; text-align: center; }
+    .cta-orb {
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, rgba(16,185,129,.18) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+    }
+    .cta-inner { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+    .cta-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      border-radius: 20px; font-size: .8rem; font-weight: 500;
+      color: var(--emerald); margin-bottom: 28px;
+    }
+    .cta-title { font-size: clamp(2rem,4vw,3rem); font-weight: 800; line-height: 1.15; letter-spacing: -.02em; margin-bottom: 20px; }
+    .cta-text { font-size: 1.0625rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 40px; }
+    .cta-btns { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .footer { padding: 32px 0; border-top: 1px solid rgba(148,163,184,.08); }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-text { font-size: .8125rem; color: var(--text-muted); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: .8125rem; color: var(--text-muted); transition: color .2s; }
+    .footer-links a:hover { color: var(--emerald); }
+
+    /* ── Scroll Reveal ─────────────────────────────────────────── */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    .d1 { transition-delay: .1s; } .d2 { transition-delay: .2s; }
+    .d3 { transition-delay: .3s; } .d4 { transition-delay: .4s; }
+    .d5 { transition-delay: .5s; }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+      .hero-img-wrap { max-width: 600px; margin: 0 auto; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .problem-points { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr 1fr; }
+      .tech-grid { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .agents-grid { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: repeat(2,1fr); }
+      .hero-stats { gap: 20px; }
+      .hero-stat-div { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" id="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <div class="nav-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <ellipse cx="12" cy="12" rx="11" ry="7" stroke="white" stroke-width="1.8"/>
+            <circle cx="12" cy="12" r="3.2" fill="white"/>
+            <circle cx="12" cy="12" r="1.4" fill="#020817"/>
+          </svg>
+        </div>
+        <span>IRIS</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#problem">Problem</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#agents">Agents &amp; MCPs</a></li>
+        <li><a href="#tech-stack">Tech Stack</a></li>
+      </ul>
+      <div class="nav-right">
+        <div class="nav-status">
+          <div class="pulse-dot"></div>
+          System Active
+        </div>
+        <a href="/dashboard" class="btn btn-primary" style="padding:8px 18px;font-size:.875rem;">Live Dashboard →</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────────── -->
+<section class="hero" id="hero">
+  <div class="orb hero-orb-1"></div>
+  <div class="orb hero-orb-2"></div>
+  <div class="container">
+    <div class="hero-inner">
+
+      <div class="hero-left">
+        <div class="hero-badge">
+          <div class="pulse-dot"></div>
+          Multi-Agent Clinical AI Safety Supervisor
+        </div>
+        <h1 class="hero-title">
+          Clinical AI Shouldn't<br>Operate
+          <span class="accent"> Without a Supervisor.</span>
+        </h1>
+        <p class="hero-subtitle">
+          IRIS is a real-time multi-agent safety layer for operating room AI — detecting hallucinations, catching dangerous drug interactions, and autonomously healing failure patterns before they reach your patient.
+        </p>
+        <div class="hero-cta">
+          <a href="/dashboard" class="btn btn-primary">Open Live Dashboard →</a>
+          <a href="https://github.com/adityashukla8/iris" target="_blank" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.933.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            View on GitHub
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-value">7</span>
+            <span class="hero-stat-label">Evaluators</span>
+          </div>
+          <div class="hero-stat-div"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">5</span>
+            <span class="hero-stat-label">AI Agents</span>
+          </div>
+          <div class="hero-stat-div"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">10</span>
+            <span class="hero-stat-label">MCP Tools</span>
+          </div>
+          <div class="hero-stat-div"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">Real-time</span>
+            <span class="hero-stat-label">SSE Alerts</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-img-wrap reveal d2">
+        <div class="hero-img-frame" id="heroImgFrame">
+          <img src="/static/images/hero.png" alt="IRIS Dashboard"
+            onerror="document.getElementById('heroImgFrame').innerHTML=`
+              <div class='hero-img-placeholder'>
+                <div class='placeholder-icon'>🖥️</div>
+                <span>Add hero.png → dashboard/static/images/</span>
+              </div>`" />
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Problem & Challenges ─────────────────────────────────────── -->
+<section class="section-problem" id="problem">
+  <div class="container">
+    <div class="problem-header reveal">
+      <div class="section-label">The Problem</div>
+      <h2 class="section-title">The Stakes in the OR<br>Have Never Been Higher</h2>
+      <p class="section-body">
+        Clinical AI agents are entering operating rooms and ICUs without any runtime safety layer. When they hallucinate, they do so silently — and the consequences fall on patients.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="glass-card stat-card reveal d1">
+        <div class="stat-number c-emerald" data-count="91.8" data-suffix="%">0%</div>
+        <div class="stat-desc">of clinicians across 15 specialties reported encountering clinical AI hallucinations — and 84.7% said they were capable of causing direct patient harm</div>
+        <div class="stat-source">MIT Media Lab, medRxiv 2025 · n=70 clinicians, 15 specialties</div>
+      </div>
+      <div class="glass-card stat-card reveal d2">
+        <div class="stat-number c-red" data-count="83" data-suffix="%">0%</div>
+        <div class="stat-desc">of cases where LLMs amplified or repeated planted clinical errors — including dosage mistakes and contraindicated drug recommendations</div>
+        <div class="stat-source">Nature Communications Medicine, 2025 · n=300 clinical vignettes</div>
+      </div>
+      <div class="glass-card stat-card reveal d3">
+        <div class="stat-number c-amber">$42B</div>
+        <div class="stat-desc">estimated annual global cost of medication errors — with AI agents now operating in these same high-stakes environments</div>
+        <div class="stat-source">WHO Medication Without Harm Global Challenge · US: 1.3M injuries/year (Nat. Academies)</div>
+      </div>
+    </div>
+
+    <div class="problem-points">
+      <div class="problem-point reveal d1">
+        <div class="problem-point-icon">⚡</div>
+        <div>
+          <div class="problem-point-title">Errors cascade silently through agent pipelines</div>
+          <div class="problem-point-text">A single upstream hallucination propagates through every downstream agent with no circuit breaker. Without a dedicated supervisor, multi-agent clinical pipelines have no mechanism to stop compounding errors.</div>
+        </div>
+      </div>
+      <div class="problem-point reveal d2">
+        <div class="problem-point-icon">💊</div>
+        <div>
+          <div class="problem-point-title">Polypharmacy is the #1 ICU medication error</div>
+          <div class="problem-point-text">OR medication error rates reach 7.3–12% (Medicina/PMC, 2025). AI agents recommending drug regimens must be checked against current medications and allergies in real time — not post-hoc.</div>
+        </div>
+      </div>
+      <div class="problem-point reveal d3">
+        <div class="problem-point-icon">🔁</div>
+        <div>
+          <div class="problem-point-title">Clinical AI lacks a self-improvement loop</div>
+          <div class="problem-point-text">Failures accumulate invisibly. There is no mechanism to detect recurring failure patterns in deployed AI and autonomously improve the clinical prompts generating them — until now.</div>
+        </div>
+      </div>
+      <div class="problem-point reveal d4">
+        <div class="problem-point-icon">📋</div>
+        <div>
+          <div class="problem-point-title">No audit trail for FDA PCCP compliance</div>
+          <div class="problem-point-text">FDA's Predetermined Change Control Plan framework requires documented evidence that AI modifications don't degrade safety. Most deployments produce zero versioned audit trail of prompt changes and validated outcomes.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How It Works ─────────────────────────────────────────────── -->
+<section class="section-how" id="how-it-works">
+  <div class="container">
+    <div class="how-header reveal">
+      <div class="section-label">Architecture</div>
+      <h2 class="section-title">A Closed-Loop Safety System</h2>
+      <p class="section-body">
+        IRIS operates as a continuous supervisor — evaluating every AI output in real time, detecting failure patterns from observability data, and autonomously improving clinical prompts through a validated self-healing loop.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="glass-card step-card reveal d1">
+        <div class="step-number">Step 01</div>
+        <div class="step-icon">📥</div>
+        <div class="step-title">Ingest IrisEvent</div>
+        <div class="step-body">Clinical AI agents submit every output as a structured IrisEvent via <code class="inline">POST /event</code>. Includes the query, output text, retrieved patient context, and surgical phase.</div>
+        <div class="step-tags">
+          <span class="tag tag-emerald">FastAPI</span>
+          <span class="tag tag-blue">REST API</span>
+        </div>
+      </div>
+      <div class="glass-card step-card reveal d2">
+        <div class="step-number">Step 02</div>
+        <div class="step-icon">🛡️</div>
+        <div class="step-title">7-Evaluator Safety Check</div>
+        <div class="step-body">The Safety Evaluator agent runs 7 parallel clinical checks: dosage boundaries, factual hallucinations, drug-drug interactions, allergy contraindications, attribution, context gaps, and surgical phase alignment.</div>
+        <div class="step-tags">
+          <span class="tag tag-emerald">Gemini</span>
+          <span class="tag tag-blue">ADK Tools</span>
+          <span class="tag tag-violet">LLM-as-Judge</span>
+        </div>
+      </div>
+      <div class="glass-card step-card reveal d3">
+        <div class="step-number">Step 03</div>
+        <div class="step-icon">📡</div>
+        <div class="step-title">Observe to Phoenix</div>
+        <div class="step-body">Every evaluation — including reasoning chain (CoT steps) and self-assessed confidence — is logged to Arize Phoenix as an OTel span annotation via OpenInference instrumentation.</div>
+        <div class="step-tags">
+          <span class="tag tag-emerald">OpenInference</span>
+          <span class="tag tag-blue">OTel</span>
+          <span class="tag tag-violet">Phoenix Cloud</span>
+        </div>
+      </div>
+      <div class="glass-card step-card reveal d1">
+        <div class="step-number">Step 04</div>
+        <div class="step-icon">🔍</div>
+        <div class="step-title">Pattern Detection via MCP</div>
+        <div class="step-body">The Pattern Detector agent queries Arize Phoenix via MCP (<code class="inline">get-spans</code>, <code class="inline" style="color:var(--blue)">get-span-annotations</code>) to identify recurring failure clusters across recent traces.</div>
+        <div class="step-tags">
+          <span class="tag tag-blue">Phoenix MCP</span>
+          <span class="tag tag-emerald">get-spans</span>
+        </div>
+      </div>
+      <div class="glass-card step-card reveal d2">
+        <div class="step-number">Step 05</div>
+        <div class="step-icon">🩺</div>
+        <div class="step-title">Diagnose &amp; Log via MCP</div>
+        <div class="step-body">The Self-Healer reads worst-performing spans, retrieves the current prompt version history, and logs failure examples to a Phoenix dataset — producing a structured HealingDiagnosis.</div>
+        <div class="step-tags">
+          <span class="tag tag-violet">get-latest-prompt</span>
+          <span class="tag tag-blue">add-dataset-examples</span>
+        </div>
+      </div>
+      <div class="glass-card step-card reveal d3">
+        <div class="step-number">Step 06</div>
+        <div class="step-icon">🔧</div>
+        <div class="step-title">Mutate, Validate &amp; Deploy</div>
+        <div class="step-body">TextGrad generates a candidate prompt mutation from the failure analysis. Counterfactual evaluation validates improvement exceeds threshold. The winning version is deployed to Phoenix.</div>
+        <div class="step-tags">
+          <span class="tag tag-emerald">TextGrad</span>
+          <span class="tag tag-amber">Approval Gate</span>
+          <span class="tag tag-violet">Phoenix Deploy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Agents, Tools & MCPs ─────────────────────────────────────── -->
+<section class="section-agents" id="agents">
+  <div class="orb agents-orb"></div>
+  <div class="container">
+    <div class="agents-header reveal">
+      <div class="section-label">Multi-Agent System</div>
+      <h2 class="section-title">Five Specialized Agents.<br>One Safety Guarantee.</h2>
+      <p class="section-body">
+        Each agent is an ADK <code class="inline">LlmAgent</code> with purpose-built tools and MCP integrations. The orchestrator delegates to sub-agents via LLM-driven routing — no hardcoded pipelines.
+      </p>
+    </div>
+
+    <div class="agents-grid">
+
+      <div class="glass-card agent-card reveal d1">
+        <div class="agent-head">
+          <div class="agent-icon ai-orch">🧠</div>
+          <div>
+            <div class="agent-role">Root Orchestrator</div>
+            <div class="agent-name">iris_orchestrator</div>
+          </div>
+        </div>
+        <div class="agent-desc">Receives all IrisEvents and SCAN_PATTERNS requests. Routes to sub-agents via LLM-driven delegation. Bridges MCP-diagnosed failures to the Python healing pipeline via a dedicated ADK tool.</div>
+        <div class="agent-tools">
+          <span class="tag tag-emerald">run_healing_pipeline_tool</span>
+          <span class="tag tag-blue">4 sub-agents</span>
+        </div>
+      </div>
+
+      <div class="glass-card agent-card reveal d2">
+        <div class="agent-head">
+          <div class="agent-icon ai-eval">🛡️</div>
+          <div>
+            <div class="agent-role">Clinical Auditor</div>
+            <div class="agent-name">safety_evaluator</div>
+          </div>
+        </div>
+        <div class="agent-desc">Runs 7 parallel clinical safety tools per event. Writes results with reasoning chain and confidence to Arize Phoenix as span annotations. Flags low-confidence results for human escalation.</div>
+        <div class="agent-tools">
+          <span class="tag tag-emerald">dosage_boundary</span>
+          <span class="tag tag-emerald">drug_interaction</span>
+          <span class="tag tag-emerald">allergy_check</span>
+          <span class="tag tag-blue">+4 evaluators</span>
+        </div>
+      </div>
+
+      <div class="glass-card agent-card reveal d3">
+        <div class="agent-head">
+          <div class="agent-icon ai-det">📊</div>
+          <div>
+            <div class="agent-role">Failure Cluster Analyst</div>
+            <div class="agent-name">pattern_detector</div>
+          </div>
+        </div>
+        <div class="agent-desc">Queries Arize Phoenix via MCP to detect recurring failure clusters across recent spans. Triggers the self-healing loop when the hallucination rate exceeds the configured threshold.</div>
+        <div class="agent-tools">
+          <span class="tag tag-blue">get-spans</span>
+          <span class="tag tag-blue">get-span-annotations</span>
+          <span class="tag tag-blue">list-traces</span>
+          <span class="tag tag-violet">Phoenix MCP</span>
+        </div>
+      </div>
+
+      <div class="glass-card agent-card reveal d1">
+        <div class="agent-head">
+          <div class="agent-icon ai-heal">🔧</div>
+          <div>
+            <div class="agent-role">DIAGNOSE Phase</div>
+            <div class="agent-name">self_healer</div>
+          </div>
+        </div>
+        <div class="agent-desc">Reads worst-performing spans from Phoenix, retrieves current clinical prompt version history, logs failure examples to a Phoenix dataset, and produces a HealingDiagnosis JSON for the mutation engine.</div>
+        <div class="agent-tools">
+          <span class="tag tag-violet">get-latest-prompt</span>
+          <span class="tag tag-violet">list-prompt-versions</span>
+          <span class="tag tag-violet">add-dataset-examples</span>
+          <span class="tag tag-blue">10 MCP tools total</span>
+        </div>
+      </div>
+
+      <div class="glass-card agent-card reveal d2">
+        <div class="agent-head">
+          <div class="agent-icon ai-disp">🚨</div>
+          <div>
+            <div class="agent-role">Notification Router</div>
+            <div class="agent-name">alert_dispatcher</div>
+          </div>
+        </div>
+        <div class="agent-desc">Routes safety alerts by severity to the real-time dashboard SSE stream. INFO → feed update. WARNING → yellow badge. CRITICAL → red alert and human escalation queue.</div>
+        <div class="agent-tools">
+          <span class="tag tag-amber">push_dashboard_alert</span>
+          <span class="tag tag-emerald">SSE stream</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Tech Stack ───────────────────────────────────────────────── -->
+<section class="section-tech" id="tech-stack">
+  <div class="container">
+    <div class="tech-header reveal">
+      <div class="section-label">Infrastructure</div>
+      <h2 class="section-title">Built on the Best AI Infrastructure</h2>
+      <p class="section-body" style="margin:0 auto;">Every layer of IRIS is production-grade — from the agent runtime to the observability backend to the mutation engine.</p>
+    </div>
+    <div class="tech-grid">
+      <div class="glass-card tech-card reveal d1">
+        <span class="tech-logo">⚙️</span>
+        <div class="tech-name">Google ADK 2.1</div>
+        <div class="tech-role">Multi-agent runtime</div>
+      </div>
+      <div class="glass-card tech-card reveal d2">
+        <span class="tech-logo">✨</span>
+        <div class="tech-name">Gemini 2.5 Flash</div>
+        <div class="tech-role">LLM backbone</div>
+      </div>
+      <div class="glass-card tech-card reveal d3">
+        <span class="tech-logo">🔭</span>
+        <div class="tech-name">Arize Phoenix</div>
+        <div class="tech-role">Observability &amp; evals</div>
+      </div>
+      <div class="glass-card tech-card reveal d4">
+        <span class="tech-logo">🔌</span>
+        <div class="tech-name">Phoenix MCP</div>
+        <div class="tech-role">10 MCP tools at runtime</div>
+      </div>
+      <div class="glass-card tech-card reveal d1">
+        <span class="tech-logo">🧬</span>
+        <div class="tech-name">TextGrad</div>
+        <div class="tech-role">Automatic prompt mutation</div>
+      </div>
+      <div class="glass-card tech-card reveal d2">
+        <span class="tech-logo">⚡</span>
+        <div class="tech-name">FastAPI</div>
+        <div class="tech-role">Async event API + SSE</div>
+      </div>
+      <div class="glass-card tech-card reveal d3">
+        <span class="tech-logo">📡</span>
+        <div class="tech-name">OpenInference</div>
+        <div class="tech-role">ADK instrumentation</div>
+      </div>
+      <div class="glass-card tech-card reveal d4">
+        <span class="tech-logo">🔬</span>
+        <div class="tech-name">OpenTelemetry</div>
+        <div class="tech-role">Trace &amp; span export</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ──────────────────────────────────────────────────────── -->
+<section class="section-cta" id="cta">
+  <div class="orb cta-orb"></div>
+  <div class="container">
+    <div class="cta-inner reveal">
+      <div class="cta-eyebrow">🏆 Arize × Google Cloud ADK Hackathon 2026</div>
+      <h2 class="cta-title">See IRIS in Action</h2>
+      <p class="cta-text">
+        Open the live dashboard to watch clinical AI events being evaluated in real time, or explore the source code to understand how the full multi-agent safety loop is built.
+      </p>
+      <div class="cta-btns">
+        <a href="/dashboard" class="btn btn-primary">Open Live Dashboard →</a>
+        <a href="https://github.com/adityashukla8/iris" target="_blank" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.933.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ───────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-text">IRIS © 2026 — Built for the Arize × Google Cloud ADK Hackathon</div>
+      <div class="footer-links">
+        <a href="https://github.com/adityashukla8/iris" target="_blank">GitHub</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="https://app.phoenix.arize.com" target="_blank">Phoenix</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  }, { passive: true });
+
+  // Scroll reveal
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  // Counter animation
+  function animateCounter(el) {
+    const target = parseFloat(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    const duration = 1800;
+    const start = performance.now();
+    (function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const v = target * (1 - Math.pow(1 - p, 3));
+      el.textContent = (Number.isInteger(target) ? Math.floor(v) : v.toFixed(1)) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = target + suffix;
+    })(start);
+  }
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && e.target.dataset.count) {
+        animateCounter(e.target);
+        counterObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
+</script>
+</body>
+</html>
