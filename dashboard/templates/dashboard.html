@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IRIS — Live Dashboard</title>
+  <title>IRIS — Shift Commander</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,205 +15,348 @@
       --gray-200: #E2E8F0;
       --gray-300: #CBD5E1;
       --gray-400: #94A3B8;
+      --gray-500: #64748B;
       --gray-600: #475569;
       --gray-700: #334155;
       --gray-800: #1E293B;
       --gray-900: #0F172A;
-
       --blue-50:  #EFF6FF;
       --blue-100: #DBEAFE;
       --blue-600: #2563EB;
       --blue-700: #1D4ED8;
-
-      --red-50:     #FEF2F2;
-      --red-100:    #FEE2E2;
-      --red-600:    #DC2626;
-      --red-700:    #B91C1C;
-      --green-50:   #F0FDF4;
-      --green-100:  #DCFCE7;
-      --green-700:  #15803D;
-      --amber-50:   #FFFBEB;
-      --amber-100:  #FEF3C7;
-      --amber-700:  #B45309;
-
+      --red-50:   #FEF2F2;
+      --red-100:  #FEE2E2;
+      --red-600:  #DC2626;
+      --red-700:  #B91C1C;
+      --green-50:  #F0FDF4;
+      --green-100: #DCFCE7;
+      --green-700: #15803D;
+      --amber-50:  #FFFBEB;
+      --amber-100: #FEF3C7;
+      --amber-700: #B45309;
       --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
       --shadow:    0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
-
       --font: 'Poppins', system-ui, -apple-system, sans-serif;
       --mono: 'JetBrains Mono', 'Fira Code', monospace;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
 
     /* ── Layout ─────────────────────────────────────────────────── */
-    .layout { display: grid; grid-template-rows: 58px 1fr; min-height: 100vh; }
+    .layout { display: grid; grid-template-rows: 58px 41px 1fr; height: 100vh; overflow: hidden; }
 
     /* ── Top Bar ────────────────────────────────────────────────── */
     .topbar {
       background: var(--white); border-bottom: 1px solid var(--gray-200);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; position: sticky; top: 0; z-index: 50;
-      box-shadow: var(--shadow-sm);
+      padding: 0 24px; z-index: 50; box-shadow: var(--shadow-sm);
     }
     .tb-left  { display: flex; align-items: center; gap: 16px; }
-    .tb-right { display: flex; align-items: center; gap: 12px; }
-
+    .tb-right { display: flex; align-items: center; gap: 10px; }
     .tb-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .9375rem; color: var(--gray-900); }
-    .tb-logo-mark {
-      width: 28px; height: 28px; background: var(--gray-900);
-      border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    }
-    .tb-sep { width: 1px; height: 18px; background: var(--gray-200); }
+    .tb-logo-mark { width: 28px; height: 28px; background: var(--gray-900); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .tb-sep  { width: 1px; height: 18px; background: var(--gray-200); }
     .tb-page { font-size: .8125rem; font-weight: 500; color: var(--gray-600); }
-
     .tb-status { display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 500; color: var(--green-700); }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green-700); }
-
-    .btn-sm {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 14px; border-radius: 6px; font-size: .8125rem;
-      font-weight: 600; font-family: var(--font); cursor: pointer;
-      border: none; transition: all .15s;
-    }
+    .last-refreshed { font-size: .7rem; font-family: var(--mono); color: var(--gray-400); white-space: nowrap; }
+    .btn-sm { display: inline-flex; align-items: center; gap: 5px; padding: 6px 13px; border-radius: 6px; font-size: .8125rem; font-weight: 600; font-family: var(--font); cursor: pointer; border: none; transition: all .15s; }
     .btn-primary { background: var(--blue-700); color: var(--white); }
     .btn-primary:hover { background: var(--blue-600); }
     .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
     .btn-ghost { background: var(--white); color: var(--gray-700); border: 1px solid var(--gray-200); }
     .btn-ghost:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .btn-refresh { background: var(--white); color: var(--gray-700); border: 1px solid var(--gray-200); }
+    .btn-refresh:hover { border-color: var(--gray-300); background: var(--gray-50); }
 
-    /* ── Main ───────────────────────────────────────────────────── */
-    .main { padding: 20px 24px; overflow-y: auto; }
+    /* ── Tab Nav ────────────────────────────────────────────────── */
+    .tab-nav { background: var(--white); border-bottom: 1px solid var(--gray-200); display: flex; align-items: stretch; padding: 0 24px; gap: 0; z-index: 40; }
+    .tab-btn { padding: 0 18px; font-size: .8125rem; font-weight: 500; color: var(--gray-500); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: var(--font); transition: color .15s, border-color .15s; height: 40px; }
+    .tab-btn:hover { color: var(--gray-800); }
+    .tab-btn.active { color: var(--blue-600); border-bottom-color: var(--blue-600); font-weight: 600; }
+
+    /* ── Tab Content ────────────────────────────────────────────── */
+    .tab-content { overflow: hidden; height: 100%; }
+    .tab-pane { height: 100%; }
+    .tab-pane[hidden] { display: none !important; }
+    .tab-pane[data-tab="overview"]  { overflow-y: auto; }
+    .tab-pane[data-tab="healing"]   { overflow-y: auto; }
+    .tab-pane[data-tab="pipeline"]  { overflow-y: auto; }
+    .tab-pane[data-tab="traces"]    { overflow: hidden; display: flex; flex-direction: column; }
+
+    /* ── Main (scrollable content area) ────────────────────────── */
+    .main { padding: 18px 24px; }
 
     /* ── Stat Row ───────────────────────────────────────────────── */
-    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-    .stat-card {
-      background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: 10px; padding: 16px 20px; box-shadow: var(--shadow-sm);
-    }
-    .stat-label { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 6px; }
-    .stat-value { font-size: 1.875rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
-    .stat-sub   { font-size: .75rem; color: var(--gray-400); }
+    .stats-row { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px 18px; box-shadow: var(--shadow-sm); }
+    .stat-label { font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); margin-bottom: 5px; }
+    .stat-value { font-size: 1.625rem; font-weight: 700; line-height: 1; margin-bottom: 3px; }
+    .stat-sub   { font-size: .6875rem; color: var(--gray-400); }
     .stat-value.neutral { color: var(--gray-900); }
     .stat-value.danger  { color: var(--red-600); }
     .stat-value.success { color: var(--green-700); }
     .stat-value.warn    { color: var(--amber-700); }
 
     /* ── Panel ──────────────────────────────────────────────────── */
-    .panel {
-      background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: 10px; overflow: hidden;
-      display: flex; flex-direction: column; box-shadow: var(--shadow-sm);
-    }
-    .panel-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px; border-bottom: 1px solid var(--gray-200);
-      background: var(--white);
-    }
+    .panel { background: var(--white); border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--gray-200); background: var(--white); flex-shrink: 0; }
     .panel-title { display: flex; align-items: center; gap: 7px; font-size: .8125rem; font-weight: 600; color: var(--gray-800); }
     .panel-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .dot-green { background: var(--green-700); }
     .dot-blue  { background: var(--blue-600); }
     .dot-amber { background: var(--amber-700); }
-    .panel-meta { font-size: .75rem; color: var(--gray-400); font-family: var(--mono); }
-    .panel-body { flex: 1; overflow-y: auto; max-height: 340px; }
-    .panel-pad  { padding: 14px 16px; flex: 1; }
+    .dot-red   { background: var(--red-600); }
+    .dot-gray  { background: var(--gray-400); }
+    .dot-purple { background: #7c3aed; }
+    .panel-meta { font-size: .6875rem; color: var(--gray-400); font-family: var(--mono); }
+    .panel-body { flex: 1; overflow-y: auto; max-height: 320px; }
+    .panel-pad  { padding: 14px 16px; flex: 1; overflow-y: auto; max-height: 320px; }
 
-    /* ── Grid ───────────────────────────────────────────────────── */
+    /* ── Grids ──────────────────────────────────────────────────── */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
-
-    /* ── Alert Feed ─────────────────────────────────────────────── */
-    .alert-item {
-      display: flex; align-items: flex-start; gap: 11px;
-      padding: 11px 16px; border-bottom: 1px solid var(--gray-100);
-      animation: slidein .25s ease;
-    }
-    @keyframes slidein { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform:none; } }
-    .alert-item:hover { background: var(--gray-50); }
-    .alert-item:last-child { border-bottom: none; }
-
-    .sev-icon {
-      width: 26px; height: 26px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .sev-critical { background: var(--red-50);   border: 1px solid var(--red-100);   color: var(--red-600); }
-    .sev-warning  { background: var(--amber-50);  border: 1px solid var(--amber-100); color: var(--amber-700); }
-    .sev-info     { background: var(--blue-50);   border: 1px solid var(--blue-100);  color: var(--blue-600); }
-
-    .alert-body    { flex: 1; min-width: 0; }
-    .alert-top     { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-    .alert-agent   { font-size: .8125rem; font-weight: 600; color: var(--gray-900); }
-    .alert-time    { font-size: .6875rem; color: var(--gray-400); font-family: var(--mono); white-space: nowrap; }
-    .alert-desc    { font-size: .8rem; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .alert-badges  { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .grid-healing { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 
     /* ── Badges ─────────────────────────────────────────────────── */
-    .badge {
-      display: inline-flex; align-items: center;
-      padding: 1px 8px; border-radius: 4px;
-      font-size: .6875rem; font-weight: 600; font-family: var(--mono);
-    }
+    .badge { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 4px; font-size: .625rem; font-weight: 600; font-family: var(--mono); }
     .badge-critical { background: var(--red-50);   color: var(--red-700);   border: 1px solid var(--red-100); }
     .badge-warning  { background: var(--amber-50);  color: var(--amber-700); border: 1px solid var(--amber-100); }
     .badge-info     { background: var(--blue-50);   color: var(--blue-700);  border: 1px solid var(--blue-100); }
     .badge-neutral  { background: var(--gray-100);  color: var(--gray-600);  border: 1px solid var(--gray-200); }
     .badge-success  { background: var(--green-50);  color: var(--green-700); border: 1px solid var(--green-100); }
+    .badge-sm { font-size: .5rem !important; padding: 1px 5px !important; }
+    .badge-lg { font-size: .75rem !important; padding: 3px 10px !important; border-radius: 5px !important; }
 
-    /* ── Trace Table ────────────────────────────────────────────── */
-    .trace-table { width: 100%; border-collapse: collapse; }
-    .trace-table thead th {
-      text-align: left; padding: 9px 16px;
-      font-size: .6875rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .07em; color: var(--gray-400);
-      border-bottom: 1px solid var(--gray-200);
-      background: var(--gray-50); position: sticky; top: 0;
-    }
-    .trace-table tbody td { padding: 9px 16px; font-size: .8125rem; color: var(--gray-600); border-bottom: 1px solid var(--gray-100); }
-    .trace-table tbody tr:hover td { background: var(--gray-50); }
-    .trace-table tbody tr:last-child td { border-bottom: none; }
-    .trace-agent { font-weight: 600; color: var(--gray-900); font-size: .8125rem; }
+    /* ── Alert Feed ─────────────────────────────────────────────── */
+    .alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--gray-100); animation: slidein .2s ease; }
+    @keyframes slidein { from { opacity:0; transform: translateY(-5px); } to { opacity:1; transform:none; } }
+    .alert-item:hover { background: var(--gray-50); }
+    .alert-item:last-child { border-bottom: none; }
+    .sev-icon { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sev-critical { background: var(--red-50);   border: 1px solid var(--red-100);   color: var(--red-600); }
+    .sev-warning  { background: var(--amber-50);  border: 1px solid var(--amber-100); color: var(--amber-700); }
+    .sev-info     { background: var(--blue-50);   border: 1px solid var(--blue-100);  color: var(--blue-600); }
+    .alert-body   { flex: 1; min-width: 0; }
+    .alert-top    { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 1px; }
+    .alert-agent  { font-size: .8125rem; font-weight: 600; color: var(--gray-900); }
+    .alert-time   { font-size: .625rem; color: var(--gray-400); font-family: var(--mono); white-space: nowrap; }
+    .alert-desc   { font-size: .75rem; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+
+    /* ── Evaluator Heatmap ──────────────────────────────────────── */
+    .heatmap-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .heatmap-table thead th { text-align: left; padding: 8px 12px; font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); border-bottom: 1px solid var(--gray-200); background: var(--gray-50); }
+    .heatmap-table thead th:not(:first-child) { text-align: right; }
+    .heatmap-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); }
+    .heatmap-table tbody td:not(:first-child) { text-align: right; font-family: var(--mono); font-size: .75rem; }
+    .heatmap-table tbody tr:last-child td { border-bottom: none; }
+    .eval-name-cell { font-weight: 500; color: var(--gray-800); font-size: .75rem; }
+    .heatmap-bar { display: inline-block; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+    .score-cell { display: flex; align-items: center; justify-content: flex-end; }
+
+    /* ── Severity Timeline ──────────────────────────────────────── */
+    .timeline-wrap { padding: 12px 16px 8px; height: 100%; display: flex; flex-direction: column; }
+    .timeline-chart { display: flex; align-items: flex-end; gap: 3px; flex: 1; min-height: 120px; max-height: 200px; }
+    .timeline-bucket { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 0; }
+    .tl-bar { width: 100%; min-height: 2px; }
+    .tl-info     { background: var(--blue-100); }
+    .tl-warning  { background: var(--amber-700); opacity: .7; }
+    .tl-critical { background: var(--red-600); }
+    .tl-label { font-size: .5rem; font-family: var(--mono); color: var(--gray-400); margin-top: 4px; white-space: nowrap; overflow: hidden; }
+    .timeline-legend { display: flex; gap: 12px; margin-top: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; font-size: .6875rem; color: var(--gray-600); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+    /* ── Query Type Breakdown ───────────────────────────────────── */
+    .qt-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .qt-table thead th { text-align: left; padding: 8px 12px; font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); border-bottom: 1px solid var(--gray-200); background: var(--gray-50); }
+    .qt-table thead th:not(:first-child) { text-align: right; }
+    .qt-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); font-size: .75rem; }
+    .qt-table tbody td:not(:first-child) { text-align: right; font-family: var(--mono); }
+    .qt-table tbody tr:last-child td { border-bottom: none; }
+    .fail-rate-bar { display: inline-block; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; background: var(--red-600); opacity: .6; }
 
     /* ── Healing ────────────────────────────────────────────────── */
-    .healing-item { padding: 14px 16px; border-bottom: 1px solid var(--gray-100); }
+    .healing-item { padding: 13px 16px; border-bottom: 1px solid var(--gray-100); }
     .healing-item:last-child { border-bottom: none; }
-    .healing-top  { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .healing-top  { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
     .healing-name { font-size: .875rem; font-weight: 600; color: var(--gray-900); }
-    .healing-meta { font-size: .75rem; color: var(--gray-400); font-family: var(--mono); margin-bottom: 10px; }
+    .healing-meta { font-size: .6875rem; color: var(--gray-400); font-family: var(--mono); margin-bottom: 8px; }
+    .healing-scores { display: flex; gap: 10px; margin-bottom: 8px; }
+    .score-pair { font-size: .6875rem; color: var(--gray-600); font-family: var(--mono); }
+    .score-delta { font-weight: 700; }
+    .score-delta.pos { color: var(--green-700); }
+    .score-delta.neg { color: var(--red-600); }
     .healing-btns { display: flex; gap: 7px; }
-    .btn-approve {
-      padding: 5px 12px; border-radius: 6px; font-size: .75rem; font-weight: 600;
-      background: var(--green-700); color: var(--white); border: none;
-      font-family: var(--font); cursor: pointer; transition: background .15s;
-    }
+    .btn-approve { padding: 4px 11px; border-radius: 5px; font-size: .75rem; font-weight: 600; background: var(--green-700); color: var(--white); border: none; font-family: var(--font); cursor: pointer; transition: background .15s; }
     .btn-approve:hover { background: #166534; }
-    .btn-reject {
-      padding: 5px 12px; border-radius: 6px; font-size: .75rem; font-weight: 600;
-      background: var(--white); color: var(--red-600);
-      border: 1px solid var(--red-100); font-family: var(--font); cursor: pointer; transition: all .15s;
-    }
+    .btn-reject { padding: 4px 11px; border-radius: 5px; font-size: .75rem; font-weight: 600; background: var(--white); color: var(--red-600); border: 1px solid var(--red-100); font-family: var(--font); cursor: pointer; transition: all .15s; }
     .btn-reject:hover { background: var(--red-50); }
 
-    /* ── Scan log ───────────────────────────────────────────────── */
-    #scanLog {
-      font-family: var(--mono); font-size: .75rem; color: var(--gray-600);
-      line-height: 1.7; white-space: pre-wrap;
-    }
+    /* ── Healing History ────────────────────────────────────────── */
+    .history-item { border-bottom: 1px solid var(--gray-100); }
+    .history-item:last-child { border-bottom: none; }
+    .history-header { display: flex; align-items: center; gap: 8px; padding: 11px 16px; cursor: pointer; transition: background .1s; }
+    .history-header:hover { background: var(--gray-50); }
+    .delta-badge { padding: 1px 7px; border-radius: 4px; font-size: .625rem; font-weight: 700; font-family: var(--mono); }
+    .delta-badge.pos { background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-100); }
+    .delta-badge.neg { background: var(--red-50);   color: var(--red-700);   border: 1px solid var(--red-100); }
+    .delta-badge.neutral { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .history-info { flex: 1; font-size: .75rem; color: var(--gray-600); min-width: 0; }
+    .history-expand { font-size: .7rem; color: var(--gray-400); transition: transform .15s; }
+    .history-item.open .history-expand { transform: rotate(90deg); }
+    .prompt-diff { display: none; padding: 0 16px 14px; }
+    .prompt-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .diff-col h4 { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 6px; }
+    .diff-col pre { font-family: var(--mono); font-size: .6875rem; color: var(--gray-700); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 10px; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; }
 
     /* ── Empty ──────────────────────────────────────────────────── */
-    .empty {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 6px; padding: 40px 16px; color: var(--gray-400);
-    }
+    .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 32px 16px; color: var(--gray-400); }
     .empty-icon { color: var(--gray-300); }
-    .empty-text { font-size: .8125rem; text-align: center; }
+    .empty-text { font-size: .75rem; text-align: center; }
+
+    /* ── Trace Inspector ────────────────────────────────────────── */
+    .trace-inspector { display: flex; height: 100%; overflow: hidden; }
+
+    .trace-list-panel { width: 300px; flex-shrink: 0; border-right: 1px solid var(--gray-200); background: var(--white); display: flex; flex-direction: column; overflow: hidden; }
+    .trace-list-header { padding: 10px 12px; border-bottom: 1px solid var(--gray-200); background: var(--gray-50); flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+    .trace-filter-select { flex: 1; font-size: .75rem; font-family: var(--font); color: var(--gray-700); border: 1px solid var(--gray-200); background: var(--white); border-radius: 5px; padding: 4px 7px; cursor: pointer; }
+    .trace-list-count { font-size: .625rem; font-family: var(--mono); color: var(--gray-400); white-space: nowrap; }
+    .trace-list-items { overflow-y: auto; flex: 1; }
+
+    .trace-list-item { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); cursor: pointer; transition: background .1s; }
+    .trace-list-item:hover { background: var(--gray-50); }
+    .trace-list-item.selected { background: var(--blue-50); border-left: 3px solid var(--blue-600); padding-left: 9px; }
+    .tli-row1 { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .tli-sev-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sev-dot-critical { background: var(--red-600); }
+    .sev-dot-warning  { background: var(--amber-700); }
+    .sev-dot-info     { background: var(--blue-600); }
+    .tli-qtype { font-size: .8125rem; font-weight: 500; color: var(--gray-800); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tli-time  { font-size: .6rem; font-family: var(--mono); color: var(--gray-400); white-space: nowrap; }
+    .tli-row2  { display: flex; align-items: center; gap: 6px; }
+    .tli-agent { font-size: .6875rem; color: var(--gray-500); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tli-evals { font-size: .6rem; font-family: var(--mono); color: var(--gray-400); }
+
+    /* ── Trace Detail Panel ─────────────────────────────────────── */
+    .trace-detail-panel { flex: 1; overflow-y: auto; background: var(--gray-50); }
+    .trace-detail-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray-300); gap: 12px; }
+    .trace-detail-empty p { font-size: .875rem; color: var(--gray-400); }
+
+    /* ── Clinical Case ──────────────────────────────────────────── */
+    .case-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--white); border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; flex-wrap: wrap; gap: 8px; }
+    .case-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .case-header-right { display: flex; align-items: center; gap: 8px; }
+    .case-qtype { font-size: .875rem; font-weight: 600; color: var(--gray-900); text-transform: capitalize; }
+    .case-sep   { color: var(--gray-300); font-size: .75rem; }
+    .case-agent { font-size: .8125rem; color: var(--gray-600); }
+    .case-ts    { font-size: .75rem; font-family: var(--mono); color: var(--gray-400); }
+    .case-id    { font-size: .6875rem; font-family: var(--mono); color: var(--gray-400); background: var(--gray-100); padding: 2px 8px; border-radius: 4px; }
+    .case-latency { font-size: .6875rem; font-family: var(--mono); color: var(--gray-500); background: var(--gray-100); padding: 2px 8px; border-radius: 4px; }
+
+    .case-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .case-io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .case-section { display: flex; flex-direction: column; gap: 6px; }
+    .case-section-label { font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); display: flex; align-items: center; gap: 6px; }
+    .case-text { font-family: var(--mono); font-size: .8125rem; color: var(--gray-700); background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; max-height: 160px; overflow-y: auto; }
+    .case-text.output-critical { border-color: var(--red-100); background: var(--red-50); color: var(--red-700); }
+    .case-text.output-warning  { border-color: var(--amber-100); background: var(--amber-50); }
+
+    /* Patient context chips */
+    .ctx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .ctx-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: .6875rem; font-weight: 500; background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); }
+    .ctx-chip.ctx-id      { background: var(--blue-50);   color: var(--blue-700);  border-color: var(--blue-100); }
+    .ctx-chip.ctx-med     { background: var(--green-50);  color: var(--green-700); border-color: var(--green-100); }
+    .ctx-chip.ctx-allergy { background: var(--red-50);    color: var(--red-700);   border-color: var(--red-100); font-weight: 600; }
+    .ctx-chip.ctx-warn    { background: var(--amber-50);  color: var(--amber-700); border-color: var(--amber-100); }
+    .ctx-chip.ctx-dx      { background: var(--gray-50);   color: var(--gray-600);  border-color: var(--gray-200); font-style: italic; }
+
+    /* ── Evaluator Cards ────────────────────────────────────────── */
+    .eval-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .eval-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px 14px; border-top: 3px solid; display: flex; flex-direction: column; gap: 7px; }
+    .eval-card.info     { border-top-color: var(--green-700); }
+    .eval-card.warning  { border-top-color: var(--amber-700); }
+    .eval-card.critical { border-top-color: var(--red-600); }
+    .eval-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+    .eval-card-name { font-size: .6875rem; font-weight: 600; color: var(--gray-700); font-family: var(--mono); line-height: 1.3; }
+    .eval-card-score { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); line-height: 1; flex-shrink: 0; }
+    .eval-card-score.info     { color: var(--green-700); }
+    .eval-card-score.warning  { color: var(--amber-700); }
+    .eval-card-score.critical { color: var(--red-600); }
+
+    /* Confidence bar */
+    .conf-row { display: flex; align-items: center; gap: 6px; }
+    .conf-label { font-size: .5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); white-space: nowrap; }
+    .conf-track { flex: 1; height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden; }
+    .conf-fill  { height: 100%; background: var(--green-700); border-radius: 2px; }
+    .conf-fill.conf-low { background: var(--red-600); }
+    .conf-val { font-size: .5625rem; font-family: var(--mono); color: var(--gray-600); white-space: nowrap; }
+    .conf-val.conf-low { color: var(--red-600); font-weight: 700; }
+
+    .eval-rationale { font-size: .75rem; color: var(--gray-600); line-height: 1.5; }
+
+    /* Flagged claims */
+    .flagged-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .claim-chip { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .625rem; background: var(--red-50); color: var(--red-700); border: 1px solid var(--red-100); }
+
+    /* Reasoning chain */
+    .chain-details { }
+    .chain-details summary { font-size: .6875rem; font-weight: 500; color: var(--blue-600); cursor: pointer; user-select: none; list-style: none; padding: 2px 0; }
+    .chain-details summary::-webkit-details-marker { display: none; }
+    .chain-steps { margin: 5px 0 0 14px; padding: 0; font-size: .6875rem; color: var(--gray-700); line-height: 1.7; }
+    .chain-steps li { margin-bottom: 1px; }
+    .skipped-evals { margin-top: 6px; font-size: .75rem; color: var(--gray-500); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .eval-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: .6875rem; font-family: var(--mono); font-weight: 500; border: 1px solid transparent; }
+    .eval-pill.critical { background: var(--red-50);   color: var(--red-700);   border-color: var(--red-100); }
+    .eval-pill.warning  { background: var(--amber-50);  color: var(--amber-700); border-color: var(--amber-100); }
+    .eval-pill.info     { background: var(--blue-50);   color: var(--blue-700);  border-color: var(--blue-100); }
+    .eval-pill.skipped  { background: var(--gray-100);  color: var(--gray-400);  border-color: var(--gray-200); }
+
+    /* ── Pipeline Diagram ───────────────────────────────────────── */
+    .pipe-flow { display: flex; flex-direction: column; }
+    .pipe-stage { padding: 14px 20px; border-bottom: 1px solid var(--gray-100); }
+    .pipe-stage:last-child { border-bottom: none; }
+    .pipe-stage-label { font-size: .5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--gray-400); margin-bottom: 10px; }
+    .pipe-nodes-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pipe-node { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 7px; font-size: .8125rem; font-weight: 500; border: 1px solid; font-family: var(--mono); }
+    .pipe-node.node-external { background: var(--gray-100); color: var(--gray-700); border-color: var(--gray-300); }
+    .pipe-node.node-iris     { background: var(--blue-50);  color: var(--blue-700);  border-color: var(--blue-100); }
+    .pipe-node.node-adk      { background: var(--blue-50);  color: var(--blue-700);  border-color: var(--blue-100); }
+    .pipe-node.node-eval     { background: var(--gray-50);  color: var(--gray-600);  border-color: var(--gray-200); font-size: .6875rem; padding: 5px 10px; }
+    .pipe-node.node-python   { background: var(--green-50); color: var(--green-700); border-color: var(--green-100); }
+    .pipe-node.node-phoenix  { background: #f5f0ff; color: #6d28d9; border-color: #ddd6fe; }
+    .pipe-arrow { font-size: .875rem; color: var(--gray-400); }
+    .pipe-connector { font-size: .6875rem; color: var(--gray-500); font-family: var(--mono); background: var(--gray-50); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--gray-200); }
+    .pipe-mcp-label { font-size: .6875rem; color: var(--amber-700); font-family: var(--mono); background: var(--amber-50); padding: 3px 10px; border-radius: 4px; border: 1px solid var(--amber-100); }
+    .pipe-down { text-align: left; padding: 4px 20px; color: var(--gray-300); font-size: 1rem; font-family: var(--mono); }
+
+    /* ── Scan / MCP Log ─────────────────────────────────────────── */
+    .scan-log-panel { font-family: var(--mono); font-size: .8rem; background: var(--gray-900); color: #e2e8f0; padding: 16px; border-radius: 8px; min-height: 160px; max-height: 380px; overflow-y: auto; line-height: 1.9; }
+    .log-line { white-space: pre-wrap; word-break: break-word; }
+    .log-mcp     { color: #93c5fd; }
+    .log-cluster { color: #fbbf24; font-weight: 600; }
+    .log-heal    { color: #86efac; }
+    .log-err     { color: #fca5a5; }
+
+    /* ── Activity Log ───────────────────────────────────────────── */
+    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 258px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column-reverse; }
+    .act-line { white-space: pre-wrap; word-break: break-word; }
+    .act-ts   { color: var(--gray-500); margin-right: 6px; font-size: .72rem; }
+    .act-info     { color: #e2e8f0; }
+    .act-warn     { color: #fbbf24; }
+    .act-critical { color: #fca5a5; font-weight: 600; }
+    .act-mcp      { color: #93c5fd; }
+    .act-adk      { color: #c4b5fd; }
+    .act-heal     { color: #86efac; }
 
     /* ── Responsive ─────────────────────────────────────────────── */
-    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(2,1fr); } .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr; } }
-    @media (max-width: 640px)  { .stats-row { grid-template-columns: 1fr 1fr; } .main { padding: 14px; } }
+    @media (max-width: 1280px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr; } .case-io-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px)  { .trace-list-panel { width: 260px; } }
+    @media (max-width: 640px)  { .stats-row { grid-template-columns: repeat(2,1fr); } .main { padding: 12px; } .grid-2 { grid-template-columns: 1fr; } .grid-healing { grid-template-columns: 1fr; } .trace-inspector { flex-direction: column; } .trace-list-panel { width: 100%; height: 220px; } }
   </style>
 </head>
 <body>
@@ -231,145 +374,402 @@
         IRIS
       </a>
       <div class="tb-sep"></div>
-      <span class="tb-page">Live Monitoring Dashboard</span>
+      <span class="tb-page">Shift Commander</span>
     </div>
     <div class="tb-right">
       <div class="tb-status"><div class="status-dot"></div><span id="sseStatus">Connecting</span></div>
+      <span class="last-refreshed" id="lastRefreshed"></span>
+      <button class="btn-sm btn-refresh" onclick="refreshAll()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
       <button class="btn-sm btn-primary" id="scanBtn" onclick="triggerScan()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Trigger Scan
       </button>
       <a href="/" class="btn-sm btn-ghost">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-        </svg>
-        Homepage
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Home
       </a>
     </div>
   </header>
 
-  <!-- Main -->
-  <main class="main">
+  <!-- Tab Nav -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
+    <button class="tab-btn" data-tab="traces" onclick="showTab('traces')">Trace Inspector</button>
+    <button class="tab-btn" data-tab="healing" onclick="showTab('healing')">Healing</button>
+    <button class="tab-btn" data-tab="pipeline" onclick="showTab('pipeline')">Pipeline</button>
+  </nav>
 
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Total Traces</div>
-        <div class="stat-value neutral" id="statTraces">{{ shift_stats.get('total_traces', 0) }}</div>
-        <div class="stat-sub">events evaluated this shift</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Hallucinations Caught</div>
-        <div class="stat-value danger" id="statHall">{{ shift_stats.get('hallucinations_caught', 0) }}</div>
-        <div class="stat-sub">warning + critical flags</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Self-Heals</div>
-        <div class="stat-value success" id="statHeals">{{ shift_stats.get('self_heals', 0) }}</div>
-        <div class="stat-sub">prompt mutations deployed</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Human Escalations</div>
-        <div class="stat-value warn" id="statEsc">{{ shift_stats.get('human_escalations', 0) }}</div>
-        <div class="stat-sub">low-confidence flags</div>
-      </div>
-    </div>
+  <!-- Tab Content -->
+  <div class="tab-content">
 
-    <!-- Alert Feed + Traces -->
-    <div class="grid-2">
+    <!-- ══ OVERVIEW TAB ══════════════════════════════════════════ -->
+    <div class="tab-pane" data-tab="overview">
+      <main class="main">
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
-          <span class="panel-meta" id="alertCount">0 alerts</span>
-        </div>
-        <div class="panel-body" id="alertFeed">
-          <div class="empty">
-            <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="2"/>
-                <path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/>
-              </svg>
-            </div>
-            <div class="empty-text">Waiting for alerts via SSE stream</div>
+        <!-- 6 Stat Cards -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Traces</div>
+            <div class="stat-value neutral" id="statTraces">{{ shift_stats.get('total_traces', 0) }}</div>
+            <div class="stat-sub">events evaluated</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Hallucinations</div>
+            <div class="stat-value danger" id="statHall">{{ shift_stats.get('hallucinations_caught', 0) }}</div>
+            <div class="stat-sub">warning + critical flags</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Self-Heals</div>
+            <div class="stat-value success" id="statHeals">{{ shift_stats.get('self_heals', 0) }}</div>
+            <div class="stat-sub">prompt mutations deployed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Escalations</div>
+            <div class="stat-value warn" id="statEsc">{{ shift_stats.get('human_escalations', 0) }}</div>
+            <div class="stat-sub">low-confidence flags</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pass Rate</div>
+            <div class="stat-value success" id="statPassRate">—</div>
+            <div class="stat-sub">info-severity / total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Critical Rate</div>
+            <div class="stat-value danger" id="statCritRate">—</div>
+            <div class="stat-sub">critical-severity / total</div>
           </div>
         </div>
-      </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot dot-blue"></div>Recent Traces</div>
-          <span class="panel-meta" id="traceCount">—</span>
-        </div>
-        <div class="panel-body">
-          <table class="trace-table">
-            <thead><tr><th>Agent</th><th>Query Type</th><th>Severity</th><th>Time</th></tr></thead>
-            <tbody id="traceFeed"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Healing + Scan Log -->
-    <div class="grid-3">
-
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot dot-amber"></div>Healing Candidates</div>
-          <span class="panel-meta" id="healingCount">0 pending</span>
-        </div>
-        <div class="panel-body" id="healingFeed">
-          <div class="empty">
-            <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-              </svg>
+        <!-- Analytics Grid -->
+        <div class="grid-3">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-blue"></div>Evaluator Heatmap</div>
+              <span class="panel-meta">7 evaluators</span>
             </div>
-            <div class="empty-text">No candidates pending — trigger a scan to detect failure clusters and run self-healing</div>
+            <div class="panel-body">
+              <table class="heatmap-table">
+                <thead><tr><th>Evaluator</th><th>Runs</th><th>Fails</th><th>Avg Score</th><th>Crits</th></tr></thead>
+                <tbody id="evalHeatmapBody">
+                  <tr><td colspan="5" style="padding:20px;text-align:center;font-size:.75rem;color:var(--gray-400);">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-green"></div>Severity Timeline</div>
+              <span class="panel-meta">last 12 buckets</span>
+            </div>
+            <div class="timeline-wrap">
+              <div class="timeline-chart" id="timelineChart">
+                <div class="empty" style="width:100%;padding:20px 0;"><div class="empty-text">No trace data yet</div></div>
+              </div>
+              <div class="timeline-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:var(--blue-100);border:1px solid var(--blue-600);"></div>info</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--amber-700);opacity:.7;"></div>warning</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--red-600);"></div>critical</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-amber"></div>Query Type Breakdown</div>
+              <span class="panel-meta" id="qtCount">—</span>
+            </div>
+            <div class="panel-body">
+              <table class="qt-table">
+                <thead><tr><th>Query Type</th><th>Count</th><th>Fail Rate</th></tr></thead>
+                <tbody id="qtBody">
+                  <tr><td colspan="3" style="padding:20px;text-align:center;font-size:.75rem;color:var(--gray-400);">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot dot-blue"></div>Scan Output</div>
-          <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="document.getElementById('scanLog').textContent='Ready.'">Clear</button>
-        </div>
-        <div class="panel-pad" style="max-height:280px;overflow-y:auto;">
-          <div id="scanLog">Ready. Click "Trigger Scan" to query Phoenix spans via MCP and detect failure clusters.</div>
-        </div>
-      </div>
+        <!-- Alert Feed + Activity Log (2-column) -->
+        <div class="grid-2" style="margin-bottom:14px;">
 
+          <!-- Live Alert Feed -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
+              <span class="panel-meta" id="alertCount">0 alerts</span>
+            </div>
+            <div class="panel-body" id="alertFeed" style="max-height:280px;">
+              <div class="empty">
+                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg></div>
+                <div class="empty-text">Waiting for SSE alerts</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Log -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-purple"></div>Activity Log</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-meta" id="activityStatus">Connecting…</span>
+                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
+              </div>
+            </div>
+            <div class="panel-pad" style="padding:10px 14px;">
+              <div class="activity-log" id="activityLog">
+                <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
     </div>
-  </main>
-</div>
+
+    <!-- ══ TRACES TAB ════════════════════════════════════════════ -->
+    <div class="tab-pane" data-tab="traces" hidden>
+      <div class="trace-inspector">
+
+        <!-- Left: Trace List -->
+        <div class="trace-list-panel">
+          <div class="trace-list-header">
+            <select class="trace-filter-select" id="sevFilter" onchange="filterTraces()">
+              <option value="">All severities</option>
+              <option value="critical">Critical only</option>
+              <option value="warning">Warning only</option>
+              <option value="info">Info only</option>
+            </select>
+            <span class="trace-list-count" id="traceListCount">0</span>
+          </div>
+          <div class="trace-list-items" id="traceListItems">
+            <div class="empty"><div class="empty-text">No traces yet — submit an event</div></div>
+          </div>
+        </div>
+
+        <!-- Right: Trace Detail -->
+        <div class="trace-detail-panel" id="traceDetail">
+          <div class="trace-detail-empty">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <p>Select a trace to inspect the full clinical case</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ HEALING TAB ═══════════════════════════════════════════ -->
+    <div class="tab-pane" data-tab="healing" hidden>
+      <main class="main">
+
+        <div class="grid-healing">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-amber"></div>Healing Candidates</div>
+              <span class="panel-meta" id="healingCount">0 pending</span>
+            </div>
+            <div class="panel-body" id="healingFeed">
+              <div class="empty">
+                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+                <div class="empty-text">No candidates — trigger a scan to detect failure clusters</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-gray"></div>Healing History</div>
+              <span class="panel-meta" id="historyCount">—</span>
+            </div>
+            <div class="panel-body" id="healingHistory">
+              <div class="empty">
+                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                <div class="empty-text">No healing history yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- ══ PIPELINE TAB ══════════════════════════════════════════ -->
+    <div class="tab-pane" data-tab="pipeline" hidden>
+      <main class="main">
+
+        <!-- Architecture Diagram -->
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot dot-purple"></div>IRIS Architecture — Live Pipeline</div>
+            <span class="panel-meta">how your event flows through the system</span>
+          </div>
+          <div class="pipe-flow">
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">1 — Input</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-external">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  ORION — Upstream Clinical AI
+                </div>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-connector">POST /event · input_prompt · output_text · retrieved_context · tool_calls</span>
+                <span class="pipe-arrow">→</span>
+                <div class="pipe-node node-iris">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  IRIS SUPERVISOR — FastAPI
+                </div>
+              </div>
+            </div>
+
+            <div class="pipe-down">↓ asyncio.gather — 7 parallel Gemini 2.5-flash evaluations</div>
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">2 — Parallel Evaluation (all 7 run concurrently)</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-eval">dosage_boundary</div>
+                <div class="pipe-node node-eval">factual_hallucination</div>
+                <div class="pipe-node node-eval">drug_interaction</div>
+                <div class="pipe-node node-eval">allergy_contraindication</div>
+                <div class="pipe-node node-eval">context_gap</div>
+                <div class="pipe-node node-eval">attribution</div>
+                <div class="pipe-node node-eval">surgical_phase</div>
+              </div>
+            </div>
+
+            <div class="pipe-down">↓ EvalResult[] — score (0–10) · severity · reasoning_chain · confidence · flagged_claims</div>
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">3 — Observability + Alert Dispatch</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-phoenix">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  write_phoenix_span_annotation → Arize Phoenix OTel
+                </div>
+                <span class="pipe-arrow" style="color:var(--gray-300);">+</span>
+                <div class="pipe-node node-iris">SSE push → Live Alert Feed → Dashboard</div>
+              </div>
+            </div>
+
+            <div class="pipe-down">↓ Phoenix MCP: get-spans / get-span-annotations — Pattern Detector reads its own traces</div>
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">4 — Pattern Detection (ADK Agent + Phoenix MCP)</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-adk">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  pattern_detector — LlmAgent (Gemini 2.5-flash)
+                </div>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-mcp-label">MCP: get-spans · get-span-annotations · list-traces · list-projects</span>
+              </div>
+            </div>
+
+            <div class="pipe-down">↓ healing_required = true → failure cluster above threshold (hallucination_rate &gt; 15%, n ≥ 5)</div>
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">5 — Self-Healer DIAGNOSE Phase (ADK Agent + Phoenix MCP)</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-adk">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                  self_healer — LlmAgent (Gemini 2.5-flash)
+                </div>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-mcp-label">MCP: get-latest-prompt · list-prompt-versions · add-dataset-examples · get-dataset-examples</span>
+              </div>
+            </div>
+
+            <div class="pipe-down">↓ HealingDiagnosis JSON — failure_analysis · current_prompt_text · failing_span_ids</div>
+
+            <div class="pipe-stage">
+              <div class="pipe-stage-label">6 — Healing Pipeline (Python async)</div>
+              <div class="pipe-nodes-row">
+                <div class="pipe-node node-python">TextGrad Mutation</div>
+                <span class="pipe-arrow">→</span>
+                <div class="pipe-node node-python">Validate (5 examples)</div>
+                <span class="pipe-arrow">→</span>
+                <div class="pipe-node node-python">Human Gate / Auto-approve</div>
+                <span class="pipe-arrow">→</span>
+                <div class="pipe-node node-phoenix">Deploy → Phoenix prompt v{N+1}</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- MCP Activity / Scan Output -->
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="panel-meta" id="scanMeta">Ready</span>
+              <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
+            </div>
+          </div>
+          <div class="panel-pad" style="padding:14px 16px;max-height:none;">
+            <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" (top bar) to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div><!-- /tab-content -->
+</div><!-- /layout -->
 
 <script>
   const BADGE = { critical:'badge-critical', warning:'badge-warning', info:'badge-info' };
   const SEV_ICON = {
-    critical: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-    warning:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-    info:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+    critical: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    warning:  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    info:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   };
 
   let alertCount = 0;
+  let currentTraces = [];
+  let selectedTraceId = null;
+  let currentFilter = '';
 
-  // ── SSE ───────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtPct(v) { return (v * 100).toFixed(1) + '%'; }
+
+  // ── Tab Navigation ───────────────────────────────────────────────
+  function showTab(name) {
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      if (p.dataset.tab === name) p.removeAttribute('hidden');
+      else p.setAttribute('hidden', '');
+    });
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    if (name === 'traces' && currentTraces.length && !selectedTraceId) {
+      selectTrace(currentTraces[0].trace_id);
+    }
+  }
+
+  // ── SSE ──────────────────────────────────────────────────────────
   function connectSSE() {
     const sse = new EventSource('/stream/alerts');
     const statusEl = document.getElementById('sseStatus');
     sse.onopen = () => { statusEl.textContent = 'Live'; };
-    sse.onerror = () => { statusEl.textContent = 'Reconnecting'; };
+    sse.onerror = () => {
+      statusEl.textContent = 'Reconnecting';
+      sse.close();
+      setTimeout(connectSSE, 3000);
+    };
     sse.onmessage = (e) => {
       const d = JSON.parse(e.data);
       if (d.type === 'heartbeat') return;
       alertCount++;
       document.getElementById('alertCount').textContent = alertCount + (alertCount === 1 ? ' alert' : ' alerts');
       const sev = d.severity || 'info';
-      const ts = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const ts  = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
       const feed = document.getElementById('alertFeed');
       if (feed.querySelector('.empty')) feed.innerHTML = '';
       const el = document.createElement('div');
@@ -385,52 +785,280 @@
           <div class="alert-badges">
             <span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span>
             ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
+            ${d.failure_type ? `<span class="badge badge-neutral">${esc(d.failure_type)}</span>` : ''}
             ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
           </div>
         </div>`;
       feed.insertBefore(el, feed.firstChild);
-      if (sev === 'critical' || sev === 'warning') {
-        const v = document.getElementById('statHall');
-        v.textContent = parseInt(v.textContent || 0) + 1;
-      }
     };
   }
 
-  // ── Traces ───────────────────────────────────────────────────
-  async function pollTraces() {
+  // ── Traces ───────────────────────────────────────────────────────
+  async function fetchTraces() {
     try {
-      const r = await fetch('/traces?limit=25');
+      const r = await fetch('/traces?limit=50');
       const d = await r.json();
-      const traces = d.traces || [];
-      document.getElementById('traceCount').textContent = traces.length + ' recent';
-      document.getElementById('traceFeed').innerHTML = traces.map(t => {
-        const sev = t.severity || 'info';
-        const ts = new Date(t.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        return `<tr>
-          <td><span class="trace-agent">${esc(t.agent_name)}</span></td>
-          <td><span class="badge badge-neutral">${esc(t.query_type)}</span></td>
-          <td><span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span></td>
-          <td style="font-family:var(--mono);font-size:.75rem;color:var(--gray-400);">${ts}</td>
-        </tr>`;
-      }).join('');
+      currentTraces = d.traces || [];
+      renderTraceList();
     } catch (_) {}
   }
 
-  // ── Status ───────────────────────────────────────────────────
-  async function pollStatus() {
+  function filterTraces() {
+    currentFilter = document.getElementById('sevFilter').value;
+    renderTraceList();
+  }
+
+  function renderTraceList() {
+    const filtered = currentFilter ? currentTraces.filter(t => t.severity === currentFilter) : currentTraces;
+    document.getElementById('traceListCount').textContent = filtered.length + ' traces';
+    const container = document.getElementById('traceListItems');
+    if (!filtered.length) {
+      container.innerHTML = `<div class="empty"><div class="empty-text">No traces${currentFilter ? ' for filter' : ' yet'}</div></div>`;
+      return;
+    }
+    container.innerHTML = filtered.map(t => {
+      const sev = t.severity || 'info';
+      const ts  = new Date(t.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const evalCount = (t.evaluations || []).filter(e => !e.skipped).length;
+      const qt = (t.query_type || '').replace(/_/g, ' ');
+      return `
+        <div class="trace-list-item ${t.trace_id === selectedTraceId ? 'selected' : ''}"
+             data-trace-id="${esc(t.trace_id)}"
+             onclick="selectTrace('${esc(t.trace_id)}')">
+          <div class="tli-row1">
+            <div class="tli-sev-dot sev-dot-${sev}"></div>
+            <span class="tli-qtype">${esc(qt)}</span>
+            <span class="tli-time">${ts}</span>
+          </div>
+          <div class="tli-row2">
+            <span class="tli-agent">${esc(t.agent_name || '')}</span>
+            <span class="badge ${BADGE[sev]} badge-sm">${sev}</span>
+            <span class="tli-evals">${evalCount} evals</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Auto-select first if nothing selected
+    if (!selectedTraceId || !filtered.find(t => t.trace_id === selectedTraceId)) {
+      if (filtered.length > 0) selectTrace(filtered[0].trace_id);
+    }
+  }
+
+  async function selectTrace(traceId) {
+    selectedTraceId = traceId;
+    // Update selection highlight
+    document.querySelectorAll('.trace-list-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.traceId === traceId);
+    });
+    try {
+      const r = await fetch(`/traces/${traceId}`);
+      if (!r.ok) throw new Error('not found');
+      const { trace } = await r.json();
+      renderTraceDetail(trace);
+    } catch (_) {
+      document.getElementById('traceDetail').innerHTML =
+        `<div class="trace-detail-empty"><p>Could not load trace details.</p></div>`;
+    }
+  }
+
+  function renderTraceDetail(t) {
+    const sev = t.severity || 'info';
+    const ctx = t.retrieved_context || {};
+    const meds = ctx.medications || [];
+    const allergies = ctx.allergies || [];
+    const diagnoses = ctx.diagnoses || [];
+    const evals = t.evaluations || [];
+    const activeEvals = evals.filter(e => !e.skipped);
+    const skippedEvals = evals.filter(e => e.skipped);
+
+    // Patient context chips
+    const ctxParts = [];
+    if (ctx.patient_id) ctxParts.push(`<span class="ctx-chip ctx-id">PT: ${esc(ctx.patient_id)}</span>`);
+    if (ctx.age_years)  ctxParts.push(`<span class="ctx-chip">${ctx.age_years} yr</span>`);
+    if (ctx.weight_kg)  ctxParts.push(`<span class="ctx-chip">${ctx.weight_kg} kg</span>`);
+    if (ctx.creatinine_clearance != null) ctxParts.push(`<span class="ctx-chip ctx-warn">CrCl ${ctx.creatinine_clearance} mL/min</span>`);
+    meds.forEach(m => ctxParts.push(`<span class="ctx-chip ctx-med">${esc(m)}</span>`));
+    allergies.forEach(a => ctxParts.push(`<span class="ctx-chip ctx-allergy">&#9888; ${esc(a)}</span>`));
+    diagnoses.forEach(d => ctxParts.push(`<span class="ctx-chip ctx-dx">${esc(d)}</span>`));
+
+    // Evaluator cards
+    const evalCardsHtml = activeEvals.map(e => {
+      const esev = e.severity || 'info';
+      const conf = e.confidence != null ? e.confidence : 1.0;
+      const isLowConf = conf < 0.6;
+      const claims = e.flagged_claims || [];
+      const chain  = e.reasoning_chain || [];
+      return `
+        <div class="eval-card ${esev}">
+          <div class="eval-card-header">
+            <span class="eval-card-name">${esc(e.evaluator || '')}</span>
+            <span class="eval-card-score ${esev}">${Number(e.score || 0).toFixed(1)}</span>
+          </div>
+          <span class="badge badge-${esev} badge-sm">${esev.toUpperCase()}</span>
+          <div class="conf-row">
+            <span class="conf-label">Confidence</span>
+            <div class="conf-track"><div class="conf-fill${isLowConf ? ' conf-low' : ''}" style="width:${(conf*100).toFixed(0)}%"></div></div>
+            <span class="conf-val${isLowConf ? ' conf-low' : ''}">${conf.toFixed(2)}${isLowConf ? ' ⚠' : ''}</span>
+          </div>
+          <div class="eval-rationale">${esc(e.rationale || '—')}</div>
+          ${claims.length ? `<div class="flagged-chips">${claims.map(c=>`<span class="claim-chip">${esc(c)}</span>`).join('')}</div>` : ''}
+          ${chain.length ? `
+            <details class="chain-details">
+              <summary>&#9656; Reasoning chain (${chain.length} steps)</summary>
+              <ol class="chain-steps">${chain.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+            </details>` : ''}
+        </div>`;
+    }).join('');
+
+    const ts = new Date(t.timestamp).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const shortId = (t.trace_id || '').slice(0, 8);
+    const qt = (t.query_type || '').replace(/_/g, ' ');
+    const outputCls = sev !== 'info' ? ` output-${sev}` : '';
+
+    document.getElementById('traceDetail').innerHTML = `
+      <div class="case-header">
+        <div class="case-header-left">
+          <span class="badge badge-${sev} badge-lg">${sev.toUpperCase()}</span>
+          <span class="case-qtype">${esc(qt)}</span>
+          <span class="case-sep">·</span>
+          <span class="case-agent">${esc(t.agent_name || '')}</span>
+          ${t.agent_version && t.agent_version !== 'unknown' ? `<span class="case-sep">·</span><span class="case-ts">v${esc(t.agent_version)}</span>` : ''}
+          <span class="case-sep">·</span>
+          <span class="case-ts">${ts}</span>
+        </div>
+        <div class="case-header-right">
+          <span class="case-id">#${shortId}</span>
+          ${t.latency_ms ? `<span class="case-latency">${t.latency_ms}ms</span>` : ''}
+        </div>
+      </div>
+      <div class="case-body">
+        <div class="case-io-grid">
+          <div class="case-section">
+            <div class="case-section-label">Input Prompt</div>
+            <div class="case-text">${esc(t.input_prompt || '—')}</div>
+          </div>
+          ${ctxParts.length ? `
+            <div class="case-section">
+              <div class="case-section-label">Patient Context</div>
+              <div class="ctx-chips">${ctxParts.join('')}</div>
+            </div>` : '<div></div>'}
+        </div>
+        <div class="case-section">
+          <div class="case-section-label">
+            AI Output
+            <span class="badge badge-${sev} badge-sm">${sev.toUpperCase()}</span>
+          </div>
+          <div class="case-text${outputCls}">${esc(t.output_text || '—')}</div>
+        </div>
+        <div class="case-section">
+          <div class="case-section-label">
+            Evaluator Results
+            <span style="color:var(--gray-400);font-weight:400;font-size:.6875rem;">${activeEvals.length} ran · ${skippedEvals.length} skipped</span>
+          </div>
+          ${activeEvals.length ? `<div class="eval-cards-grid">${evalCardsHtml}</div>` : '<div class="empty" style="padding:20px 0;"><div class="empty-text">No evaluations available</div></div>'}
+          ${skippedEvals.length ? `
+            <div class="skipped-evals">
+              <span style="font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);">Skipped:</span>
+              ${skippedEvals.map(e=>`<span class="eval-pill skipped">${esc(e.evaluator)}</span>`).join('')}
+            </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // ── Status ───────────────────────────────────────────────────────
+  async function fetchStatus() {
     try {
       const r = await fetch('/status');
       const d = await r.json();
       const s = d.stats || {};
-      document.getElementById('statTraces').textContent = s.total_traces    || 0;
+      document.getElementById('statTraces').textContent = s.total_traces        || 0;
       document.getElementById('statHall').textContent   = s.hallucinations_caught || 0;
-      document.getElementById('statHeals').textContent  = s.self_heals      || 0;
-      document.getElementById('statEsc').textContent    = s.human_escalations || 0;
+      document.getElementById('statHeals').textContent  = s.self_heals          || 0;
+      document.getElementById('statEsc').textContent    = s.human_escalations   || 0;
     } catch (_) {}
   }
 
-  // ── Healing ──────────────────────────────────────────────────
-  async function pollHealing() {
+  // ── Analytics ────────────────────────────────────────────────────
+  async function fetchAnalytics() {
+    try {
+      const r = await fetch('/analytics');
+      const d = await r.json();
+      const a = d.analytics || {};
+
+      if (a.pass_rate     != null) document.getElementById('statPassRate').textContent  = fmtPct(a.pass_rate);
+      if (a.critical_rate != null) document.getElementById('statCritRate').textContent = fmtPct(a.critical_rate);
+
+      // Evaluator Heatmap
+      const tbody = document.getElementById('evalHeatmapBody');
+      const stats = a.evaluator_stats || {};
+      const evalNames = Object.keys(stats);
+      if (!evalNames.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;font-size:.75rem;color:var(--gray-400);">No evaluation data yet</td></tr>`;
+      } else {
+        tbody.innerHTML = evalNames.map(name => {
+          const s = stats[name];
+          const failRate = s.runs ? s.failures / s.runs : 0;
+          const hue = Math.round(120 * Math.max(0, 1 - failRate * 2));
+          const bg = `hsl(${hue},60%,96%)`;
+          const scoreBar = s.avg_score != null
+            ? `<span class="heatmap-bar" style="width:${Math.round(s.avg_score*8)}px;background:hsl(${hue},60%,55%);"></span>${s.avg_score}`
+            : '—';
+          return `<tr style="background:${bg};">
+            <td class="eval-name-cell">${esc(name.replace(/_/g,' '))}</td>
+            <td>${s.runs}</td>
+            <td>${s.failures > 0 ? `<span style="color:var(--red-600);font-weight:600;">${s.failures}</span>` : '0'}</td>
+            <td><div class="score-cell">${scoreBar}</div></td>
+            <td>${s.critical_count > 0 ? `<span style="color:var(--red-600);font-weight:600;">${s.critical_count}</span>` : '0'}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // Severity Timeline
+      const buckets = a.severity_timeline || [];
+      const chart = document.getElementById('timelineChart');
+      if (!buckets.length) {
+        chart.innerHTML = `<div class="empty" style="width:100%;padding:20px 0;"><div class="empty-text">No trace data yet</div></div>`;
+      } else {
+        const maxTotal = Math.max(...buckets.map(b => (b.info||0)+(b.warning||0)+(b.critical||0)), 1);
+        const H = 140;
+        chart.innerHTML = buckets.map(b => {
+          const ih = Math.round(((b.info||0)/maxTotal)*H);
+          const wh = Math.round(((b.warning||0)/maxTotal)*H);
+          const ch = Math.round(((b.critical||0)/maxTotal)*H);
+          const tot = (b.info||0)+(b.warning||0)+(b.critical||0);
+          return `<div class="timeline-bucket">
+            ${b.critical>0?`<div class="tl-bar tl-critical" style="height:${ch}px;" title="${b.critical} critical"></div>`:''}
+            ${b.warning >0?`<div class="tl-bar tl-warning"  style="height:${wh}px;" title="${b.warning} warning"></div>`:''}
+            ${b.info    >0?`<div class="tl-bar tl-info"     style="height:${ih}px;" title="${b.info} info"></div>`:''}
+            ${tot===0?`<div class="tl-bar tl-info" style="height:2px;"></div>`:''}
+            <div class="tl-label">${esc(b.ts)}</div>
+          </div>`;
+        }).join('');
+      }
+
+      // Query Type Breakdown
+      const qt = a.query_type_breakdown || {};
+      const qtKeys = Object.keys(qt);
+      const qtBody = document.getElementById('qtBody');
+      document.getElementById('qtCount').textContent = qtKeys.length + ' types';
+      if (!qtKeys.length) {
+        qtBody.innerHTML = `<tr><td colspan="3" style="padding:20px;text-align:center;font-size:.75rem;color:var(--gray-400);">No data yet</td></tr>`;
+      } else {
+        qtBody.innerHTML = qtKeys.sort((a,b) => qt[b].count - qt[a].count).map(k => {
+          const v = qt[k];
+          const barW = Math.round(v.failure_rate * 60);
+          return `<tr>
+            <td style="font-size:.75rem;color:var(--gray-800);">${esc(k.replace(/_/g,' '))}</td>
+            <td>${v.count}</td>
+            <td><span class="fail-rate-bar" style="width:${barW}px;"></span>${fmtPct(v.failure_rate)}</td>
+          </tr>`;
+        }).join('');
+      }
+    } catch (_) {}
+  }
+
+  // ── Healing Candidates ───────────────────────────────────────────
+  async function fetchHealingCandidates() {
     try {
       const r = await fetch('/healing/candidates');
       const d = await r.json();
@@ -438,67 +1066,267 @@
       document.getElementById('healingCount').textContent = candidates.length + ' pending';
       const feed = document.getElementById('healingFeed');
       if (!candidates.length) {
-        feed.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div><div class="empty-text">No candidates — trigger a scan to detect failure clusters</div></div>`;
+        feed.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div><div class="empty-text">No candidates — trigger a scan to detect failure clusters</div></div>`;
         return;
       }
-      feed.innerHTML = candidates.map(c => `
-        <div class="healing-item">
-          <div class="healing-top">
-            <span class="healing-name">${esc(c.query_type)} &mdash; ${esc(c.agent_name)}</span>
-            <span class="badge badge-warning">pending</span>
-          </div>
-          <div class="healing-meta">id: ${esc((c.candidate_id||'').slice(0,8))}&hellip; &nbsp;&middot;&nbsp; hallucination rate: ${((c.hallucination_rate||0)*100).toFixed(0)}%</div>
-          <div class="healing-btns">
-            <button class="btn-approve" onclick="approveCandidate('${esc(c.candidate_id)}')">Approve</button>
-            <button class="btn-reject"  onclick="rejectCandidate('${esc(c.candidate_id)}')">Reject</button>
-          </div>
-        </div>`).join('');
+      feed.innerHTML = candidates.map(c => {
+        const qt = c.diagnosis?.query_type || c.query_type || '—';
+        const agn = c.diagnosis?.agent_name || c.agent_name || '—';
+        const hr  = c.diagnosis?.hallucination_rate || c.hallucination_rate || 0;
+        const sb = c.validation_score_before != null ? Number(c.validation_score_before).toFixed(2) : '—';
+        const sa = c.validation_score_after  != null ? Number(c.validation_score_after).toFixed(2)  : '—';
+        const imp = c.improvement_score;
+        let deltaHtml = '';
+        if (imp != null) {
+          const cls = imp >= 0 ? 'pos' : 'neg';
+          deltaHtml = `<span class="score-delta ${cls}">${imp >= 0 ? '+' : ''}${Number(imp).toFixed(2)}</span>`;
+        }
+        const fa = c.diagnosis?.failure_analysis || '';
+        return `
+          <div class="healing-item">
+            <div class="healing-top">
+              <span class="healing-name">${esc(qt)} — ${esc(agn)}</span>
+              <span class="badge badge-warning">pending</span>
+            </div>
+            <div class="healing-meta">id: ${esc((c.candidate_id||'').slice(0,8))}… · fail rate: ${((hr)*100).toFixed(0)}%</div>
+            ${fa ? `<div style="font-size:.75rem;color:var(--gray-600);margin-bottom:6px;line-height:1.4;font-style:italic;">${esc(fa.slice(0,200))}</div>` : ''}
+            <div class="healing-scores">
+              <span class="score-pair">before <strong>${sb}</strong></span>
+              <span style="color:var(--gray-400);">&rarr;</span>
+              <span class="score-pair">after <strong>${sa}</strong></span>
+              ${deltaHtml}
+            </div>
+            <div class="healing-btns">
+              <button class="btn-approve" onclick="approveCandidate('${esc(c.candidate_id)}')">Approve</button>
+              <button class="btn-reject"  onclick="rejectCandidate('${esc(c.candidate_id)}')">Reject</button>
+            </div>
+          </div>`;
+      }).join('');
     } catch (_) {}
   }
 
-  // ── Scan ─────────────────────────────────────────────────────
+  // ── Healing History ──────────────────────────────────────────────
+  async function fetchHealingHistory() {
+    try {
+      const r = await fetch('/healing/history?limit=20');
+      const d = await r.json();
+      const history = d.history || [];
+      document.getElementById('historyCount').textContent = history.length + ' entries';
+      const panel = document.getElementById('healingHistory');
+      if (!history.length) {
+        panel.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="empty-text">No healing history yet</div></div>`;
+        return;
+      }
+      panel.innerHTML = history.map((c, idx) => {
+        const imp = c.improvement_score;
+        let deltaClass = 'neutral', deltaText = '—';
+        if (imp != null) { deltaClass = imp >= 0 ? 'pos' : 'neg'; deltaText = (imp >= 0 ? '+' : '') + Number(imp).toFixed(2); }
+        const ts = c.deployed_at || c.approved_at || c.timestamp || '';
+        const tsShort = ts ? new Date(ts).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        const qt  = c.diagnosis?.query_type || c.query_type || '—';
+        const old_ = c.old_prompt_text || '';
+        const new_ = c.new_prompt_text || '';
+        return `
+          <div class="history-item" id="hist-${idx}">
+            <div class="history-header" onclick="toggleHistDiff(${idx})">
+              <span class="delta-badge ${deltaClass}">${esc(deltaText)}</span>
+              <span class="history-info">${esc(qt.replace(/_/g,' '))} · ${esc(c.status||'')} · ${esc(tsShort)}</span>
+              <span class="history-expand"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+            </div>
+            <div class="prompt-diff" id="diff-${idx}">
+              <div class="prompt-diff-grid">
+                <div class="diff-col"><h4>Before</h4><pre>${esc(old_)||'<em>—</em>'}</pre></div>
+                <div class="diff-col"><h4>After</h4><pre>${esc(new_)||'<em>—</em>'}</pre></div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (_) {}
+  }
+
+  function toggleHistDiff(idx) {
+    const item = document.getElementById('hist-' + idx);
+    const diff = document.getElementById('diff-' + idx);
+    const open = diff.style.display !== 'none' && diff.style.display !== '';
+    diff.style.display = open ? 'none' : 'block';
+    item.classList.toggle('open', !open);
+  }
+
+  // ── Scan / MCP Log ───────────────────────────────────────────────
+  function parseScanOutput(resultText) {
+    const now = () => '[' + new Date().toLocaleTimeString() + '] ';
+    const lines = [];
+    lines.push({ text: now() + 'Pattern Detector invoked — querying Arize Phoenix spans via MCP', cls: '' });
+    if (!resultText || !resultText.trim()) {
+      lines.push({ text: now() + 'No result text returned', cls: 'err' });
+      return lines;
+    }
+    let data = null;
+    try {
+      const clean = resultText.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+      const start = clean.indexOf('{');
+      const end   = clean.lastIndexOf('}');
+      if (start !== -1 && end !== -1) data = JSON.parse(clean.slice(start, end+1));
+    } catch (_) {}
+
+    if (data) {
+      if (data.scan_timestamp) lines.push({ text: now() + 'Scan at: ' + String(data.scan_timestamp).replace('T',' ').slice(0,19) + 'Z', cls: '' });
+      if (data.window_minutes) lines.push({ text: now() + 'Window: last ' + data.window_minutes + ' minutes', cls: '' });
+      if (data.clusters_analyzed != null) lines.push({ text: now() + 'MCP: get-spans → analyzed ' + data.clusters_analyzed + ' query type cluster(s)', cls: 'mcp' });
+
+      const clusters = data.failure_clusters || [];
+      if (clusters.length === 0) {
+        lines.push({ text: now() + '✓ No failure clusters — system healthy within threshold', cls: 'heal' });
+      } else {
+        clusters.forEach(c => {
+          const rate = ((c.hallucination_rate||0)*100).toFixed(0);
+          const worst = c.worst_score != null ? Number(c.worst_score).toFixed(1) : '?';
+          lines.push({ text: now() + '⚠ FAILURE CLUSTER: ' + (c.query_type||c.agent_name||'?') + ' — ' + rate + '% hallucination (' + (c.span_count||'?') + ' spans, worst: ' + worst + ')', cls: 'cluster' });
+        });
+      }
+      if (data.healing_required) {
+        lines.push({ text: now() + 'Healing required — invoking Self-Healer agent', cls: 'heal' });
+        lines.push({ text: now() + 'MCP: get-latest-prompt → retrieving current production prompt', cls: 'mcp' });
+        lines.push({ text: now() + 'MCP: list-prompt-versions → retrieving version history', cls: 'mcp' });
+        lines.push({ text: now() + 'MCP: add-dataset-examples → logging failure examples to Phoenix dataset', cls: 'mcp' });
+        lines.push({ text: now() + 'MCP: get-dataset-examples → verifying examples logged correctly', cls: 'mcp' });
+        lines.push({ text: now() + 'HealingDiagnosis produced — triggering Python mutation pipeline', cls: '' });
+      }
+      if (data.candidate_id) {
+        if (data.failure_analysis) lines.push({ text: now() + 'Analysis: ' + String(data.failure_analysis).slice(0,180), cls: '' });
+        if (data.examples_logged)  lines.push({ text: now() + 'MCP: ' + data.examples_logged + ' failure examples logged → ' + (data.dataset_name||'Phoenix dataset'), cls: 'mcp' });
+      }
+      lines.push({ text: now() + 'Scan complete', cls: 'heal' });
+    } else {
+      const truncated = resultText.length > 800 ? resultText.slice(0,800) + '…' : resultText;
+      lines.push({ text: now() + truncated, cls: '' });
+    }
+    return lines;
+  }
+
   async function triggerScan() {
     const btn = document.getElementById('scanBtn');
     const log = document.getElementById('scanLog');
+    const meta = document.getElementById('scanMeta');
     btn.disabled = true;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Scanning…`;
-    log.textContent = '[' + new Date().toLocaleTimeString() + '] Querying Phoenix spans via MCP…\n';
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Scanning…`;
+    if (meta) meta.textContent = 'Running…';
+    log.innerHTML = `<div class="log-line">[${new Date().toLocaleTimeString()}] Initiating MCP scan — querying Phoenix spans…</div>`;
     try {
       const r = await fetch('/scan', { method: 'POST' });
-      const d = await r.json();
-      log.textContent += '[' + new Date().toLocaleTimeString() + '] Scan complete.\n\n' + JSON.stringify(d, null, 2);
-      await pollHealing();
-      await pollStatus();
+      const text = await r.text();
+      let d;
+      try { d = JSON.parse(text); } catch (_) { d = { status: 'error', error: text }; }
+      if (d.status === 'error') {
+        log.innerHTML += `<div class="log-line log-err">[${new Date().toLocaleTimeString()}] Scan error: ${esc(d.error || 'unknown')}</div>`;
+        if (meta) meta.textContent = 'Error';
+      } else {
+        const lines = parseScanOutput(d.result || '');
+        log.innerHTML = lines.map(l => `<div class="log-line${l.cls ? ' log-'+l.cls : ''}">${esc(l.text)}</div>`).join('');
+        if (meta) meta.textContent = 'Last run: ' + new Date().toLocaleTimeString();
+        await fetchHealingCandidates();
+        await fetchHealingHistory();
+        await fetchStatus();
+        await fetchAnalytics();
+      }
     } catch (err) {
-      log.textContent += '\n[error] ' + err.message;
+      log.innerHTML += `<div class="log-line log-err">[error] ${esc(err.message)}</div>`;
+      if (meta) meta.textContent = 'Error';
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Trigger Scan`;
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Trigger Scan`;
     }
+  }
+
+  function clearScanLog() {
+    document.getElementById('scanLog').innerHTML = '<div class="log-line">Ready.</div>';
+    const meta = document.getElementById('scanMeta');
+    if (meta) meta.textContent = 'Ready';
   }
 
   async function approveCandidate(id) {
     await fetch(`/healing/approve/${id}`, { method: 'POST' });
     const el = document.getElementById('statHeals');
     el.textContent = parseInt(el.textContent || 0) + 1;
-    pollHealing();
+    fetchHealingCandidates();
+    fetchHealingHistory();
   }
   async function rejectCandidate(id) {
     await fetch(`/healing/reject/${id}`, { method: 'POST' });
-    pollHealing();
+    fetchHealingCandidates();
   }
 
-  function esc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // ── Activity Log ─────────────────────────────────────────────────
+  const ACT_LEVEL_CLS = { info: 'act-info', warn: 'act-warn', warning: 'act-warn',
+    critical: 'act-critical', mcp: 'act-mcp', adk: 'act-adk', heal: 'act-heal' };
+
+  function appendActivityLine(event) {
+    const log = document.getElementById('activityLog');
+    if (!log) return;
+    // Remove placeholder
+    const placeholder = log.querySelector('.act-info');
+    if (placeholder && placeholder.textContent.startsWith('Ready')) placeholder.remove();
+    const cls = ACT_LEVEL_CLS[event.level] || 'act-info';
+    const el = document.createElement('div');
+    el.className = `act-line ${cls}`;
+    el.innerHTML = `<span class="act-ts">${esc(event.ts || '')}</span>${esc(event.text || '')}`;
+    // flex-direction:column-reverse so newest appears at bottom visually
+    log.appendChild(el);
+    // Keep at most 200 lines
+    while (log.children.length > 200) log.removeChild(log.firstChild);
   }
 
+  function clearActivityLog() {
+    const log = document.getElementById('activityLog');
+    if (log) log.innerHTML = '<div class="act-line act-info">Log cleared.</div>';
+  }
+
+  async function loadActivityHistory() {
+    try {
+      const r = await fetch('/activity?limit=80');
+      const d = await r.json();
+      const events = (d.activity || []).reverse(); // oldest first
+      events.forEach(appendActivityLine);
+    } catch (_) {}
+  }
+
+  function connectActivitySSE() {
+    const sse = new EventSource('/stream/activity');
+    const status = document.getElementById('activityStatus');
+    sse.onopen = () => { if (status) status.textContent = 'Live'; };
+    sse.onerror = () => {
+      if (status) status.textContent = 'Reconnecting';
+      sse.close();
+      setTimeout(connectActivitySSE, 3000);
+    };
+    sse.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.type === 'heartbeat') return;
+      appendActivityLine(d);
+    };
+  }
+
+  // ── Refresh All ──────────────────────────────────────────────────
+  function refreshAll() {
+    fetchStatus();
+    fetchTraces();
+    fetchHealingCandidates();
+    fetchHealingHistory();
+    fetchAnalytics();
+    document.getElementById('lastRefreshed').textContent =
+      'refreshed ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────
   connectSSE();
-  pollTraces();
-  pollStatus();
-  pollHealing();
-  setInterval(pollTraces,  10000);
-  setInterval(pollStatus,  10000);
-  setInterval(pollHealing, 15000);
+  connectActivitySSE();
+  loadActivityHistory();
+  refreshAll();
+  setInterval(fetchStatus,            10000);
+  setInterval(fetchTraces,            10000);
+  setInterval(fetchAnalytics,         10000);
+  setInterval(fetchHealingCandidates, 15000);
+  setInterval(fetchHealingHistory,    30000);
 </script>
 </body>
 </html>
