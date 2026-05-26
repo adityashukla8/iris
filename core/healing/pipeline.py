@@ -26,7 +26,7 @@ from core.healing.models import HealingCandidate, HealingDiagnosis
 from core.healing.mutation_engine import generate_candidate_prompt
 from core.healing.prompt_manager import prompt_manager
 from core.healing.validator import validate_candidate
-from core.state import healing_candidates, healing_history, shift_stats
+from core.state import healing_candidates, healing_history, push_activity, shift_stats
 
 
 async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate | None:
@@ -34,8 +34,11 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     Execute the full GENERATE → VALIDATE → GATE → DEPLOY pipeline.
     Returns the HealingCandidate (regardless of approval status), or None on fatal error.
     """
-    print(f"[HealingPipeline] Starting pipeline for cluster: {diagnosis.query_type} "
-          f"(failure_rate={diagnosis.hallucination_rate:.0%})")
+    push_activity(
+        f"HealingPipeline: starting for {diagnosis.query_type} "
+        f"({diagnosis.hallucination_rate:.0%} failure rate)",
+        "heal",
+    )
 
     # Rebuild failing examples from diagnosis metadata for mutation + validation
     # The MCP agent has already logged these to Phoenix dataset; we reconstruct
@@ -43,6 +46,7 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     failing_examples = _extract_examples_from_diagnosis(diagnosis)
 
     # ── Phase 3a: GENERATE candidate prompt ──────────────────────────────────
+    push_activity("HealingPipeline: mutation engine running (TextGrad)", "heal")
     try:
         mutation_result = await generate_candidate_prompt(
             current_prompt=diagnosis.current_prompt_text,
@@ -51,15 +55,21 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
             failure_rate=diagnosis.hallucination_rate,
         )
     except Exception as exc:
+        push_activity(f"HealingPipeline: mutation failed — {str(exc)[:100]}", "critical")
         print(f"[HealingPipeline] Mutation failed: {exc}")
         return None
 
     new_prompt = mutation_result.get("new_prompt", "")
     if not new_prompt or new_prompt == diagnosis.current_prompt_text:
+        push_activity("HealingPipeline: mutation produced no change — aborting", "warn")
         print("[HealingPipeline] Mutation produced no change — aborting")
         return None
 
+    constraint = mutation_result.get("injected_constraint", "")
+    push_activity(f"HealingPipeline: mutation generated — {constraint[:100]}", "heal")
+
     # ── Phase 3b: VALIDATE candidate prompt ──────────────────────────────────
+    push_activity("HealingPipeline: validating candidate prompt", "heal")
     validation = await validate_candidate(
         old_prompt=diagnosis.current_prompt_text,
         new_prompt=new_prompt,
@@ -82,17 +92,19 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     )
 
     if not validation["passed"]:
-        print(
-            f"[HealingPipeline] Validation FAILED — improvement {validation['improvement']:.2f} "
-            f"< threshold {settings.healing_improvement_threshold}. Discarding candidate."
+        push_activity(
+            f"HealingPipeline: validation FAILED — improvement {validation['improvement']:+.2f}"
+            f" < threshold {settings.healing_improvement_threshold}",
+            "warn",
         )
         candidate.status = "failed"
         healing_history.appendleft(candidate)
         return candidate
 
-    print(
-        f"[HealingPipeline] Validation PASSED — improvement {validation['improvement']:.2f}, "
-        f"prevention_rate={validation['prevention_rate']:.0%}"
+    push_activity(
+        f"HealingPipeline: validation PASSED — score {validation['score_before']:.2f}"
+        f" → {validation['score_after']:.2f} ({validation['improvement']:+.2f})",
+        "heal",
     )
 
     # ── Phase 4: GATE / DEPLOY ────────────────────────────────────────────────
@@ -101,7 +113,10 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     else:
         candidate.status = "pending"
         healing_candidates.appendleft(candidate)
-        print(f"[HealingPipeline] Candidate queued for human approval: {candidate.candidate_id}")
+        push_activity(
+            f"HealingPipeline: candidate {candidate.candidate_id[:8]} queued for human approval",
+            "heal",
+        )
 
     return candidate
 
@@ -136,6 +151,7 @@ async def reject_candidate(candidate_id: str, reason: str = "") -> HealingCandid
     candidate.rejection_reason = reason or "Human reviewer rejected the candidate"
     _remove_from_pending(candidate_id)
     healing_history.appendleft(candidate)
+    push_activity(f"Candidate {candidate_id[:8]} rejected by human reviewer", "warn")
     print(f"[HealingPipeline] Candidate rejected: {candidate_id} — {reason}")
     return candidate
 
@@ -174,6 +190,11 @@ async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
 
         candidate.deployed_at = now
         shift_stats["self_heals"] = shift_stats.get("self_heals", 0) + 1
+        push_activity(
+            f"Prompt deployed to Phoenix: {candidate.diagnosis.current_prompt_name}"
+            f" (version {version_id or 'unknown'}) improvement={candidate.improvement_score:+.2f}",
+            "heal",
+        )
         print(
             f"[HealingPipeline] Prompt deployed to Phoenix: "
             f"{candidate.diagnosis.current_prompt_name} "
@@ -184,6 +205,7 @@ async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
         candidate.status = "deployed"
         candidate.deployed_at = datetime.utcnow()
         shift_stats["self_heals"] = shift_stats.get("self_heals", 0) + 1
+        push_activity("Prompt approved locally (Phoenix write failed)", "warn")
         print("[HealingPipeline] Phoenix write failed — candidate approved locally only")
 
     healing_history.appendleft(candidate)

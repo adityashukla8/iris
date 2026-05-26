@@ -10,6 +10,12 @@ from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.genai import types
 from mcp import StdioServerParameters
 
+from core.agents.activity_callbacks import (
+    after_model_callback,
+    after_tool_callback,
+    before_model_callback,
+    on_model_error_callback,
+)
 from core.config import settings
 
 _phoenix_mcp_read = McpToolset(
@@ -88,4 +94,8 @@ Output ONLY valid JSON:
     output_key="detected_patterns",
     disallow_transfer_to_parent=False,
     disallow_transfer_to_peers=True,
+    before_model_callback=before_model_callback,
+    after_model_callback=after_model_callback,
+    after_tool_callback=after_tool_callback,
+    on_model_error_callback=on_model_error_callback,
 )

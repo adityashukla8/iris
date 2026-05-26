@@ -27,6 +27,9 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from openinference.instrumentation.google_adk import GoogleADKInstrumentor
+from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
+from opentelemetry import context as otel_context
+from opentelemetry import trace as otel_trace
 from phoenix.otel import register
 
 from core.agents.orchestrator import iris_orchestrator
@@ -42,7 +45,10 @@ from core.agents.tools.eval_tools import (
     write_phoenix_span_annotation,
 )
 from core.config import settings
-from core.state import alert_bus, healing_candidates, healing_history, recent_traces, self_heal_bus, shift_stats
+from core.state import (
+    _activity_subscribers, activity_log, alert_bus, healing_candidates,
+    healing_history, push_activity, recent_traces, self_heal_bus, shift_stats,
+)
 from sdk.models import IrisEvent
 
 os.environ["GOOGLE_API_KEY"] = settings.google_api_key
@@ -68,6 +74,10 @@ _tracer_provider = register(
     verbose=False,
 )
 GoogleADKInstrumentor().instrument(tracer_provider=_tracer_provider)
+# Instruments all direct google.genai SDK calls (evaluators run outside ADK runner)
+GoogleGenAIInstrumentor().instrument(tracer_provider=_tracer_provider)
+
+_tracer = otel_trace.get_tracer("iris.supervisor", tracer_provider=_tracer_provider)
 
 _session_service = InMemorySessionService()
 _runner = Runner(
@@ -112,32 +122,68 @@ async def submit_event(event: IrisEvent) -> dict:
     in parallel after evaluation completes.
     """
     event_json = event.model_dump_json()
+    push_activity(f"Event received — {event.agent_name} · {event.query_type}", "info")
     try:
-        # All evaluators run concurrently — no sequential LLM routing overhead
-        raw = await asyncio.gather(
-            run_factual_hallucination_evaluation(event_json),
-            run_context_gap_evaluation(event_json),
-            run_dosage_boundary_evaluation(event_json),
-            run_attribution_evaluation(event_json),
-            run_surgical_phase_evaluation(event_json),
-            run_drug_interaction_evaluation(event_json),
-            run_allergy_contraindication_evaluation(event_json),
-            return_exceptions=True,
-        )
+        # Parent OTel span groups all 7 evaluator Gemini calls as children.
+        # asyncio tasks don't inherit OTel context automatically, so we capture
+        # the parent context and re-attach it inside each child coroutine.
+        with _tracer.start_as_current_span(
+            "iris.evaluate",
+            kind=otel_trace.SpanKind.SERVER,
+            attributes={
+                "iris.trace_id": event.trace_id,
+                "iris.agent_name": event.agent_name,
+                "iris.query_type": str(event.query_type),
+                "iris.agent_version": event.agent_version or "unknown",
+            },
+        ):
+            parent_ctx = otel_context.get_current()
 
-        evaluations = [
-            r for r in raw
-            if isinstance(r, dict) and not r.get("skipped") and not r.get("error")
-        ]
+            async def _with_ctx(coro):
+                token = otel_context.attach(parent_ctx)
+                try:
+                    return await coro
+                finally:
+                    otel_context.detach(token)
 
-        # Derive final severity from evaluation results
-        sevs = [e.get("severity", "info") for e in evaluations]
-        if "critical" in sevs:
-            final_severity = "critical"
-        elif "warning" in sevs:
-            final_severity = "warning"
-        else:
-            final_severity = "info"
+            raw = await asyncio.gather(
+                _with_ctx(run_factual_hallucination_evaluation(event_json)),
+                _with_ctx(run_context_gap_evaluation(event_json)),
+                _with_ctx(run_dosage_boundary_evaluation(event_json)),
+                _with_ctx(run_attribution_evaluation(event_json)),
+                _with_ctx(run_surgical_phase_evaluation(event_json)),
+                _with_ctx(run_drug_interaction_evaluation(event_json)),
+                _with_ctx(run_allergy_contraindication_evaluation(event_json)),
+                return_exceptions=True,
+            )
+
+            evaluations = [
+                r for r in raw
+                if isinstance(r, dict) and not r.get("skipped") and not r.get("error")
+            ]
+
+            # Derive final severity from evaluation results
+            sevs = [e.get("severity", "info") for e in evaluations]
+            if "critical" in sevs:
+                final_severity = "critical"
+            elif "warning" in sevs:
+                final_severity = "warning"
+            else:
+                final_severity = "info"
+
+            # Write IRIS-level results on the parent span while it's still open
+            # so they appear as attributes in Phoenix alongside the child LLM spans.
+            parent_span = otel_trace.get_current_span()
+            parent_span.set_attribute("iris.severity", final_severity)
+            parent_span.set_attribute("iris.eval_count", len(evaluations))
+            for e in evaluations:
+                pfx = f"iris.eval.{e.get('evaluator', 'unknown')}"
+                parent_span.set_attribute(f"{pfx}.score",      float(e.get("score", 10.0)))
+                parent_span.set_attribute(f"{pfx}.severity",   e.get("severity", "info"))
+                parent_span.set_attribute(f"{pfx}.passed",     bool(e.get("passed", True)))
+                parent_span.set_attribute(f"{pfx}.confidence", float(e.get("confidence", 1.0)))
+
+        # ── span closed — below runs outside the OTel span ───────────────────
 
         # Shift counters
         shift_stats["total_traces"] += 1
@@ -151,6 +197,13 @@ async def submit_event(event: IrisEvent) -> dict:
         if low_confidence:
             shift_stats["human_escalations"] = shift_stats.get("human_escalations", 0) + 1
 
+        # Log evaluation outcome
+        eval_level = "critical" if final_severity == "critical" else "warn" if final_severity == "warning" else "info"
+        push_activity(
+            f"Evaluation complete — {len(evaluations)} evaluators · severity: {final_severity}",
+            eval_level,
+        )
+
         # Worst-scoring evaluator drives the alert description
         worst = min(evaluations, key=lambda e: e.get("score", 10.0), default=None)
         failure_type = worst["evaluator"] if worst else "none"
@@ -160,30 +213,15 @@ async def submit_event(event: IrisEvent) -> dict:
             else "All safety checks passed"
         )
 
-        # Alert dispatch + all Phoenix annotations in parallel
-        await asyncio.gather(
-            push_dashboard_alert(
-                severity=final_severity,
-                agent_name=event.agent_name,
-                trace_id=event.trace_id,
-                query_type=str(event.query_type),
-                failure_type=failure_type,
-                description=description,
-                eval_score=worst.get("score", 10.0) if worst else 10.0,
-            ),
-            *[
-                write_phoenix_span_annotation(
-                    trace_id=event.trace_id,
-                    agent_name=event.agent_name,
-                    query_type=str(event.query_type),
-                    evaluator_name=e["evaluator"],
-                    score=float(e.get("score", 5.0)),
-                    severity=e.get("severity", "info"),
-                    rationale=e.get("rationale", ""),
-                    passed=bool(e.get("passed", True)),
-                )
-                for e in evaluations
-            ],
+        # Alert dispatch (annotations are now OTel attributes — REST call is best-effort)
+        await push_dashboard_alert(
+            severity=final_severity,
+            agent_name=event.agent_name,
+            trace_id=event.trace_id,
+            query_type=str(event.query_type),
+            failure_type=failure_type,
+            description=description,
+            eval_score=worst.get("score", 10.0) if worst else 10.0,
         )
 
         recent_traces.appendleft({
@@ -214,6 +252,7 @@ async def submit_event(event: IrisEvent) -> dict:
 @app.post("/scan")
 async def trigger_pattern_scan() -> dict:
     """Manually trigger a pattern detection scan."""
+    push_activity("ADK: iris_orchestrator invoked — SCAN_PATTERNS", "adk")
     message = types.Content(
         role="user",
         parts=[types.Part(text="SCAN_PATTERNS")],
@@ -225,13 +264,16 @@ async def trigger_pattern_scan() -> dict:
             session_id=SHIFT_SESSION_ID,
             new_message=message,
         ):
+            _handle_adk_event(adk_event)
             if adk_event.is_final_response() and adk_event.content:
                 for part in adk_event.content.parts:
                     if part.text:
                         result_text = part.text
+        _push_scan_activity(result_text)
         return {"status": "scan_complete", "result": result_text}
     except Exception as exc:
         err = str(exc)
+        push_activity(f"Scan error: {err[:120]}", "critical")
         return {"status": "error", "error": err}
 
 
@@ -248,6 +290,35 @@ async def alert_stream():
                 yield "data: {\"type\": \"heartbeat\"}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/stream/activity")
+async def activity_stream():
+    """SSE stream of ADK orchestration and MCP interaction events."""
+    q: asyncio.Queue = asyncio.Queue(maxsize=200)
+    _activity_subscribers.append(q)
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=30.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield "data: {\"type\": \"heartbeat\"}\n\n"
+        finally:
+            try:
+                _activity_subscribers.remove(q)
+            except ValueError:
+                pass
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/activity")
+async def get_activity(limit: int = 100) -> dict:
+    """Recent activity log for initial page load."""
+    return {"activity": list(activity_log)[:limit]}
 
 
 @app.get("/status")
@@ -325,6 +396,59 @@ async def dashboard(request: Request):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+_last_event_author: str = ""
+
+
+def _handle_adk_event(event) -> None:
+    """
+    Parse a mid-stream ADK Event to emit agent-transition activity lines.
+    Callbacks already cover LLM calls and tool calls; this catches author changes
+    (orchestrator handing off to a sub-agent) that aren't visible in callbacks.
+    """
+    global _last_event_author
+    author = getattr(event, "author", None) or ""
+    if author and author != "user" and author != _last_event_author:
+        push_activity(f"ADK: agent active — {author}", "adk")
+        _last_event_author = author
+
+
+def _push_scan_activity(result_text: str) -> None:
+    """Parse a scan result and emit human-readable activity events."""
+    if not result_text:
+        push_activity("Scan returned no output", "warn")
+        return
+    try:
+        clean = re.sub(r"```(?:json)?\s*", "", result_text)
+        clean = re.sub(r"```\s*", "", clean).strip()
+        start = clean.find("{")
+        end   = clean.rfind("}")
+        data  = json.loads(clean[start:end + 1]) if start != -1 else {}
+    except Exception:
+        data = {}
+
+    if data.get("clusters_analyzed") is not None:
+        push_activity(
+            f"MCP: get-span-annotations — {data['clusters_analyzed']} cluster(s) analyzed",
+            "mcp",
+        )
+    clusters = data.get("failure_clusters") or []
+    if not clusters:
+        push_activity("No failure clusters detected — system healthy", "heal")
+    for c in clusters:
+        rate = int((c.get("hallucination_rate") or 0) * 100)
+        push_activity(
+            f"FAILURE CLUSTER: {c.get('query_type','?')} — {rate}% failure rate"
+            f" ({c.get('span_count','?')} spans, worst score {c.get('worst_score','?')})",
+            "critical",
+        )
+    if data.get("healing_required"):
+        push_activity("ADK: self_healer invoked — DIAGNOSE phase", "adk")
+        push_activity(
+            "MCP: get-latest-prompt · list-prompt-versions · add-dataset-examples · get-dataset-examples",
+            "mcp",
+        )
+
 
 _EVAL_NAMES = [
     "dosage_boundary", "factual_hallucination", "drug_interaction",
@@ -471,16 +595,24 @@ async def _scheduled_pattern_scan():
     await asyncio.sleep(60)  # warm-up delay
     while True:
         await asyncio.sleep(settings.pattern_window_minutes * 60)
+        push_activity("ADK: scheduled SCAN_PATTERNS — iris_orchestrator invoked", "adk")
+        result_text = ""
         try:
             message = types.Content(
                 role="user",
                 parts=[types.Part(text="SCAN_PATTERNS")],
             )
-            async for _ in _runner.run_async(
+            async for adk_event in _runner.run_async(
                 user_id=SYSTEM_USER_ID,
                 session_id=SHIFT_SESSION_ID,
                 new_message=message,
             ):
-                pass
+                _handle_adk_event(adk_event)
+                if adk_event.is_final_response() and adk_event.content:
+                    for part in adk_event.content.parts:
+                        if part.text:
+                            result_text = part.text
+            _push_scan_activity(result_text)
         except Exception as exc:
+            push_activity(f"Scheduled scan error: {str(exc)[:120]}", "critical")
             print(f"[IRIS] Scheduled scan failed: {exc}")

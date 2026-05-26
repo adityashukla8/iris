@@ -80,6 +80,7 @@
     /* ── Tab Content ────────────────────────────────────────────── */
     .tab-content { overflow: hidden; height: 100%; }
     .tab-pane { height: 100%; }
+    .tab-pane[hidden] { display: none !important; }
     .tab-pane[data-tab="overview"]  { overflow-y: auto; }
     .tab-pane[data-tab="healing"]   { overflow-y: auto; }
     .tab-pane[data-tab="pipeline"]  { overflow-y: auto; }
@@ -340,6 +341,17 @@
     .log-heal    { color: #86efac; }
     .log-err     { color: #fca5a5; }
 
+    /* ── Activity Log ───────────────────────────────────────────── */
+    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 258px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column-reverse; }
+    .act-line { white-space: pre-wrap; word-break: break-word; }
+    .act-ts   { color: var(--gray-500); margin-right: 6px; font-size: .72rem; }
+    .act-info     { color: #e2e8f0; }
+    .act-warn     { color: #fbbf24; }
+    .act-critical { color: #fca5a5; font-weight: 600; }
+    .act-mcp      { color: #93c5fd; }
+    .act-adk      { color: #c4b5fd; }
+    .act-heal     { color: #86efac; }
+
     /* ── Responsive ─────────────────────────────────────────────── */
     @media (max-width: 1280px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr; } .case-io-grid { grid-template-columns: 1fr; } }
@@ -481,18 +493,39 @@
           </div>
         </div>
 
-        <!-- Live Alert Feed (full width) -->
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
-            <span class="panel-meta" id="alertCount">0 alerts</span>
-          </div>
-          <div class="panel-body" id="alertFeed" style="max-height:260px;">
-            <div class="empty">
-              <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg></div>
-              <div class="empty-text">Waiting for SSE alerts</div>
+        <!-- Alert Feed + Activity Log (2-column) -->
+        <div class="grid-2" style="margin-bottom:14px;">
+
+          <!-- Live Alert Feed -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
+              <span class="panel-meta" id="alertCount">0 alerts</span>
+            </div>
+            <div class="panel-body" id="alertFeed" style="max-height:280px;">
+              <div class="empty">
+                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg></div>
+                <div class="empty-text">Waiting for SSE alerts</div>
+              </div>
             </div>
           </div>
+
+          <!-- Activity Log -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-purple"></div>Activity Log</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-meta" id="activityStatus">Connecting…</span>
+                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
+              </div>
+            </div>
+            <div class="panel-pad" style="padding:10px 14px;">
+              <div class="activity-log" id="activityLog">
+                <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </main>
@@ -1223,6 +1256,56 @@
     fetchHealingCandidates();
   }
 
+  // ── Activity Log ─────────────────────────────────────────────────
+  const ACT_LEVEL_CLS = { info: 'act-info', warn: 'act-warn', warning: 'act-warn',
+    critical: 'act-critical', mcp: 'act-mcp', adk: 'act-adk', heal: 'act-heal' };
+
+  function appendActivityLine(event) {
+    const log = document.getElementById('activityLog');
+    if (!log) return;
+    // Remove placeholder
+    const placeholder = log.querySelector('.act-info');
+    if (placeholder && placeholder.textContent.startsWith('Ready')) placeholder.remove();
+    const cls = ACT_LEVEL_CLS[event.level] || 'act-info';
+    const el = document.createElement('div');
+    el.className = `act-line ${cls}`;
+    el.innerHTML = `<span class="act-ts">${esc(event.ts || '')}</span>${esc(event.text || '')}`;
+    // flex-direction:column-reverse so newest appears at bottom visually
+    log.appendChild(el);
+    // Keep at most 200 lines
+    while (log.children.length > 200) log.removeChild(log.firstChild);
+  }
+
+  function clearActivityLog() {
+    const log = document.getElementById('activityLog');
+    if (log) log.innerHTML = '<div class="act-line act-info">Log cleared.</div>';
+  }
+
+  async function loadActivityHistory() {
+    try {
+      const r = await fetch('/activity?limit=80');
+      const d = await r.json();
+      const events = (d.activity || []).reverse(); // oldest first
+      events.forEach(appendActivityLine);
+    } catch (_) {}
+  }
+
+  function connectActivitySSE() {
+    const sse = new EventSource('/stream/activity');
+    const status = document.getElementById('activityStatus');
+    sse.onopen = () => { if (status) status.textContent = 'Live'; };
+    sse.onerror = () => {
+      if (status) status.textContent = 'Reconnecting';
+      sse.close();
+      setTimeout(connectActivitySSE, 3000);
+    };
+    sse.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.type === 'heartbeat') return;
+      appendActivityLine(d);
+    };
+  }
+
   // ── Refresh All ──────────────────────────────────────────────────
   function refreshAll() {
     fetchStatus();
@@ -1236,6 +1319,8 @@
 
   // ── Boot ─────────────────────────────────────────────────────────
   connectSSE();
+  connectActivitySSE();
+  loadActivityHistory();
   refreshAll();
   setInterval(fetchStatus,            10000);
   setInterval(fetchTraces,            10000);
