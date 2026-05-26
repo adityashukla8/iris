@@ -29,7 +29,7 @@ _phoenix_mcp_read = McpToolset(
 )
 
 pattern_detector_agent = LlmAgent(
-    model=settings.gemini_model,
+    model=settings.mcp_gemini_model,
     name="pattern_detector",
     description=(
         "Queries Arize Phoenix to detect recurring clinical safety failure clusters. "
@@ -44,7 +44,7 @@ When invoked, perform this analysis:
 
 Step 1 — Get recent spans:
   Use `get-spans` to retrieve spans from the IRIS clinical safety project.
-  Request spans from the last {settings.pattern_window_minutes} minutes with limit=50.
+  Request spans from the last {settings.pattern_window_minutes} minutes with limit=10.
 
 Step 2 — Get evaluation scores:
   Use `get-span-annotations` with the span IDs from Step 1 to retrieve
