@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     score_warning_threshold: float = 5.0
 
     gemini_model: str = "gemini-2.5-pro"
+    mcp_gemini_model: str = "gemini-2.5-flash"
 
     # Self-healing pipeline
     healing_prompt_name: str = "orion-clinical-safety"   # name of the prompt in Phoenix

@@ -53,6 +53,7 @@ _tracer_provider = register(
     project_name="iris-clinical",
     batch=True,
     set_global_tracer_provider=False,
+    auto_instrument=True,
     verbose=False,
 )
 GoogleADKInstrumentor().instrument(tracer_provider=_tracer_provider)
