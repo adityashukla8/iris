@@ -40,12 +40,6 @@ from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.genai import types
 from mcp import StdioServerParameters
 
-from core.agents.activity_callbacks import (
-    after_model_callback,
-    after_tool_callback,
-    before_model_callback,
-    on_model_error_callback,
-)
 from core.config import settings
 
 _phoenix_mcp = McpToolset(
@@ -78,7 +72,7 @@ _phoenix_mcp = McpToolset(
 _HEALING_PROMPT_NAME = settings.healing_prompt_name
 
 self_healer_agent = LlmAgent(
-    model=settings.mcp_gemini_model,
+    model=settings.gemini_model,
     name="self_healer",
     description=(
         "DIAGNOSE phase of the IRIS self-healing loop. "
@@ -98,7 +92,7 @@ You do NOT mutate prompts. You do NOT call upsert-prompt. You DIAGNOSE.
 Execute these steps precisely:
 
 Step 1 — Retrieve worst-performing spans:
-  Use `get-spans` to retrieve the 5 worst-scoring spans from the failure cluster.
+  Use `get-spans` to retrieve the 10 worst-scoring spans from the failure cluster.
   Filter by the query_type and agent_name from the failure_cluster JSON.
   Request spans from the last {settings.pattern_window_minutes} minutes.
 
@@ -170,8 +164,4 @@ Do not abort the entire diagnosis if a single step fails.
     output_key="healing_diagnosis",
     disallow_transfer_to_parent=False,
     disallow_transfer_to_peers=True,
-    before_model_callback=before_model_callback,
-    after_model_callback=after_model_callback,
-    after_tool_callback=after_tool_callback,
-    on_model_error_callback=on_model_error_callback,
 )

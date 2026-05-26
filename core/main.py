@@ -27,28 +27,11 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from openinference.instrumentation.google_adk import GoogleADKInstrumentor
-from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
-from opentelemetry import context as otel_context
-from opentelemetry import trace as otel_trace
 from phoenix.otel import register
 
 from core.agents.orchestrator import iris_orchestrator
-from core.agents.tools.eval_tools import (
-    push_dashboard_alert,
-    run_allergy_contraindication_evaluation,
-    run_attribution_evaluation,
-    run_context_gap_evaluation,
-    run_dosage_boundary_evaluation,
-    run_drug_interaction_evaluation,
-    run_factual_hallucination_evaluation,
-    run_surgical_phase_evaluation,
-    write_phoenix_span_annotation,
-)
 from core.config import settings
-from core.state import (
-    _activity_subscribers, activity_log, alert_bus, healing_candidates,
-    healing_history, push_activity, recent_traces, self_heal_bus, shift_stats,
-)
+from core.state import alert_bus, healing_candidates, healing_history, recent_traces, self_heal_bus, shift_stats
 from sdk.models import IrisEvent
 
 os.environ["GOOGLE_API_KEY"] = settings.google_api_key
@@ -70,14 +53,9 @@ _tracer_provider = register(
     project_name="iris-clinical",
     batch=True,
     set_global_tracer_provider=False,
-    auto_instrument=True,
     verbose=False,
 )
 GoogleADKInstrumentor().instrument(tracer_provider=_tracer_provider)
-# Instruments all direct google.genai SDK calls (evaluators run outside ADK runner)
-GoogleGenAIInstrumentor().instrument(tracer_provider=_tracer_provider)
-
-_tracer = otel_trace.get_tracer("iris.supervisor", tracer_provider=_tracer_provider)
 
 _session_service = InMemorySessionService()
 _runner = Runner(
@@ -117,132 +95,62 @@ templates = Jinja2Templates(directory="dashboard/templates")
 async def submit_event(event: IrisEvent) -> dict:
     """
     Receive an IrisEvent from a connected clinical AI agent.
-    All 7 evaluators run concurrently via asyncio.gather — each makes its own
-    Gemini call independently. Alert dispatch and Phoenix annotations also run
-    in parallel after evaluation completes.
+    Runs the full IRIS evaluation pipeline via the ADK orchestrator.
     """
     event_json = event.model_dump_json()
-    push_activity(f"Event received — {event.agent_name} · {event.query_type}", "info")
+    message = types.Content(
+        role="user",
+        parts=[types.Part(text=f"IrisEvent:\n{event_json}")],
+    )
+
+    result_text = ""
     try:
-        # Parent OTel span groups all 7 evaluator Gemini calls as children.
-        # asyncio tasks don't inherit OTel context automatically, so we capture
-        # the parent context and re-attach it inside each child coroutine.
-        with _tracer.start_as_current_span(
-            "iris.evaluate",
-            kind=otel_trace.SpanKind.SERVER,
-            attributes={
-                "iris.trace_id": event.trace_id,
-                "iris.agent_name": event.agent_name,
-                "iris.query_type": str(event.query_type),
-                "iris.agent_version": event.agent_version or "unknown",
-            },
+        async for adk_event in _runner.run_async(
+            user_id=SYSTEM_USER_ID,
+            session_id=SHIFT_SESSION_ID,
+            new_message=message,
         ):
-            parent_ctx = otel_context.get_current()
+            if adk_event.is_final_response() and adk_event.content:
+                for part in adk_event.content.parts:
+                    if part.text:
+                        result_text = part.text
+                        break
 
-            async def _with_ctx(coro):
-                token = otel_context.attach(parent_ctx)
-                try:
-                    return await coro
-                finally:
-                    otel_context.detach(token)
-
-            raw = await asyncio.gather(
-                _with_ctx(run_factual_hallucination_evaluation(event_json)),
-                _with_ctx(run_context_gap_evaluation(event_json)),
-                _with_ctx(run_dosage_boundary_evaluation(event_json)),
-                _with_ctx(run_attribution_evaluation(event_json)),
-                _with_ctx(run_surgical_phase_evaluation(event_json)),
-                _with_ctx(run_drug_interaction_evaluation(event_json)),
-                _with_ctx(run_allergy_contraindication_evaluation(event_json)),
-                return_exceptions=True,
-            )
-
-            evaluations = [
-                r for r in raw
-                if isinstance(r, dict) and not r.get("skipped") and not r.get("error")
-            ]
-
-            # Derive final severity from evaluation results
-            sevs = [e.get("severity", "info") for e in evaluations]
-            if "critical" in sevs:
-                final_severity = "critical"
-            elif "warning" in sevs:
-                final_severity = "warning"
-            else:
-                final_severity = "info"
-
-            # Write IRIS-level results on the parent span while it's still open
-            # so they appear as attributes in Phoenix alongside the child LLM spans.
-            parent_span = otel_trace.get_current_span()
-            parent_span.set_attribute("iris.severity", final_severity)
-            parent_span.set_attribute("iris.eval_count", len(evaluations))
-            for e in evaluations:
-                pfx = f"iris.eval.{e.get('evaluator', 'unknown')}"
-                parent_span.set_attribute(f"{pfx}.score",      float(e.get("score", 10.0)))
-                parent_span.set_attribute(f"{pfx}.severity",   e.get("severity", "info"))
-                parent_span.set_attribute(f"{pfx}.passed",     bool(e.get("passed", True)))
-                parent_span.set_attribute(f"{pfx}.confidence", float(e.get("confidence", 1.0)))
-
-        # ── span closed — below runs outside the OTel span ───────────────────
-
-        # Shift counters
         shift_stats["total_traces"] += 1
+
+        # Parse structured result from orchestrator output
+        parsed = _parse_result(result_text)
+        final_severity = parsed.get("final_severity", "info")
+        evaluations = parsed.get("evaluations", [])
+
+        # Update shift counters
         if final_severity in ("warning", "critical"):
             shift_stats["hallucinations_caught"] = shift_stats.get("hallucinations_caught", 0) + 1
 
-        low_confidence = [
-            e for e in evaluations
-            if (e.get("confidence") or 1.0) < 0.6
-        ]
-        if low_confidence:
-            shift_stats["human_escalations"] = shift_stats.get("human_escalations", 0) + 1
-
-        # Log evaluation outcome
-        eval_level = "critical" if final_severity == "critical" else "warn" if final_severity == "warning" else "info"
-        push_activity(
-            f"Evaluation complete — {len(evaluations)} evaluators · severity: {final_severity}",
-            eval_level,
-        )
-
-        # Worst-scoring evaluator drives the alert description
-        worst = min(evaluations, key=lambda e: e.get("score", 10.0), default=None)
-        failure_type = worst["evaluator"] if worst else "none"
-        description = (
-            worst.get("rationale", "")[:200]
-            if worst and final_severity != "info"
-            else "All safety checks passed"
-        )
-
-        # Alert dispatch (annotations are now OTel attributes — REST call is best-effort)
-        await push_dashboard_alert(
-            severity=final_severity,
-            agent_name=event.agent_name,
-            trace_id=event.trace_id,
-            query_type=str(event.query_type),
-            failure_type=failure_type,
-            description=description,
-            eval_score=worst.get("score", 10.0) if worst else 10.0,
-        )
-
-        recent_traces.appendleft({
+        trace_summary = {
             "trace_id": event.trace_id,
             "timestamp": event.timestamp.isoformat(),
             "agent_name": event.agent_name,
-            "agent_version": event.agent_version,
             "query_type": str(event.query_type),
             "severity": final_severity,
-            "input_prompt": event.input_prompt,
-            "output_text": event.output_text,
-            "retrieved_context": event.retrieved_context.model_dump(),
-            "latency_ms": event.latency_ms,
-            "evaluations": evaluations,
-        })
+            "evaluations": evaluations[:5],
+        }
+        recent_traces.appendleft(trace_summary)
+
+        # Low-confidence escalation: evaluator uncertain → flag for human review
+        # Guard against Gemini returning null for confidence field
+        low_confidence = [
+            e for e in evaluations
+            if (e.get("confidence") or 1.0) < 0.6 and not e.get("skipped")
+        ]
+        if low_confidence:
+            shift_stats["human_escalations"] = shift_stats.get("human_escalations", 0) + 1
 
         return {
             "trace_id": event.trace_id,
             "status": "evaluated",
             "severity": final_severity,
-            "result": json.dumps({"evaluations": evaluations, "final_severity": final_severity}),
+            "result": result_text,
         }
 
     except Exception as exc:
@@ -252,29 +160,21 @@ async def submit_event(event: IrisEvent) -> dict:
 @app.post("/scan")
 async def trigger_pattern_scan() -> dict:
     """Manually trigger a pattern detection scan."""
-    push_activity("ADK: iris_orchestrator invoked — SCAN_PATTERNS", "adk")
     message = types.Content(
         role="user",
         parts=[types.Part(text="SCAN_PATTERNS")],
     )
     result_text = ""
-    try:
-        async for adk_event in _runner.run_async(
-            user_id=SYSTEM_USER_ID,
-            session_id=SHIFT_SESSION_ID,
-            new_message=message,
-        ):
-            _handle_adk_event(adk_event)
-            if adk_event.is_final_response() and adk_event.content:
-                for part in adk_event.content.parts:
-                    if part.text:
-                        result_text = part.text
-        _push_scan_activity(result_text)
-        return {"status": "scan_complete", "result": result_text}
-    except Exception as exc:
-        err = str(exc)
-        push_activity(f"Scan error: {err[:120]}", "critical")
-        return {"status": "error", "error": err}
+    async for adk_event in _runner.run_async(
+        user_id=SYSTEM_USER_ID,
+        session_id=SHIFT_SESSION_ID,
+        new_message=message,
+    ):
+        if adk_event.is_final_response() and adk_event.content:
+            for part in adk_event.content.parts:
+                if part.text:
+                    result_text = part.text
+    return {"status": "scan_complete", "result": result_text}
 
 
 @app.get("/stream/alerts")
@@ -292,35 +192,6 @@ async def alert_stream():
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@app.get("/stream/activity")
-async def activity_stream():
-    """SSE stream of ADK orchestration and MCP interaction events."""
-    q: asyncio.Queue = asyncio.Queue(maxsize=200)
-    _activity_subscribers.append(q)
-
-    async def event_generator():
-        try:
-            while True:
-                try:
-                    event = await asyncio.wait_for(q.get(), timeout=30.0)
-                    yield f"data: {json.dumps(event)}\n\n"
-                except asyncio.TimeoutError:
-                    yield "data: {\"type\": \"heartbeat\"}\n\n"
-        finally:
-            try:
-                _activity_subscribers.remove(q)
-            except ValueError:
-                pass
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-@app.get("/activity")
-async def get_activity(limit: int = 100) -> dict:
-    """Recent activity log for initial page load."""
-    return {"activity": list(activity_log)[:limit]}
-
-
 @app.get("/status")
 async def shift_status() -> dict:
     return {"stats": shift_stats, "connected": True}
@@ -329,14 +200,6 @@ async def shift_status() -> dict:
 @app.get("/traces")
 async def get_traces(limit: int = 50) -> dict:
     return {"traces": list(recent_traces)[:limit]}
-
-
-@app.get("/traces/{trace_id}")
-async def get_trace(trace_id: str) -> dict:
-    for t in recent_traces:
-        if t["trace_id"] == trace_id:
-            return {"trace": t}
-    raise HTTPException(status_code=404, detail="Trace not found")
 
 
 @app.get("/healing/candidates")
@@ -377,11 +240,6 @@ async def healing_history_feed(limit: int = 50) -> dict:
     }
 
 
-@app.get("/analytics")
-async def get_analytics() -> dict:
-    return {"analytics": _compute_analytics(list(recent_traces))}
-
-
 @app.get("/", response_class=HTMLResponse)
 async def homepage(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -396,146 +254,6 @@ async def dashboard(request: Request):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-_last_event_author: str = ""
-
-
-def _handle_adk_event(event) -> None:
-    """
-    Parse a mid-stream ADK Event to emit agent-transition activity lines.
-    Callbacks already cover LLM calls and tool calls; this catches author changes
-    (orchestrator handing off to a sub-agent) that aren't visible in callbacks.
-    """
-    global _last_event_author
-    author = getattr(event, "author", None) or ""
-    if author and author != "user" and author != _last_event_author:
-        push_activity(f"ADK: agent active — {author}", "adk")
-        _last_event_author = author
-
-
-def _push_scan_activity(result_text: str) -> None:
-    """Parse a scan result and emit human-readable activity events."""
-    if not result_text:
-        push_activity("Scan returned no output", "warn")
-        return
-    try:
-        clean = re.sub(r"```(?:json)?\s*", "", result_text)
-        clean = re.sub(r"```\s*", "", clean).strip()
-        start = clean.find("{")
-        end   = clean.rfind("}")
-        data  = json.loads(clean[start:end + 1]) if start != -1 else {}
-    except Exception:
-        data = {}
-
-    if data.get("clusters_analyzed") is not None:
-        push_activity(
-            f"MCP: get-span-annotations — {data['clusters_analyzed']} cluster(s) analyzed",
-            "mcp",
-        )
-    clusters = data.get("failure_clusters") or []
-    if not clusters:
-        push_activity("No failure clusters detected — system healthy", "heal")
-    for c in clusters:
-        rate = int((c.get("hallucination_rate") or 0) * 100)
-        push_activity(
-            f"FAILURE CLUSTER: {c.get('query_type','?')} — {rate}% failure rate"
-            f" ({c.get('span_count','?')} spans, worst score {c.get('worst_score','?')})",
-            "critical",
-        )
-    if data.get("healing_required"):
-        push_activity("ADK: self_healer invoked — DIAGNOSE phase", "adk")
-        push_activity(
-            "MCP: get-latest-prompt · list-prompt-versions · add-dataset-examples · get-dataset-examples",
-            "mcp",
-        )
-
-
-_EVAL_NAMES = [
-    "dosage_boundary", "factual_hallucination", "drug_interaction",
-    "allergy_contraindication", "attribution", "context_gap", "surgical_phase",
-]
-
-
-def _compute_analytics(traces: list[dict]) -> dict:
-    stats: dict[str, dict] = {
-        e: {"runs": 0, "failures": 0, "skipped": 0, "score_sum": 0.0, "critical_count": 0}
-        for e in _EVAL_NAMES
-    }
-    sev_counts: dict[str, int] = {"info": 0, "warning": 0, "critical": 0}
-    qt_map: dict[str, dict] = {}
-    last_critical_ts: str | None = None
-
-    for t in traces:
-        sev = t.get("severity", "info")
-        sev_counts[sev] = sev_counts.get(sev, 0) + 1
-        if sev == "critical" and last_critical_ts is None:
-            last_critical_ts = t.get("timestamp")
-        qt = t.get("query_type", "general")
-        entry = qt_map.setdefault(qt, {"count": 0, "failures": 0})
-        entry["count"] += 1
-        if sev != "info":
-            entry["failures"] += 1
-        for ev in t.get("evaluations", []):
-            name = ev.get("evaluator")
-            if name not in stats:
-                continue
-            if ev.get("skipped"):
-                stats[name]["skipped"] += 1
-                continue
-            stats[name]["runs"] += 1
-            stats[name]["score_sum"] += ev.get("score", 10.0)
-            if not ev.get("passed", True):
-                stats[name]["failures"] += 1
-            if ev.get("severity") == "critical":
-                stats[name]["critical_count"] += 1
-
-    total = len(traces)
-    evaluator_stats = {
-        e: {
-            "runs": s["runs"],
-            "failures": s["failures"],
-            "skipped": s["skipped"],
-            "avg_score": round(s["score_sum"] / s["runs"], 2) if s["runs"] else None,
-            "critical_count": s["critical_count"],
-        }
-        for e, s in stats.items()
-    }
-    return {
-        "evaluator_stats": evaluator_stats,
-        "severity_timeline": _bucket_traces(list(reversed(traces)), 12),
-        "query_type_breakdown": {
-            qt: {
-                "count": v["count"],
-                "failure_rate": round(v["failures"] / v["count"], 3) if v["count"] else 0,
-            }
-            for qt, v in qt_map.items()
-        },
-        "pass_rate": round(sev_counts.get("info", 0) / total, 3) if total else 1.0,
-        "critical_rate": round(sev_counts.get("critical", 0) / total, 3) if total else 0.0,
-        "last_critical_ts": last_critical_ts,
-    }
-
-
-def _bucket_traces(ordered_traces: list[dict], buckets: int) -> list[dict]:
-    if not ordered_traces:
-        return []
-    n = len(ordered_traces)
-    size = max(1, n // buckets)
-    result = []
-    for i in range(0, n, size):
-        chunk = ordered_traces[i : i + size]
-        info = sum(1 for t in chunk if t.get("severity", "info") == "info")
-        warn = sum(1 for t in chunk if t.get("severity") == "warning")
-        crit = sum(1 for t in chunk if t.get("severity") == "critical")
-        ts = chunk[0].get("timestamp", "")
-        result.append({
-            "ts": ts[11:16] if len(ts) > 15 else ts,
-            "info": info,
-            "warning": warn,
-            "critical": crit,
-        })
-    return result[-12:]
-
 
 def _parse_result(result_text: str) -> dict:
     """
@@ -595,24 +313,16 @@ async def _scheduled_pattern_scan():
     await asyncio.sleep(60)  # warm-up delay
     while True:
         await asyncio.sleep(settings.pattern_window_minutes * 60)
-        push_activity("ADK: scheduled SCAN_PATTERNS — iris_orchestrator invoked", "adk")
-        result_text = ""
         try:
             message = types.Content(
                 role="user",
                 parts=[types.Part(text="SCAN_PATTERNS")],
             )
-            async for adk_event in _runner.run_async(
+            async for _ in _runner.run_async(
                 user_id=SYSTEM_USER_ID,
                 session_id=SHIFT_SESSION_ID,
                 new_message=message,
             ):
-                _handle_adk_event(adk_event)
-                if adk_event.is_final_response() and adk_event.content:
-                    for part in adk_event.content.parts:
-                        if part.text:
-                            result_text = part.text
-            _push_scan_activity(result_text)
+                pass
         except Exception as exc:
-            push_activity(f"Scheduled scan error: {str(exc)[:120]}", "critical")
             print(f"[IRIS] Scheduled scan failed: {exc}")

@@ -10,12 +10,6 @@ from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.genai import types
 from mcp import StdioServerParameters
 
-from core.agents.activity_callbacks import (
-    after_model_callback,
-    after_tool_callback,
-    before_model_callback,
-    on_model_error_callback,
-)
 from core.config import settings
 
 _phoenix_mcp_read = McpToolset(
@@ -35,7 +29,7 @@ _phoenix_mcp_read = McpToolset(
 )
 
 pattern_detector_agent = LlmAgent(
-    model=settings.mcp_gemini_model,
+    model=settings.gemini_model,
     name="pattern_detector",
     description=(
         "Queries Arize Phoenix to detect recurring clinical safety failure clusters. "
@@ -50,7 +44,7 @@ When invoked, perform this analysis:
 
 Step 1 — Get recent spans:
   Use `get-spans` to retrieve spans from the IRIS clinical safety project.
-  Request spans from the last {settings.pattern_window_minutes} minutes with limit=10.
+  Request spans from the last {settings.pattern_window_minutes} minutes with limit=50.
 
 Step 2 — Get evaluation scores:
   Use `get-span-annotations` with the span IDs from Step 1 to retrieve
@@ -94,8 +88,4 @@ Output ONLY valid JSON:
     output_key="detected_patterns",
     disallow_transfer_to_parent=False,
     disallow_transfer_to_peers=True,
-    before_model_callback=before_model_callback,
-    after_model_callback=after_model_callback,
-    after_tool_callback=after_tool_callback,
-    on_model_error_callback=on_model_error_callback,
 )

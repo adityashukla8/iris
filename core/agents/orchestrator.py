@@ -8,12 +8,6 @@ from __future__ import annotations
 from google.adk.agents import LlmAgent
 from google.genai import types
 
-from core.agents.activity_callbacks import (
-    after_model_callback,
-    after_tool_callback,
-    before_model_callback,
-    on_model_error_callback,
-)
 from core.agents.alert_dispatcher import alert_dispatcher_agent
 from core.agents.pattern_detector import pattern_detector_agent
 from core.agents.safety_evaluator import safety_evaluator_agent
@@ -84,8 +78,4 @@ is driven by real observability data, is logged in Arize Phoenix, and is autonom
     generate_content_config=types.GenerateContentConfig(
         temperature=0.1,
     ),
-    before_model_callback=before_model_callback,
-    after_model_callback=after_model_callback,
-    after_tool_callback=after_tool_callback,
-    on_model_error_callback=on_model_error_callback,
 )
