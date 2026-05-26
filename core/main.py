@@ -445,7 +445,7 @@ def _compute_analytics(traces: list[dict]) -> dict:
             }
             for e, s in stats.items()
         },
-        "severity_timeline": _bucket_traces(list(reversed(traces)), 12),
+        "severity_timeline": _bucket_traces_by_minute(traces),
         "query_type_breakdown": {
             qt: {
                 "count": v["count"],
@@ -459,25 +459,19 @@ def _compute_analytics(traces: list[dict]) -> dict:
     }
 
 
-def _bucket_traces(ordered_traces: list[dict], buckets: int) -> list[dict]:
-    if not ordered_traces:
-        return []
-    n = len(ordered_traces)
-    size = max(1, n // buckets)
-    result = []
-    for i in range(0, n, size):
-        chunk = ordered_traces[i: i + size]
-        info = sum(1 for t in chunk if t.get("severity", "info") == "info")
-        warn = sum(1 for t in chunk if t.get("severity") == "warning")
-        crit = sum(1 for t in chunk if t.get("severity") == "critical")
-        ts = chunk[0].get("timestamp", "")
-        result.append({
-            "ts": ts[11:16] if len(ts) > 15 else ts,
-            "info": info,
-            "warning": warn,
-            "critical": crit,
-        })
-    return result[-12:]
+def _bucket_traces_by_minute(traces: list[dict]) -> list[dict]:
+    """Group traces by wall-clock minute, count severity per bucket. Newest last."""
+    buckets: dict[str, dict] = {}
+    for t in reversed(traces):  # oldest → newest
+        ts = t.get("timestamp", "")
+        key = ts[:16] if len(ts) >= 16 else ts       # "2026-05-27T12:34"
+        label = ts[11:16] if len(ts) > 15 else ts    # "12:34"
+        if key not in buckets:
+            buckets[key] = {"ts": label, "info": 0, "warning": 0, "critical": 0}
+        sev = t.get("severity", "info")
+        buckets[key][sev] = buckets[key].get(sev, 0) + 1
+    sorted_buckets = sorted(buckets.items())         # sort by ISO key → chronological
+    return [v for _, v in sorted_buckets[-12:]]
 
 
 def _parse_result(result_text: str) -> dict:

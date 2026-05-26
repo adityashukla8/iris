@@ -22,18 +22,18 @@
       --gray-900: #0F172A;
       --blue-50:  #EFF6FF;
       --blue-100: #DBEAFE;
-      --blue-600: #2563EB;
-      --blue-700: #1D4ED8;
-      --red-50:   #FEF2F2;
-      --red-100:  #FEE2E2;
-      --red-600:  #DC2626;
-      --red-700:  #B91C1C;
-      --green-50:  #F0FDF4;
-      --green-100: #DCFCE7;
-      --green-700: #15803D;
-      --amber-50:  #FFFBEB;
-      --amber-100: #FEF3C7;
-      --amber-700: #B45309;
+      --blue-600: #3B82F6;
+      --blue-700: #2563EB;
+      --red-50:   #FFF1F1;
+      --red-100:  #FFE0E0;
+      --red-600:  #E05555;
+      --red-700:  #C43434;
+      --green-50:  #EDFBF3;
+      --green-100: #D6F5E3;
+      --green-700: #1A9652;
+      --amber-50:  #FFFCF0;
+      --amber-100: #FEF5D0;
+      --amber-700: #C07818;
       --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
       --shadow:    0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
       --font: 'Poppins', system-ui, -apple-system, sans-serif;
@@ -42,6 +42,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); -webkit-font-smoothing: antialiased; }
+    input, select, textarea, button, table, th, td { font-family: var(--font); }
     a { color: inherit; text-decoration: none; }
 
     /* ── Layout ─────────────────────────────────────────────────── */
@@ -262,52 +263,233 @@
     .case-section { display: flex; flex-direction: column; gap: 6px; }
     .case-section-label { font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); display: flex; align-items: center; gap: 6px; }
     .case-text { font-family: var(--mono); font-size: .8125rem; color: var(--gray-700); background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; max-height: 160px; overflow-y: auto; }
-    .case-text.output-critical { border-color: var(--red-100); background: var(--red-50); color: var(--red-700); }
-    .case-text.output-warning  { border-color: var(--amber-100); background: var(--amber-50); }
+    .case-text.output-critical { border: 0.1mm solid var(--red-600); }
+    .case-text.output-warning  { border: 0.1mm solid var(--amber-700); }
 
     /* Patient context chips */
     .ctx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
     .ctx-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: .6875rem; font-weight: 500; background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); }
-    .ctx-chip.ctx-id      { background: var(--blue-50);   color: var(--blue-700);  border-color: var(--blue-100); }
-    .ctx-chip.ctx-med     { background: var(--green-50);  color: var(--green-700); border-color: var(--green-100); }
-    .ctx-chip.ctx-allergy { background: var(--red-50);    color: var(--red-700);   border-color: var(--red-100); font-weight: 600; }
-    .ctx-chip.ctx-warn    { background: var(--amber-50);  color: var(--amber-700); border-color: var(--amber-100); }
-    .ctx-chip.ctx-dx      { background: var(--gray-50);   color: var(--gray-600);  border-color: var(--gray-200); font-style: italic; }
+    .ctx-chip.ctx-dx { font-style: italic; }
 
     /* ── Evaluator Cards ────────────────────────────────────────── */
-    .eval-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-    .eval-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px 14px; border-top: 3px solid; display: flex; flex-direction: column; gap: 7px; }
-    .eval-card.info     { border-top-color: var(--green-700); }
-    .eval-card.warning  { border-top-color: var(--amber-700); }
-    .eval-card.critical { border-top-color: var(--red-600); }
-    .eval-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
-    .eval-card-name { font-size: .6875rem; font-weight: 600; color: var(--gray-700); font-family: var(--mono); line-height: 1.3; }
-    .eval-card-score { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); line-height: 1; flex-shrink: 0; }
-    .eval-card-score.info     { color: var(--green-700); }
-    .eval-card-score.warning  { color: var(--amber-700); }
-    .eval-card-score.critical { color: var(--red-600); }
+    /* CSS variable additions for eval-card severity theming */
+    :root {
+      --rose-bg:    #FFE8E8;
+      --rose-text:  #D44040;
+      --amber-bg:   #FFF5D6;
+      --amber-text: #B86015;
+      --mint-bg:    #E5F9EF;
+      --mint-text:  #1A9652;
+    }
 
-    /* Confidence bar */
-    .conf-row { display: flex; align-items: center; gap: 6px; }
-    .conf-label { font-size: .5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); white-space: nowrap; }
-    .conf-track { flex: 1; height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden; }
-    .conf-fill  { height: 100%; background: var(--green-700); border-radius: 2px; }
-    .conf-fill.conf-low { background: var(--red-600); }
-    .conf-val { font-size: .5625rem; font-family: var(--mono); color: var(--gray-600); white-space: nowrap; }
-    .conf-val.conf-low { color: var(--red-600); font-weight: 700; }
+    .eval-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+    }
 
-    .eval-rationale { font-size: .75rem; color: var(--gray-600); line-height: 1.5; }
+    /* ── Base card ── */
+    .eval-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      font-family: var(--font);
+      transition: box-shadow .15s, border-color .15s;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .eval-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+      border-color: var(--gray-300);
+    }
 
-    /* Flagged claims */
-    .flagged-chips { display: flex; flex-wrap: wrap; gap: 3px; }
-    .claim-chip { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .625rem; background: var(--red-50); color: var(--red-700); border: 1px solid var(--red-100); }
+    /* ── Card header: name on top, score+pill below ── */
+    .eval-card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .eval-card-name {
+      font-size: .6875rem;
+      font-weight: 600;
+      font-family: var(--mono);
+      color: var(--gray-600);
+      letter-spacing: .01em;
+      line-height: 1.35;
+      word-break: break-word;
+      min-width: 0;
+    }
+    /* Score + pill wrapper */
+    .eval-card-score-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .eval-card-score {
+      font-size: 1.5rem;
+      font-weight: 500;
+      font-family: var(--mono);
+      line-height: 1;
+      letter-spacing: -.02em;
+      white-space: nowrap;
+    }
+    .eval-card-score.critical { color: var(--gray-900); }
+    .eval-card-score.warning  { color: var(--gray-900); }
+    .eval-card-score.info     { color: var(--gray-900); }
 
-    /* Reasoning chain */
-    .chain-details { }
-    .chain-details summary { font-size: .6875rem; font-weight: 500; color: var(--blue-600); cursor: pointer; user-select: none; list-style: none; padding: 2px 0; }
+    /* Severity pill — sits to the right of the score */
+    .eval-sev-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-size: .5625rem;
+      font-weight: 700;
+      font-family: var(--font);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      line-height: 1.6;
+    }
+    .eval-sev-pill.critical { background: var(--rose-bg);  color: var(--rose-text);  }
+    .eval-sev-pill.warning  { background: var(--amber-bg); color: var(--amber-text); }
+    .eval-sev-pill.info     { background: var(--mint-bg);  color: var(--mint-text);  }
+
+    /* ── Confidence bar ── */
+    .conf-block {
+      margin-bottom: 10px;
+    }
+    .conf-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .conf-label {
+      font-size: .5625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--gray-400);
+    }
+    .conf-val {
+      font-size: .5625rem;
+      font-family: var(--mono);
+      font-weight: 500;
+      color: var(--gray-600);
+    }
+    .conf-val.conf-low { color: var(--gray-700); font-weight: 400; }
+    .conf-track {
+      width: 100%;
+      height: 3px;
+      background: var(--gray-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .conf-fill {
+      height: 100%;
+      border-radius: 2px;
+      /* color interpolated via inline style using JS */
+    }
+
+    /* ── Rationale text ── */
+    .eval-rationale {
+      font-size: .75rem;
+      font-family: var(--font);
+      color: var(--gray-600);
+      line-height: 1.55;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      margin-bottom: 9px;
+    }
+
+    /* ── Flagged claims ── */
+    .flagged-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .claim-chip {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: .5625rem;
+      font-weight: 600;
+      font-family: var(--font);
+      letter-spacing: .02em;
+      background: transparent;
+      color: var(--gray-800);
+      font-weight: 400;
+      border: 1px solid var(--red-600);
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* ── Reasoning chain ── */
+    .chain-details {
+      border-top: 1px solid var(--gray-200);
+      padding-top: 8px;
+      margin-top: 1px;
+    }
+    .chain-details summary {
+      font-size: .6875rem;
+      font-weight: 500;
+      color: var(--blue-600);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0;
+      transition: color .1s;
+    }
     .chain-details summary::-webkit-details-marker { display: none; }
-    .chain-steps { margin: 5px 0 0 14px; padding: 0; font-size: .6875rem; color: var(--gray-700); line-height: 1.7; }
-    .chain-steps li { margin-bottom: 1px; }
+    .chain-details summary:hover { color: var(--blue-700); }
+    .chain-details summary::before {
+      content: '›';
+      font-size: .875rem;
+      line-height: 1;
+      transition: transform .15s;
+      display: inline-block;
+    }
+    .chain-details[open] summary::before { transform: rotate(90deg); }
+    .chain-steps {
+      margin: 7px 0 0 0;
+      padding: 0 0 0 16px;
+      font-size: .6875rem;
+      font-family: var(--font);
+      color: var(--gray-600);
+      line-height: 1.75;
+      list-style: none;
+    }
+    .chain-steps li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+    }
+    .chain-steps li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: .45em;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--gray-300);
+    }
+    .chain-steps li:last-child { margin-bottom: 0; }
+
+    /* ── Skipped evals / eval pills (unchanged) ── */
     .skipped-evals { margin-top: 6px; font-size: .75rem; color: var(--gray-500); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .eval-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: .6875rem; font-family: var(--mono); font-weight: 500; border: 1px solid transparent; }
     .eval-pill.critical { background: var(--red-50);   color: var(--red-700);   border-color: var(--red-100); }
@@ -342,7 +524,7 @@
     .log-err     { color: #fca5a5; }
 
     /* ── Activity Log ───────────────────────────────────────────── */
-    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 258px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column-reverse; }
+    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 258px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column; }
     .act-line { white-space: pre-wrap; word-break: break-word; }
     .act-ts   { color: var(--gray-500); margin-right: 6px; font-size: .72rem; }
     .act-info     { color: #e2e8f0; }
@@ -463,7 +645,7 @@
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title"><div class="panel-dot dot-green"></div>Severity Timeline</div>
-              <span class="panel-meta">last 12 buckets</span>
+              <span class="panel-meta">by minute · last 12 min</span>
             </div>
             <div class="timeline-wrap">
               <div class="timeline-chart" id="timelineChart">
@@ -526,6 +708,20 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- MCP Scan Log -->
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="panel-meta" id="scanMeta">Ready</span>
+              <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
+            </div>
+          </div>
+          <div class="panel-pad" style="padding:14px 16px;max-height:none;">
+            <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" (top bar) to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
+          </div>
         </div>
 
       </main>
@@ -701,20 +897,6 @@
           </div>
         </div>
 
-        <!-- MCP Activity / Scan Output -->
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <span class="panel-meta" id="scanMeta">Ready</span>
-              <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
-            </div>
-          </div>
-          <div class="panel-pad" style="padding:14px 16px;max-height:none;">
-            <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" (top bar) to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
-          </div>
-        </div>
-
       </main>
     </div>
 
@@ -883,28 +1065,42 @@
 
     // Evaluator cards
     const evalCardsHtml = activeEvals.map(e => {
-      const esev = e.severity || 'info';
-      const conf = e.confidence != null ? e.confidence : 1.0;
+      const esev   = e.severity || 'info';
+      const conf   = e.confidence != null ? e.confidence : 1.0;
+      const confPct = Math.round(conf * 100);
       const isLowConf = conf < 0.6;
       const claims = e.flagged_claims || [];
       const chain  = e.reasoning_chain || [];
+      // Confidence bar color: interpolate green (#1A7A4A) → red (#C0392B) based on 1-conf
+      // High confidence (1.0) = mint green; low confidence (0.0) = rose red
+      const t = 1 - conf;
+      const r = Math.round(26  + (192 - 26)  * t);
+      const g = Math.round(122 + (57  - 122) * t);
+      const b = Math.round(74  + (43  - 74)  * t);
+      const confColor = `rgb(${r},${g},${b})`;
       return `
         <div class="eval-card ${esev}">
           <div class="eval-card-header">
             <span class="eval-card-name">${esc(e.evaluator || '')}</span>
-            <span class="eval-card-score ${esev}">${Number(e.score || 0).toFixed(1)}</span>
+            <div class="eval-card-score-row">
+              <span class="eval-card-score ${esev}">${Number(e.score || 0).toFixed(1)}</span>
+              <span class="eval-sev-pill ${esev}">${esev}</span>
+            </div>
           </div>
-          <span class="badge badge-${esev} badge-sm">${esev.toUpperCase()}</span>
-          <div class="conf-row">
-            <span class="conf-label">Confidence</span>
-            <div class="conf-track"><div class="conf-fill${isLowConf ? ' conf-low' : ''}" style="width:${(conf*100).toFixed(0)}%"></div></div>
-            <span class="conf-val${isLowConf ? ' conf-low' : ''}">${conf.toFixed(2)}${isLowConf ? ' ⚠' : ''}</span>
+          <div class="conf-block">
+            <div class="conf-meta">
+              <span class="conf-label">Confidence</span>
+              <span class="conf-val${isLowConf ? ' conf-low' : ''}">${confPct}%</span>
+            </div>
+            <div class="conf-track">
+              <div class="conf-fill" style="width:${confPct}%;background:${confColor};"></div>
+            </div>
           </div>
           <div class="eval-rationale">${esc(e.rationale || '—')}</div>
           ${claims.length ? `<div class="flagged-chips">${claims.map(c=>`<span class="claim-chip">${esc(c)}</span>`).join('')}</div>` : ''}
           ${chain.length ? `
             <details class="chain-details">
-              <summary>&#9656; Reasoning chain (${chain.length} steps)</summary>
+              <summary>${chain.length} step${chain.length !== 1 ? 's' : ''}</summary>
               <ol class="chain-steps">${chain.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
             </details>` : ''}
         </div>`;
@@ -1270,10 +1466,10 @@
     const el = document.createElement('div');
     el.className = `act-line ${cls}`;
     el.innerHTML = `<span class="act-ts">${esc(event.ts || '')}</span>${esc(event.text || '')}`;
-    // flex-direction:column-reverse so newest appears at bottom visually
     log.appendChild(el);
     // Keep at most 200 lines
     while (log.children.length > 200) log.removeChild(log.firstChild);
+    log.scrollTop = log.scrollHeight;
   }
 
   function clearActivityLog() {
@@ -1287,6 +1483,8 @@
       const d = await r.json();
       const events = (d.activity || []).reverse(); // oldest first
       events.forEach(appendActivityLine);
+      const log = document.getElementById('activityLog');
+      if (log) log.scrollTop = log.scrollHeight;
     } catch (_) {}
   }
 
