@@ -160,16 +160,37 @@
 
     /* ── Severity Timeline ──────────────────────────────────────── */
     .timeline-wrap { padding: 12px 16px 8px; height: 100%; display: flex; flex-direction: column; }
-    .timeline-chart { display: flex; align-items: flex-end; gap: 3px; flex: 1; min-height: 120px; max-height: 200px; }
-    .timeline-bucket { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 0; }
-    .tl-bar { width: 100%; min-height: 2px; }
-    .tl-info     { background: var(--blue-100); }
-    .tl-warning  { background: var(--amber-700); opacity: .7; }
-    .tl-critical { background: var(--red-600); }
-    .tl-label { font-size: .5rem; font-family: var(--mono); color: var(--gray-400); margin-top: 4px; white-space: nowrap; overflow: hidden; }
+    .timeline-chart { flex: 1; min-height: 120px; max-height: 200px; }
     .timeline-legend { display: flex; gap: 12px; margin-top: 8px; }
     .legend-item { display: flex; align-items: center; gap: 4px; font-size: .6875rem; color: var(--gray-600); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ── MCP Probe Chat ─────────────────────────────────────────── */
+    .mcp-probe-presets { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--gray-100); }
+    .preset-btn { padding: 3px 11px; border-radius: 14px; font-size: .6875rem; font-weight: 500; background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); cursor: pointer; font-family: var(--font); transition: all .12s; }
+    .preset-btn:hover { background: var(--blue-50); color: var(--blue-700); border-color: var(--blue-100); }
+    .mcp-chat-history { overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; max-height: 340px; min-height: 80px; }
+    .mcp-msg { display: flex; flex-direction: column; max-width: 88%; }
+    .mcp-msg.user  { align-self: flex-end; }
+    .mcp-msg.agent { align-self: flex-start; }
+    .mcp-bubble { padding: 8px 12px; border-radius: 8px; font-size: .8125rem; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+    .mcp-msg.user  .mcp-bubble { background: var(--gray-100); color: var(--gray-800); border-radius: 8px 8px 2px 8px; }
+    .mcp-msg.agent .mcp-bubble { background: var(--white); border: 1px solid var(--gray-200); color: var(--gray-800); border-radius: 8px 8px 8px 2px; }
+    .mcp-tool-card { font-family: var(--mono); font-size: .6875rem; background: var(--gray-900); color: #e2e8f0; padding: 8px 12px; border-radius: 7px; margin-top: 2px; max-width: 100%; }
+    .mcp-tool-name { color: #fbbf24; font-weight: 600; }
+    .mcp-tool-result { color: #86efac; margin-top: 4px; white-space: pre-wrap; word-break: break-all; opacity: .9; }
+    .mcp-chat-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--gray-200); }
+    .mcp-input { flex: 1; padding: 7px 12px; border: 1px solid var(--gray-200); border-radius: 7px; font-size: .8125rem; color: var(--gray-800); outline: none; transition: border-color .15s; background: var(--white); }
+    .mcp-input:focus { border-color: var(--blue-600); }
+    .btn-mcp-send { padding: 7px 16px; background: var(--blue-700); color: var(--white); border: none; border-radius: 7px; font-size: .8125rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+    .btn-mcp-send:hover { background: var(--blue-600); }
+    .btn-mcp-send:disabled { opacity: .45; cursor: not-allowed; }
+    .mcp-typing { display: flex; align-items: center; gap: 5px; padding: 6px 0; }
+    .mcp-typing-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-300); animation: typing-pulse 1.2s infinite; }
+    .mcp-typing-dot:nth-child(2) { animation-delay: .2s; }
+    .mcp-typing-dot:nth-child(3) { animation-delay: .4s; }
+    .mcp-typing span { font-size: .75rem; color: var(--gray-400); }
+    @keyframes typing-pulse { 0%,80%,100%{opacity:.3;transform:scale(.8);}40%{opacity:1;transform:scale(1);} }
 
     /* ── Query Type Breakdown ───────────────────────────────────── */
     .qt-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
@@ -341,9 +362,9 @@
       letter-spacing: -.02em;
       white-space: nowrap;
     }
-    .eval-card-score.critical { color: var(--gray-900); }
-    .eval-card-score.warning  { color: var(--gray-900); }
-    .eval-card-score.info     { color: var(--gray-900); }
+    .eval-card-score.critical { color: var(--rose-text); }
+    .eval-card-score.warning  { color: var(--amber-text); }
+    .eval-card-score.info     { color: var(--mint-text); }
 
     /* Severity pill — sits to the right of the score */
     .eval-sev-pill {
@@ -652,9 +673,9 @@
                 <div class="empty" style="width:100%;padding:20px 0;"><div class="empty-text">No trace data yet</div></div>
               </div>
               <div class="timeline-legend">
-                <div class="legend-item"><div class="legend-dot" style="background:var(--blue-100);border:1px solid var(--blue-600);"></div>info</div>
-                <div class="legend-item"><div class="legend-dot" style="background:var(--amber-700);opacity:.7;"></div>warning</div>
-                <div class="legend-item"><div class="legend-dot" style="background:var(--red-600);"></div>critical</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#3B82F6;"></div>info</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#C07818;"></div>warning</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#E05555;"></div>critical</div>
               </div>
             </div>
           </div>
@@ -675,7 +696,7 @@
           </div>
         </div>
 
-        <!-- Alert Feed + Activity Log (2-column) -->
+        <!-- Live Alert Feed + Test & Debug MCP -->
         <div class="grid-2" style="margin-bottom:14px;">
 
           <!-- Live Alert Feed -->
@@ -684,11 +705,56 @@
               <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
               <span class="panel-meta" id="alertCount">0 alerts</span>
             </div>
-            <div class="panel-body" id="alertFeed" style="max-height:280px;">
+            <div class="panel-body" id="alertFeed" style="max-height:340px;">
               <div class="empty">
                 <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg></div>
                 <div class="empty-text">Waiting for SSE alerts</div>
               </div>
+            </div>
+          </div>
+
+          <!-- Test & Debug MCP Servers -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-purple"></div>Test &amp; Debug MCP Servers</div>
+              <span class="panel-meta">Live Phoenix MCP · Gemini 2.5-flash</span>
+            </div>
+            <div class="mcp-probe-presets">
+              <button class="preset-btn" onclick="sendMcpQuery('List all Phoenix projects')">List projects</button>
+              <button class="preset-btn" onclick="sendMcpQuery('Get the last 5 spans from the iris-clinical project')">Recent spans</button>
+              <button class="preset-btn" onclick="sendMcpQuery('List all prompts and their latest versions')">Prompt versions</button>
+              <button class="preset-btn" onclick="sendMcpQuery('List all datasets and how many examples each has')">Datasets</button>
+              <button class="preset-btn" onclick="sendMcpQuery('How many spans are in the iris-clinical project? Break down by any metadata you can find.')">Span count</button>
+            </div>
+            <div class="mcp-chat-history" id="mcpHistory">
+              <div class="mcp-msg agent">
+                <div class="mcp-bubble">Ready. Ask anything about your Phoenix observability data — spans, prompts, datasets, experiments. I'll query the live MCP server to answer.</div>
+              </div>
+            </div>
+            <div class="mcp-chat-input-row">
+              <input class="mcp-input" id="mcpInput" type="text"
+                placeholder="e.g. What's the current production prompt?"
+                onkeydown="if(event.key==='Enter')sendMcpQuery()" />
+              <button class="btn-mcp-send" id="mcpSendBtn" onclick="sendMcpQuery()">Send</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MCP Activity Log + Activity Log -->
+        <div class="grid-2" style="margin-bottom:14px;">
+
+          <!-- MCP Activity Log -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-meta" id="scanMeta">Ready</span>
+                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
+              </div>
+            </div>
+            <div class="panel-pad" style="padding:12px 14px;max-height:none;">
+              <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
             </div>
           </div>
 
@@ -708,20 +774,6 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- MCP Scan Log -->
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <span class="panel-meta" id="scanMeta">Ready</span>
-              <button class="btn-sm btn-ghost" style="padding:3px 9px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
-            </div>
-          </div>
-          <div class="panel-pad" style="padding:14px 16px;max-height:none;">
-            <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" (top bar) to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
-          </div>
         </div>
 
       </main>
@@ -1209,27 +1261,13 @@
         }).join('');
       }
 
-      // Severity Timeline
+      // Severity Timeline — SVG line chart
       const buckets = a.severity_timeline || [];
       const chart = document.getElementById('timelineChart');
       if (!buckets.length) {
         chart.innerHTML = `<div class="empty" style="width:100%;padding:20px 0;"><div class="empty-text">No trace data yet</div></div>`;
       } else {
-        const maxTotal = Math.max(...buckets.map(b => (b.info||0)+(b.warning||0)+(b.critical||0)), 1);
-        const H = 140;
-        chart.innerHTML = buckets.map(b => {
-          const ih = Math.round(((b.info||0)/maxTotal)*H);
-          const wh = Math.round(((b.warning||0)/maxTotal)*H);
-          const ch = Math.round(((b.critical||0)/maxTotal)*H);
-          const tot = (b.info||0)+(b.warning||0)+(b.critical||0);
-          return `<div class="timeline-bucket">
-            ${b.critical>0?`<div class="tl-bar tl-critical" style="height:${ch}px;" title="${b.critical} critical"></div>`:''}
-            ${b.warning >0?`<div class="tl-bar tl-warning"  style="height:${wh}px;" title="${b.warning} warning"></div>`:''}
-            ${b.info    >0?`<div class="tl-bar tl-info"     style="height:${ih}px;" title="${b.info} info"></div>`:''}
-            ${tot===0?`<div class="tl-bar tl-info" style="height:2px;"></div>`:''}
-            <div class="tl-label">${esc(b.ts)}</div>
-          </div>`;
-        }).join('');
+        chart.innerHTML = renderTimelineSVG(buckets);
       }
 
       // Query Type Breakdown
@@ -1525,6 +1563,131 @@
   setInterval(fetchAnalytics,         10000);
   setInterval(fetchHealingCandidates, 15000);
   setInterval(fetchHealingHistory,    30000);
+
+  // ── Severity Timeline SVG ────────────────────────────────────────
+  function renderTimelineSVG(buckets) {
+    const W = 420, H = 130, PL = 10, PR = 10, PT = 12, PB = 26;
+    const cW = W - PL - PR, cH = H - PT - PB;
+    const n = buckets.length;
+    const maxVal = Math.max(...buckets.map(b => Math.max(b.info||0, b.warning||0, b.critical||0)), 1);
+    const xOf = i => PL + (n <= 1 ? cW / 2 : i * cW / (n - 1));
+    const yOf = v => PT + cH - Math.max(0, (v / maxVal)) * cH;
+
+    function smoothPath(pts) {
+      if (!pts.length) return '';
+      if (pts.length === 1) return `M${pts[0].x},${pts[0].y}`;
+      let d = `M${pts[0].x},${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const dx = (pts[i+1].x - pts[i].x) * 0.42;
+        d += ` C${pts[i].x+dx},${pts[i].y} ${pts[i+1].x-dx},${pts[i+1].y} ${pts[i+1].x},${pts[i+1].y}`;
+      }
+      return d;
+    }
+
+    const series = [
+      { key:'info',     color:'#3B82F6', label:'info' },
+      { key:'warning',  color:'#C07818', label:'warning' },
+      { key:'critical', color:'#E05555', label:'critical' },
+    ];
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">`;
+
+    // Grid lines
+    for (let i = 0; i <= 3; i++) {
+      const y = PT + (i / 3) * cH;
+      svg += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width="0.5"/>`;
+    }
+
+    // Lines + dots + count labels per series
+    for (const s of series) {
+      const hasData = buckets.some(b => (b[s.key]||0) > 0);
+      if (!hasData) continue;
+      const pts = buckets.map((b, i) => ({ x: xOf(i), y: yOf(b[s.key]||0) }));
+      const d = smoothPath(pts);
+      svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.75" stroke-linecap="round" opacity="0.85"/>`;
+      pts.forEach((p, i) => {
+        const v = buckets[i][s.key] || 0;
+        svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${v>0?3.5:1.5}" fill="${v>0?s.color:'#CBD5E1'}" stroke="${v>0?'white':'none'}" stroke-width="1.5" opacity="${v>0?1:.5}"><title>${s.label}: ${v} at ${esc(buckets[i].ts)}</title></circle>`;
+        if (v > 0) {
+          svg += `<text x="${p.x.toFixed(1)}" y="${(p.y-6).toFixed(1)}" text-anchor="middle" font-size="6.5" font-weight="600" fill="${s.color}" font-family="JetBrains Mono,monospace">${v}</text>`;
+        }
+      });
+    }
+
+    // X-axis labels (show every 2nd if many)
+    const step = n > 8 ? 2 : 1;
+    buckets.forEach((b, i) => {
+      if (i % step === 0 || i === n - 1) {
+        svg += `<text x="${xOf(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="7" fill="#94A3B8" font-family="JetBrains Mono,monospace">${esc(b.ts)}</text>`;
+      }
+    });
+
+    svg += `</svg>`;
+    return svg;
+  }
+
+  // ── MCP Probe Chat ────────────────────────────────────────────────
+  async function sendMcpQuery(preset) {
+    const input = document.getElementById('mcpInput');
+    const message = preset || (input ? input.value.trim() : '');
+    if (!message) return;
+    if (input && !preset) input.value = '';
+
+    appendMcpMsg('user', message);
+    const typingId = 'typing-' + Date.now();
+    appendMcpTyping(typingId);
+
+    const btn = document.getElementById('mcpSendBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const r = await fetch('/mcp/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const d = await r.json();
+      document.getElementById(typingId)?.remove();
+      (d.tool_calls || []).forEach(tc => appendMcpToolCard(tc));
+      appendMcpMsg('agent', d.response || '(no response)');
+    } catch (err) {
+      document.getElementById(typingId)?.remove();
+      appendMcpMsg('agent', 'Request failed: ' + err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function mcpHistory() { return document.getElementById('mcpHistory'); }
+
+  function appendMcpMsg(role, text) {
+    const h = mcpHistory(); if (!h) return;
+    const d = document.createElement('div');
+    d.className = `mcp-msg ${role}`;
+    d.innerHTML = `<div class="mcp-bubble">${esc(text)}</div>`;
+    h.appendChild(d);
+    h.scrollTop = h.scrollHeight;
+  }
+
+  function appendMcpToolCard(tc) {
+    const h = mcpHistory(); if (!h) return;
+    const d = document.createElement('div');
+    d.className = 'mcp-msg agent';
+    const res = tc.result ? `<div class="mcp-tool-result">${esc(tc.result)}</div>` : '';
+    d.innerHTML = `<div class="mcp-tool-card"><span class="mcp-tool-name">MCP → ${esc(tc.tool)}</span>${res}</div>`;
+    h.appendChild(d);
+    h.scrollTop = h.scrollHeight;
+  }
+
+  function appendMcpTyping(id) {
+    const h = mcpHistory(); if (!h) return;
+    const d = document.createElement('div');
+    d.id = id;
+    d.className = 'mcp-msg agent';
+    d.innerHTML = `<div class="mcp-typing"><div class="mcp-typing-dot"></div><div class="mcp-typing-dot"></div><div class="mcp-typing-dot"></div><span>Querying Phoenix MCP…</span></div>`;
+    h.appendChild(d);
+    h.scrollTop = h.scrollHeight;
+  }
 </script>
 </body>
 </html>

@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import re
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -31,6 +32,7 @@ from google.genai import types
 from openinference.instrumentation.google_adk import GoogleADKInstrumentor
 from phoenix.otel import register
 
+from core.agents.mcp_probe import mcp_probe_agent
 from core.agents.orchestrator import iris_orchestrator
 from core.config import settings
 from core.state import (
@@ -74,6 +76,14 @@ _runner = Runner(
     app_name="iris-clinical",
     session_service=_session_service,
 )
+
+_probe_session_service = InMemorySessionService()
+_probe_runner = Runner(
+    agent=mcp_probe_agent,
+    app_name="iris-mcp-probe",
+    session_service=_probe_session_service,
+)
+_PROBE_USER_ID = "iris-probe"
 
 SHIFT_SESSION_ID = "shift-001"
 SYSTEM_USER_ID = "iris-system"
@@ -303,6 +313,60 @@ async def healing_history_feed(limit: int = 50) -> dict:
 @app.get("/analytics")
 async def get_analytics() -> dict:
     return {"analytics": _compute_analytics(list(recent_traces))}
+
+
+@app.post("/mcp/chat")
+async def mcp_chat(request: Request) -> dict:
+    """
+    Run an ad-hoc natural-language query against Arize Phoenix via the MCP probe agent.
+    Each call gets an isolated session — no cross-query context bleed.
+    """
+    body = await request.json()
+    message = (body.get("message") or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="message required")
+
+    session_id = f"probe-{uuid.uuid4().hex[:12]}"
+    await _probe_session_service.create_session(
+        app_name="iris-mcp-probe",
+        user_id=_PROBE_USER_ID,
+        session_id=session_id,
+    )
+
+    content = types.Content(role="user", parts=[types.Part(text=message)])
+    response_text = ""
+    tool_calls: list[dict] = []
+
+    try:
+        async for evt in _probe_runner.run_async(
+            user_id=_PROBE_USER_ID,
+            session_id=session_id,
+            new_message=content,
+        ):
+            parts = getattr(getattr(evt, "content", None), "parts", None) or []
+            for part in parts:
+                fc = getattr(part, "function_call", None)
+                if fc and fc.name:
+                    tool_calls.append({"tool": fc.name, "args": dict(fc.args or {})})
+                fr = getattr(part, "function_response", None)
+                if fr and fr.name:
+                    resp = fr.response or {}
+                    preview = json.dumps(resp)[:400] if isinstance(resp, dict) else str(resp)[:400]
+                    for tc in reversed(tool_calls):
+                        if tc["tool"] == fr.name and "result" not in tc:
+                            tc["result"] = preview
+                            break
+            if evt.is_final_response() and evt.content:
+                for part in evt.content.parts:
+                    if getattr(part, "text", None):
+                        response_text = part.text
+                        break
+
+        push_activity(f"MCP Probe: {message[:60]} → {len(tool_calls)} tool call(s)", "mcp")
+        return {"response": response_text, "tool_calls": tool_calls}
+
+    except Exception as exc:
+        return {"response": f"Error: {str(exc)[:300]}", "tool_calls": tool_calls}
 
 
 @app.get("/", response_class=HTMLResponse)
