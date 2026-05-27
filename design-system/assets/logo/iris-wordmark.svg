@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40" fill="none">
+  <!-- Logo mark (compact, 32×32 centered at x=4) -->
+  <rect x="4" y="4" width="32" height="32" rx="7" fill="#0F172A"/>
+  <circle cx="20" cy="20" r="8.5" stroke="#FFFFFF" stroke-width="1.25" stroke-dasharray="13.5 53.4" stroke-dashoffset="-3" stroke-linecap="round"/>
+  <circle cx="20" cy="20" r="5.5" stroke="#FFFFFF" stroke-width="1.25" stroke-dasharray="9 34.6" stroke-dashoffset="-2" stroke-linecap="round"/>
+  <circle cx="20" cy="20" r="2" fill="#FFFFFF"/>
+
+  <!-- Wordmark: "IRIS" in Poppins-style geometry — hand-traced letterforms -->
+  <!-- I -->
+  <rect x="48" y="13" width="2.5" height="14" rx="1.25" fill="#0F172A"/>
+  <!-- R -->
+  <path d="M58 13 L58 27 M58 13 L63 13 C65.2 13 66.5 14.3 66.5 16.2 C66.5 18.1 65.2 19.4 63 19.4 L58 19.4 M62 19.4 L66.5 27" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- I -->
+  <rect x="71" y="13" width="2.5" height="14" rx="1.25" fill="#0F172A"/>
+  <!-- S -->
+  <path d="M83.5 16 C83.5 14.3 81.9 13 80 13 C77.8 13 76.5 14.2 76.5 15.8 C76.5 17.4 77.6 18 80 18.8 C82.4 19.6 83.5 20.4 83.5 22.2 C83.5 24 82.1 25 80 25 C77.9 25 76.5 23.8 76.5 22" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Subtitle: "Clinical AI Safety" in lighter weight -->
+  <text x="48" y="35" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="500" fill="#94A3B8" letter-spacing="0.05em">CLINICAL AI SAFETY</text>
+</svg>

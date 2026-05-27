@@ -1,0 +1,93 @@
+/* Dashboard UI Kit — gallery layout styles */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  background: #F0F2F5;
+  color: #0F172A;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea, button, table, th, td {
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Gallery layout */
+#root { min-height: 100vh; }
+
+.gallery-header {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gallery-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.gallery-subtitle {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.gallery-body {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.gallery-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gallery-section-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-section-label::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 2px;
+  background: #CBD5E1;
+  border-radius: 2px;
+}
+
+.gallery-demo-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15,23,42,.06);
+}
+
+.gallery-demo-box.full-height {
+  height: 480px;
+}
+
+.gallery-demo-box .demo-label {
+  padding: 8px 16px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 0.6875rem;
+  color: #94A3B8;
+  font-weight: 500;
+}

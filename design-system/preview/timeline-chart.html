@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IRIS DS — Timeline Chart</title>
+  <link rel="stylesheet" href="_base.css">
+</head>
+<body>
+  <div class="preview-card">
+    <div class="preview-label">timeline-chart</div>
+
+    <div class="preview-section">
+      <div style="font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;margin-bottom:8px">Severity by minute · last 12 min</div>
+      <svg viewBox="0 0 420 130" width="100%" style="display:block">
+        <!-- Grid lines -->
+        <line x1="10" y1="12" x2="10" y2="104" stroke="#E2E8F0" stroke-width="1"/>
+        <line x1="410" y1="12" x2="410" y2="104" stroke="#E2E8F0" stroke-width="1"/>
+        <line x1="10" y1="104" x2="410" y2="104" stroke="#E2E8F0" stroke-width="1"/>
+        <!-- Info line (blue) — flat -->
+        <path d="M10,80 C43,80 77,60 110,55 C143,50 177,45 210,48 C243,51 277,52 310,50 C343,48 377,52 410,50" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+        <!-- Warning line (amber) — some spikes -->
+        <path d="M10,95 C43,95 77,90 110,85 C143,80 177,75 210,72 C243,69 277,70 310,68 C343,66 377,68 410,65" fill="none" stroke="#C07818" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2"/>
+        <!-- Critical line (red) — spikes -->
+        <path d="M10,102 C43,102 77,100 110,98 C143,78 177,102 210,100 C243,98 277,75 310,102 C343,100 377,98 410,96" fill="none" stroke="#E05555" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2"/>
+        <!-- Dots on info -->
+        <circle cx="210" cy="48" r="3" fill="#3B82F6"/>
+        <circle cx="410" cy="50" r="3" fill="#3B82F6"/>
+        <!-- X labels -->
+        <text x="10" y="120" font-family="'Poppins',sans-serif" font-size="8" fill="#94A3B8" text-anchor="middle">12:23</text>
+        <text x="210" y="120" font-family="'Poppins',sans-serif" font-size="8" fill="#94A3B8" text-anchor="middle">12:29</text>
+        <text x="410" y="120" font-family="'Poppins',sans-serif" font-size="8" fill="#94A3B8" text-anchor="middle">12:34</text>
+      </svg>
+      <div style="display:flex;gap:12px;margin-top:6px">
+        <div style="display:flex;align-items:center;gap:4px;font-size:.6875rem;color:#64748B"><div style="width:8px;height:8px;border-radius:50%;background:#3B82F6"></div>info</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:.6875rem;color:#64748B"><div style="width:8px;height:8px;border-radius:50%;background:#C07818"></div>warning</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:.6875rem;color:#64748B"><div style="width:8px;height:8px;border-radius:50%;background:#E05555"></div>critical</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

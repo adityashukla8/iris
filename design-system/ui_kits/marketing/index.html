@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRIS — Marketing UI Kit</title>
+  <link rel="stylesheet" href="styles.css">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+/* ── Shared ──────────────────────────────────────────────────────────────── */
+function IrisMark({ size = 28 }) {
+  return (
+    <div style={{ width: size, height: size, background: '#0F172A', borderRadius: Math.round(size * 0.22), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width={size * 0.64} height={size * 0.64} viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="11" stroke="#fff" strokeWidth="1.5" strokeDasharray="17 52.83" strokeDashoffset="-4" strokeLinecap="round"/>
+        <circle cx="20" cy="20" r="7.5" stroke="#fff" strokeWidth="1.5" strokeDasharray="12 47.12" strokeDashoffset="-2.5" strokeLinecap="round"/>
+        <circle cx="20" cy="20" r="2.5" fill="#fff"/>
+      </svg>
+    </div>
+  );
+}
+
+function Eyebrow({ text }) {
+  return (
+    <div style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:'.6875rem', fontWeight:600, letterSpacing:'.09em', textTransform:'uppercase', color:'#475569', marginBottom:14 }}>
+      <span style={{ width:18, height:2, background:'#475569', borderRadius:2, flexShrink:0, display:'inline-block' }}/>
+      {text}
+    </div>
+  );
+}
+
+/* ── Navbar ──────────────────────────────────────────────────────────────── */
+function Navbar() {
+  return (
+    <nav style={{ background:'#fff', borderBottom:'1px solid #E2E8F0', position:'sticky', top:0, zIndex:50 }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+          <IrisMark size={32}/>
+          <span style={{ fontSize:'1rem', fontWeight:700, color:'#0F172A' }}>IRIS</span>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:24 }}>
+          {['How It Works','Agents','Tech Stack'].map(l => (
+            <a key={l} style={{ fontSize:'.875rem', fontWeight:500, color:'#475569' }}>{l}</a>
+          ))}
+        </div>
+        <a href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, fontSize:'.875rem', fontWeight:600, background:'#0F172A', color:'#fff', border:'none', cursor:'pointer' }}>
+          Dashboard
+        </a>
+      </div>
+    </nav>
+  );
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+function Hero() {
+  return (
+    <section style={{ background:'#fff', padding:'80px 0 72px' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px' }}>
+        <Eyebrow text="Real-time Clinical AI Safety"/>
+        <h1 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800, lineHeight:1.12, letterSpacing:'-.03em', color:'#0F172A', maxWidth:820, marginBottom:24 }}>
+          Clinical AI Shouldn't Operate<br/>Without a Supervisor.
+        </h1>
+        <p style={{ fontSize:'1.0625rem', color:'#475569', lineHeight:1.75, maxWidth:600, marginBottom:36 }}>
+          IRIS is a multi-agent safety layer that evaluates every AI response in real time, catches hallucinations before they reach the clinician, and autonomously heals failure patterns by rewriting prompts.
+        </p>
+        <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:64 }}>
+          <a href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'11px 22px', borderRadius:10, fontFamily:'inherit', fontSize:'.9375rem', fontWeight:600, background:'#0F172A', color:'#fff', border:'none', cursor:'pointer', textDecoration:'none' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Live Dashboard
+          </a>
+          <a href="https://github.com" style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'11px 22px', borderRadius:10, fontFamily:'inherit', fontSize:'.9375rem', fontWeight:600, background:'#fff', color:'#1E293B', border:'1.5px solid #E2E8F0', cursor:'pointer', textDecoration:'none' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            View on GitHub
+          </a>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:32, maxWidth:720, borderTop:'1px solid #E2E8F0', paddingTop:40 }}>
+          {[
+            { v:'91.8%', l:'of LLMs generate dangerous medication errors', s:'MIT Media Lab, 2025' },
+            { v:'83%',   l:'of ICU medication errors involve polypharmacy', s:'RxSafeBench 2025' },
+            { v:'$42B',  l:'annual cost of preventable medication errors',  s:'FDA PCCP Analysis' },
+          ].map(s => (
+            <div key={s.v} style={{ display:'flex', flexDirection:'column', gap:4 }}>
+              <div style={{ fontSize:'clamp(1.75rem,4vw,2.5rem)', fontWeight:800, lineHeight:1, fontVariantNumeric:'tabular-nums', color:'#0F172A' }}>{s.v}</div>
+              <div style={{ fontSize:'.8125rem', color:'#475569', lineHeight:1.45 }}>{s.l}</div>
+              <div style={{ fontSize:'.625rem', color:'#94A3B8' }}>{s.s}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Problem strip ───────────────────────────────────────────────────────── */
+function ProblemStrip() {
+  const items = [
+    { title:'Hallucinated dosages', body:'LLMs confidently state dangerous drug doses with no access to patient-specific renal or hepatic function data.' },
+    { title:'Drug-drug interactions', body:'Polypharmacy is the #1 ICU medication error. AI assistants have no cross-reference mechanism for the patient\'s current medication list.' },
+    { title:'Missing allergy checks', body:'Recommending a drug the patient is allergic to is a preventable, lethal error — and current LLMs have no structured allergy-check step.' },
+    { title:'No audit trail', body:'Clinicians can\'t trust an AI they can\'t audit. Without reasoning chains and span-level logs, every AI response is a black box.' },
+  ];
+  return (
+    <section style={{ background:'#F8FAFC', padding:'80px 0' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px' }}>
+        <Eyebrow text="The Problem"/>
+        <h2 style={{ fontSize:'clamp(1.625rem,3.5vw,2.375rem)', fontWeight:700, lineHeight:1.2, letterSpacing:'-.02em', color:'#0F172A', marginBottom:14 }}>
+          The OR is the last place<br/>for AI to hallucinate.
+        </h2>
+        <p style={{ fontSize:'1rem', color:'#475569', lineHeight:1.75, maxWidth:560, marginBottom:48 }}>
+          Current clinical AI assistants lack systematic safety rails. IRIS closes that gap.
+        </p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:16 }}>
+          {items.map(item => (
+            <div key={item.title} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:14, padding:'20px 24px', boxShadow:'0 1px 3px rgba(15,23,42,.06)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#E05555', flexShrink:0 }}/>
+                <span style={{ fontSize:'1rem', fontWeight:600, color:'#0F172A' }}>{item.title}</span>
+              </div>
+              <p style={{ fontSize:'.875rem', color:'#64748B', lineHeight:1.65 }}>{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── HowItWorks ──────────────────────────────────────────────────────────── */
+const STEPS = [
+  { n:'01', title:'AI Generates Response',   body:'An upstream clinical AI (ORION) responds to a clinician query. The response is intercepted before reaching the end user.' },
+  { n:'02', title:'Parallel Evaluation',      body:'7 specialized evaluators run in parallel via Google ADK — checking dosage, hallucinations, drug interactions, allergies, attribution, context gaps, and surgical phase.' },
+  { n:'03', title:'OTel Tracing to Phoenix',  body:'Every evaluation result is exported as an OpenInference span to Arize Phoenix Cloud, with per-evaluator scores, severity, confidence, and reasoning chains.' },
+  { n:'04', title:'Pattern Detection via MCP',body:'The Pattern Detector agent queries Phoenix through the MCP server — reading recent spans to identify recurring failure clusters across traces.' },
+  { n:'05', title:'Autonomous Prompt Mutation',body:'When a failure cluster exceeds the threshold, the Self-Healer fetches the current prompt via MCP, logs failing examples to a Phoenix dataset, and generates a patch using TextGrad.' },
+  { n:'06', title:'Validate → Gate → Deploy', body:'The candidate prompt is validated against real failing examples. If improvement exceeds the gate threshold, it is deployed as a new Phoenix prompt version.' },
+];
+
+function HowItWorks() {
+  return (
+    <section style={{ background:'#fff', padding:'80px 0' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px' }}>
+        <Eyebrow text="How It Works"/>
+        <h2 style={{ fontSize:'clamp(1.625rem,3.5vw,2.375rem)', fontWeight:700, lineHeight:1.2, letterSpacing:'-.02em', color:'#0F172A', marginBottom:14 }}>End-to-end observability loop</h2>
+        <p style={{ fontSize:'1rem', color:'#475569', lineHeight:1.75, maxWidth:560, marginBottom:48 }}>From AI response to deployed fix — every step is traced, evaluated, and stored in Phoenix.</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}>
+          {STEPS.map(s => (
+            <div key={s.n} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:14, padding:24, boxShadow:'0 1px 3px rgba(15,23,42,.06)' }}>
+              <div style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, background:'#F1F5F9', marginBottom:14, fontSize:'.75rem', fontWeight:700, fontVariantNumeric:'tabular-nums', color:'#475569' }}>{s.n}</div>
+              <div style={{ fontSize:'1rem', fontWeight:600, color:'#0F172A', marginBottom:8, lineHeight:1.3 }}>{s.title}</div>
+              <p style={{ fontSize:'.875rem', color:'#64748B', lineHeight:1.65 }}>{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── AgentGrid ───────────────────────────────────────────────────────────── */
+const AGENTS = [
+  { name:'Supervisor',       role:'Coordinator', desc:'Receives every AI response, dispatches evaluation tools in parallel, aggregates results, and escalates to healing when failure patterns emerge.', tags:['Google ADK','Orchestrator'], dot:'#1A9652' },
+  { name:'Safety Evaluator', role:'Evaluator',   desc:'Runs 7 parallel Gemini-powered evaluation tools — dosage, hallucination, drug interaction, allergy, attribution, context gap, surgical phase.', tags:['Gemini 2.0 Flash','7 tools'], dot:'#E05555' },
+  { name:'Pattern Detector', role:'Observer',    desc:'Queries Phoenix via MCP to identify recurring failure clusters across recent spans. Triggers self-healing when hallucination rate exceeds threshold.', tags:['MCP','Phoenix spans'], dot:'#C07818' },
+  { name:'Self-Healer',      role:'Healer',      desc:'Fetches the current failing prompt from Phoenix, logs examples to a dataset via MCP, and produces a HealingDiagnosis for the mutation pipeline.', tags:['MCP','TextGrad'], dot:'#3B82F6' },
+  { name:'Alert Dispatcher', role:'Notifier',    desc:'Translates evaluation results into structured alerts streamed to the dashboard via Server-Sent Events. Critical alerts trigger immediate notification.', tags:['SSE','Real-time'], dot:'#94A3B8' },
+  { name:'MCP Probe',        role:'Debug',       desc:'Interactive Phoenix MCP query agent for live demonstrations. Queries spans, traces, datasets, and prompts on demand through the dashboard chat interface.', tags:['MCP','Interactive'], dot:'#475569' },
+];
+
+function AgentGrid() {
+  return (
+    <section style={{ background:'#F8FAFC', padding:'80px 0' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px' }}>
+        <Eyebrow text="Agent Architecture"/>
+        <h2 style={{ fontSize:'clamp(1.625rem,3.5vw,2.375rem)', fontWeight:700, lineHeight:1.2, letterSpacing:'-.02em', color:'#0F172A', marginBottom:14 }}>Six agents. One safety loop.</h2>
+        <p style={{ fontSize:'1rem', color:'#475569', lineHeight:1.75, maxWidth:560, marginBottom:48 }}>Each agent has a narrow, auditable responsibility — no monolith, no black box.</p>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+          {AGENTS.map(a => (
+            <div key={a.name} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:14, padding:20, boxShadow:'0 1px 3px rgba(15,23,42,.06)', display:'flex', flexDirection:'column', gap:12 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:a.dot, flexShrink:0 }}/>
+                  <span style={{ fontSize:'1rem', fontWeight:600, color:'#0F172A' }}>{a.name}</span>
+                </div>
+                <span style={{ display:'inline-flex', padding:'2px 9px', borderRadius:20, fontSize:'.6875rem', fontWeight:500, background:'#F1F5F9', color:'#475569', border:'1px solid #E2E8F0' }}>{a.role}</span>
+              </div>
+              <p style={{ fontSize:'.875rem', color:'#64748B', lineHeight:1.65, flex:1 }}>{a.desc}</p>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {a.tags.map(t => <span key={t} style={{ display:'inline-flex', padding:'2px 8px', borderRadius:4, fontSize:'.6875rem', fontWeight:500, background:'#F8FAFC', color:'#334155', border:'1px solid #E2E8F0' }}>{t}</span>)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── TechStack ───────────────────────────────────────────────────────────── */
+function TechStack() {
+  const rows = [
+    ['Agent Runtime',     'Google ADK 2.1 (Python)'],
+    ['LLM',               'Gemini 2.0 Flash / Gemini 1.5 Pro (MCP agents)'],
+    ['Observability',     'Arize Phoenix Cloud · OpenInference OTel'],
+    ['MCP Server',        '@arizeai/phoenix-mcp@latest (npx stdio)'],
+    ['Prompt Mutation',   'TextGrad · asyncio pipeline'],
+    ['Self-Hosting',      'FastAPI · Uvicorn · Docker · Cloud Run'],
+    ['Frontend',          'Vanilla JS · SSE · inline SVG · no build step'],
+  ];
+  return (
+    <section style={{ background:'#fff', padding:'80px 0' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px' }}>
+        <Eyebrow text="Tech Stack"/>
+        <h2 style={{ fontSize:'clamp(1.625rem,3.5vw,2.375rem)', fontWeight:700, lineHeight:1.2, letterSpacing:'-.02em', color:'#0F172A', marginBottom:14 }}>Built on open standards</h2>
+        <p style={{ fontSize:'1rem', color:'#475569', lineHeight:1.75, maxWidth:560, marginBottom:40 }}>Every component is observable, replaceable, and auditable.</p>
+        <div style={{ maxWidth:640, border:'1px solid #E2E8F0', borderRadius:12, overflow:'hidden' }}>
+          {rows.map(([k, v], i) => (
+            <div key={k} style={{ display:'grid', gridTemplateColumns:'180px 1fr', borderBottom:i<rows.length-1?'1px solid #E2E8F0':'none' }}>
+              <div style={{ padding:'10px 16px', fontSize:'.875rem', fontWeight:500, color:'#94A3B8', background:'#F8FAFC', borderRight:'1px solid #E2E8F0' }}>{k}</div>
+              <div style={{ padding:'10px 16px', fontSize:'.875rem', fontWeight:500, color:'#0F172A' }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+function CTA() {
+  return (
+    <section style={{ background:'#0F172A', padding:'80px 0' }}>
+      <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px', textAlign:'center' }}>
+        <h2 style={{ fontSize:'clamp(1.625rem,3.5vw,2.375rem)', fontWeight:700, lineHeight:1.2, letterSpacing:'-.02em', color:'#F8FAFC', marginBottom:16 }}>
+          See IRIS in action
+        </h2>
+        <p style={{ fontSize:'1rem', color:'#94A3B8', lineHeight:1.75, maxWidth:500, margin:'0 auto 36px' }}>
+          Open the live dashboard and run the demo agent — watch real-time evaluations, trace inspection, and prompt self-healing end-to-end.
+        </p>
+        <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+          <a href="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'12px 24px', borderRadius:10, fontFamily:'inherit', fontSize:'1rem', fontWeight:600, background:'#F8FAFC', color:'#0F172A', border:'none', cursor:'pointer', textDecoration:'none' }}>
+            Open Dashboard
+          </a>
+          <a href="https://github.com" style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'12px 24px', borderRadius:10, fontFamily:'inherit', fontSize:'1rem', fontWeight:600, background:'transparent', color:'#CBD5E1', border:'1.5px solid #334155', cursor:'pointer', textDecoration:'none' }}>
+            View Source
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+function Footer() {
+  return (
+    <footer style={{ background:'#0F172A', borderTop:'1px solid #1E293B', padding:'24px', display:'flex', alignItems:'center', justifyContent:'center', gap:16 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <IrisMark size={24}/>
+        <span style={{ fontSize:'.875rem', fontWeight:600, color:'#94A3B8' }}>IRIS</span>
+      </div>
+      <span style={{ color:'#334155', fontSize:'.8125rem' }}>·</span>
+      <span style={{ fontSize:'.8125rem', color:'#475569' }}>Clinical AI Safety Supervisor</span>
+    </footer>
+  );
+}
+
+/* ── App ─────────────────────────────────────────────────────────────────── */
+function App() {
+  return (
+    <div>
+      <div className="gallery-meta">
+        <span><strong>IRIS Marketing UI Kit</strong> — React 18 · Babel standalone · zero-build</span>
+        <span>Serve via HTTP: <code>python -m http.server 4201</code></span>
+      </div>
+      <Navbar/>
+      <Hero/>
+      <div className="section-divider"/>
+      <ProblemStrip/>
+      <div className="section-divider"/>
+      <HowItWorks/>
+      <div className="section-divider"/>
+      <AgentGrid/>
+      <div className="section-divider"/>
+      <TechStack/>
+      <CTA/>
+      <Footer/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

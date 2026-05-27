@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRIS DS — Color Palette</title>
+  <link rel="stylesheet" href="_base.css">
+  <style>
+    body { max-width: 640px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div class="preview-card">
+    <div class="preview-label">color-palette</div>
+
+    <div class="preview-section">
+      <div style="font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-tertiary);margin-bottom:4px">Slate scale</div>
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+        <div style="height:40px;border-radius:4px;background:#F8FAFC;border:1px solid #E2E8F0" title="50"></div>
+        <div style="height:40px;border-radius:4px;background:#F1F5F9" title="100"></div>
+        <div style="height:40px;border-radius:4px;background:#E2E8F0" title="200"></div>
+        <div style="height:40px;border-radius:4px;background:#CBD5E1" title="300"></div>
+        <div style="height:40px;border-radius:4px;background:#94A3B8" title="400"></div>
+        <div style="height:40px;border-radius:4px;background:#64748B" title="500"></div>
+        <div style="height:40px;border-radius:4px;background:#475569" title="600"></div>
+        <div style="height:40px;border-radius:4px;background:#334155" title="700"></div>
+        <div style="height:40px;border-radius:4px;background:#1E293B" title="800"></div>
+        <div style="height:40px;border-radius:4px;background:#0F172A" title="900"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:.6875rem;color:var(--ink-tertiary)">
+        <span>50</span><span style="flex:1;border-top:1px dashed var(--border-subtle)"></span><span>900</span>
+      </div>
+      <div class="preview-divider"></div>
+      <div style="font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-tertiary);margin-bottom:4px">Severity triad</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="background:#FFF1F1;border:1px solid #FFD4D4;border-radius:6px;padding:10px 12px">
+          <div style="width:24px;height:4px;background:#E05555;border-radius:2px;margin-bottom:6px"></div>
+          <div style="font-size:.75rem;font-weight:600;color:#C43434">Critical</div>
+          <div style="font-size:.625rem;color:#94A3B8">#E05555</div>
+        </div>
+        <div style="background:#FFFBEB;border:1px solid #FEE9A0;border-radius:6px;padding:10px 12px">
+          <div style="width:24px;height:4px;background:#C07818;border-radius:2px;margin-bottom:6px"></div>
+          <div style="font-size:.75rem;font-weight:600;color:#C07818">Warning</div>
+          <div style="font-size:.625rem;color:#94A3B8">#C07818</div>
+        </div>
+        <div style="background:#EDFBF3;border:1px solid #D6F5E3;border-radius:6px;padding:10px 12px">
+          <div style="width:24px;height:4px;background:#1A9652;border-radius:2px;margin-bottom:6px"></div>
+          <div style="font-size:.75rem;font-weight:600;color:#1A9652">Pass</div>
+          <div style="font-size:.625rem;color:#94A3B8">#1A9652</div>
+        </div>
+      </div>
+      <div class="preview-divider"></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="background:#1D4ED8;border-radius:4px;width:36px;height:20px"></div>
+        <div><div style="font-size:.75rem;font-weight:600;color:var(--ink-primary)">#1D4ED8 — accent</div><div style="font-size:.625rem;color:var(--ink-tertiary)">Active tab underline only</div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

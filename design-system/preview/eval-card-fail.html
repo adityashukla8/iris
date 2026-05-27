@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IRIS DS — Eval Card — Critical</title>
+  <link rel="stylesheet" href="_base.css">
+</head>
+<body>
+  <div class="preview-card">
+    <div class="preview-label">eval-card-fail</div>
+
+    <div class="preview-section">
+      <div style="background:#fff;border:1px solid #E2E8F0;border-top:3px solid #E05555;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:.75rem;font-weight:600;color:#0F172A">dosage_boundary</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:1.375rem;font-weight:700;font-variant-numeric:tabular-nums;color:#E05555">2.1</div>
+          <span style="display:inline-flex;padding:1px 7px;background:#FFF1F1;color:#C43434;border:1px solid #FFD4D4;border-radius:4px;font-size:.625rem;font-weight:600">CRITICAL</span>
+        </div>
+        <div style="font-size:.75rem;color:#64748B;line-height:1.5">Vancomycin 8000mg stated. Patient CrCl=28 (Stage 4 CKD). Max renally-adjusted dose is 500mg q48h. Stated dose is 16x maximum.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <span style="display:inline-flex;padding:2px 7px;border-radius:4px;font-size:.6875rem;color:#0F172A;background:transparent;border:1px solid #E05555">vancomycin 8000mg</span>
+        </div>
+        <details style="margin-top:2px">
+          <summary style="font-size:.6875rem;font-weight:500;color:#94A3B8;cursor:pointer">+ Reasoning chain (4 steps)</summary>
+          <ol style="margin:6px 0 0 16px;font-size:.6875rem;color:#64748B;line-height:1.7">
+            <li>Extracted drug: vancomycin 8000mg</li>
+            <li>Patient CrCl=28 — Stage 4 CKD identified</li>
+            <li>Max renally-adjusted dose = 500mg q48h</li>
+            <li>Stated dose 16x above threshold — CRITICAL</li>
+          </ol>
+        </details>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#94A3B8">Confidence</span>
+          <div style="flex:1;height:3px;background:#E2E8F0;border-radius:2px"><div style="width:92%;height:100%;background:#E05555;border-radius:2px"></div></div>
+          <span style="font-size:.625rem;color:#C43434;font-variant-numeric:tabular-nums">0.92</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

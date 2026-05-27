@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRIS — Dashboard UI Kit</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- React + Babel standalone (zero-build) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ── Component definitions (inline JSX — same source as the .jsx files) ── -->
+<script type="text/babel">
+
+/* ── Shared micro-icons ──────────────────────────────────────────────────── */
+function IrisMark({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="11" stroke="#fff" strokeWidth="1.5" strokeDasharray="17 52.83" strokeDashoffset="-4" strokeLinecap="round"/>
+      <circle cx="20" cy="20" r="7.5" stroke="#fff" strokeWidth="1.5" strokeDasharray="12 47.12" strokeDashoffset="-2.5" strokeLinecap="round"/>
+      <circle cx="20" cy="20" r="2.5" fill="#fff"/>
+    </svg>
+  );
+}
+const IconRefresh = ({size=14,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
+const IconCpu    = ({size=14,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>;
+const IconShield = ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+const IconTriangle = ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+const IconCheck   = ({size=14}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const IconBell    = ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
+const IconEye     = ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+const SEV_STYLES = {
+  critical: { bg: '#FFF1F1', border: '#FFD4D4', color: '#E05555', text: '#C43434' },
+  warning:  { bg: '#FFFBEB', border: '#FEE9A0', color: '#C07818', text: '#C07818' },
+  info:     { bg: '#EDFBF3', border: '#D6F5E3', color: '#1A9652', text: '#1A9652' },
+  skipped:  { bg: '#F1F5F9', border: '#E2E8F0', color: '#94A3B8', text: '#475569' },
+};
+
+/* ── TopBar ──────────────────────────────────────────────────────────────── */
+function TopBar({ onRefresh, onScan, lastRefreshed, scanLoading }) {
+  return (
+    <div style={{ background:'#fff', borderBottom:'1px solid #E2E8F0', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px', height:58, boxShadow:'0 1px 2px rgba(15,23,42,.04)', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:28, height:28, background:'#0F172A', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><IrisMark size={18}/></div>
+          <span style={{ fontSize:'.9375rem', fontWeight:700, color:'#0F172A' }}>IRIS</span>
+        </div>
+        <div style={{ width:1, height:18, background:'#E2E8F0' }}/>
+        <span style={{ fontSize:'.8125rem', fontWeight:500, color:'#64748B' }}>Shift Commander</span>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:'.75rem', fontWeight:500, color:'#1A9652' }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', background:'#1A9652', display:'inline-block' }}/> Live
+        </div>
+        {lastRefreshed && <span style={{ fontSize:'.7rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums' }}>{lastRefreshed}</span>}
+        <button onClick={onRefresh} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:6, fontSize:'.8125rem', fontWeight:600, background:'#fff', color:'#475569', border:'1px solid #E2E8F0', cursor:'pointer', fontFamily:'inherit' }}>
+          <IconRefresh size={12}/> Refresh
+        </button>
+        <button onClick={onScan} disabled={scanLoading} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:6, fontSize:'.8125rem', fontWeight:600, background:'#0F172A', color:'#fff', border:'none', cursor:scanLoading?'not-allowed':'pointer', opacity:scanLoading?.45:1, fontFamily:'inherit' }}>
+          <IconCpu size={12} color="#fff"/> {scanLoading ? 'Scanning…' : 'Scan'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── TabNav ──────────────────────────────────────────────────────────────── */
+function TabNav({ tabs, activeTab, onChange }) {
+  return (
+    <div style={{ background:'#fff', borderBottom:'1px solid #E2E8F0', display:'flex', alignItems:'stretch', padding:'0 24px', height:40, flexShrink:0 }}>
+      {tabs.map(tab => {
+        const active = tab.id === activeTab;
+        return (
+          <button key={tab.id} onClick={() => onChange(tab.id)} style={{ padding:'0 18px', height:40, fontFamily:'inherit', fontSize:'.8125rem', fontWeight:active?600:500, color:active?'#1D4ED8':'#94A3B8', background:'none', border:'none', borderBottom:active?'2px solid #1D4ED8':'2px solid transparent', cursor:'pointer', whiteSpace:'nowrap' }}>
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── StatRow ─────────────────────────────────────────────────────────────── */
+const STAT_CARDS = [
+  { key:'traces',        label:'Total Traces',   sub:'this session',             rail:'#94A3B8' },
+  { key:'hallucinations',label:'Hallucinations', sub:'caught this shift',         rail:'#E05555' },
+  { key:'selfHeals',     label:'Self-Heals',     sub:'prompts deployed',          rail:'#C07818' },
+  { key:'escalations',   label:'Escalations',    sub:'low-confidence evals',      rail:'#94A3B8' },
+  { key:'passRate',      label:'Pass Rate',      sub:'info / total',              rail:'#1A9652' },
+  { key:'criticalRate',  label:'Critical Rate',  sub:'critical / total',          rail:'#E05555' },
+];
+
+function StatRow({ stats = {} }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:12, marginBottom:16 }}>
+      {STAT_CARDS.map(c => (
+        <div key={c.key} style={{ position:'relative', background:'#fff', border:'1px solid #E2E8F0', borderRadius:10, padding:'14px 16px 14px 20px', boxShadow:'0 1px 3px rgba(15,23,42,.06)', overflow:'hidden' }}>
+          <div style={{ position:'absolute', left:0, top:12, bottom:12, width:3, borderRadius:'0 2px 2px 0', background:c.rail }}/>
+          <div style={{ fontSize:'.625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.08em', color:'#94A3B8', marginBottom:5 }}>{c.label}</div>
+          <div style={{ fontSize:'1.625rem', fontWeight:700, lineHeight:1, marginBottom:3, fontVariantNumeric:'tabular-nums', color:'#0F172A' }}>{stats[c.key] ?? '—'}</div>
+          <div style={{ fontSize:'.6875rem', color:'#94A3B8' }}>{c.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+function Panel({ title, dotColor='#94A3B8', meta, children, style }) {
+  return (
+    <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:10, boxShadow:'0 1px 3px rgba(15,23,42,.06)', overflow:'hidden', display:'flex', flexDirection:'column', ...style }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E2E8F0', flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:7, fontSize:'.8125rem', fontWeight:600, color:'#0F172A' }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background:dotColor, flexShrink:0 }}/>{title}
+        </div>
+        {meta && <span style={{ fontSize:'.6875rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums' }}>{meta}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/* ── AlertFeed ───────────────────────────────────────────────────────────── */
+function AlertFeed({ alerts = [], maxHeight = 260 }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [alerts.length]);
+  return (
+    <Panel title="Live Alert Feed" dotColor="#1A9652" meta={`${alerts.length} events`}>
+      <div ref={ref} style={{ overflowY:'auto', maxHeight }}>
+        {alerts.length === 0 ? (
+          <div style={{ padding:'28px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>Waiting for events…</div>
+        ) : alerts.map((a, i) => {
+          const s = SEV_STYLES[a.severity] || SEV_STYLES.info;
+          return (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 16px', borderBottom:'1px solid #F1F5F9' }}>
+              <div style={{ width:24, height:24, borderRadius:5, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:s.bg, border:`1px solid ${s.border}`, color:s.color }}>
+                {a.severity === 'critical' ? <IconShield size={11}/> : a.severity === 'warning' ? <IconTriangle size={11}/> : <IconCheck size={11}/>}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:1 }}>
+                  <span style={{ fontSize:'.8125rem', fontWeight:600, color:'#0F172A' }}>{a.agent_name || 'ORION'}</span>
+                  <span style={{ fontSize:'.6rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>{a.time || ''}</span>
+                </div>
+                <div style={{ fontSize:'.75rem', color:'#64748B', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.message || ''}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+/* ── EvalCard ────────────────────────────────────────────────────────────── */
+function EvalCard({ evaluation = {} }) {
+  const [open, setOpen] = React.useState(false);
+  const { evaluator='unknown', score, severity='info', skipped=false, rationale='', confidence=1.0, reasoning_chain=[], flagged_claims=[] } = evaluation;
+  const sev = skipped ? 'skipped' : severity;
+  const s = SEV_STYLES[sev] || SEV_STYLES.info;
+  const confLow = confidence < 0.6;
+  return (
+    <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderTop:`3px solid ${s.color}`, borderRadius:8, padding:'12px 14px', display:'flex', flexDirection:'column', gap:8, overflow:'hidden' }}>
+      <div style={{ fontSize:'.75rem', fontWeight:600, color:'#0F172A', wordBreak:'break-word' }}>{evaluator}</div>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontSize:'1.375rem', fontWeight:700, fontVariantNumeric:'tabular-nums', color:s.color }}>{skipped ? '—' : score != null ? score.toFixed(1) : '—'}</span>
+        <span style={{ display:'inline-flex', padding:'1px 7px', background:s.bg, color:s.text, border:`1px solid ${s.border}`, borderRadius:4, fontSize:'.625rem', fontWeight:600 }}>{sev.toUpperCase()}</span>
+      </div>
+      {rationale && <div style={{ fontSize:'.75rem', color:'#64748B', lineHeight:1.5, wordBreak:'break-word' }}>{rationale}</div>}
+      {flagged_claims.length > 0 && (
+        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+          {flagged_claims.map((c, i) => <span key={i} style={{ display:'inline-flex', padding:'2px 7px', borderRadius:4, fontSize:'.6875rem', color:'#0F172A', background:'transparent', border:'1px solid #E05555', wordBreak:'break-word' }}>{c}</span>)}
+        </div>
+      )}
+      {reasoning_chain.length > 0 && (
+        <details onToggle={e => setOpen(e.target.open)}>
+          <summary style={{ fontSize:'.6875rem', fontWeight:500, color:'#94A3B8', cursor:'pointer', listStyle:'none' }}>{open ? '− ' : '+ '}Reasoning ({reasoning_chain.length} steps)</summary>
+          <ol style={{ margin:'6px 0 0 16px', fontSize:'.6875rem', color:'#64748B', lineHeight:1.7 }}>{reasoning_chain.map((s, i) => <li key={i}>{s}</li>)}</ol>
+        </details>
+      )}
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <span style={{ fontSize:'.5625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.07em', color:'#94A3B8', whiteSpace:'nowrap' }}>Conf</span>
+        <div style={{ flex:1, height:3, background:'#E2E8F0', borderRadius:2 }}>
+          <div style={{ width:`${confidence*100}%`, height:'100%', background:confLow?'#E05555':'#1A9652', borderRadius:2 }}/>
+        </div>
+        <span style={{ fontSize:'.625rem', fontVariantNumeric:'tabular-nums', color:confLow?'#C43434':'#94A3B8' }}>{confidence.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── HealingPanel ────────────────────────────────────────────────────────── */
+function HealingPanel({ candidates = [], history = [], onApprove, onReject }) {
+  return (
+    <div style={{ padding:'18px 24px', display:'flex', flexDirection:'column', gap:14 }}>
+      <Panel title="Pending Approval" dotColor="#C07818" meta={`${candidates.length} candidates`}>
+        {candidates.length === 0 ? (
+          <div style={{ padding:'28px 16px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No pending candidates</div>
+        ) : candidates.map(c => {
+          const imp = c.improvement_score || 0;
+          return (
+            <div key={c.candidate_id} style={{ padding:'13px 16px', borderBottom:'1px solid #F1F5F9' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:3 }}>
+                <span style={{ fontSize:'.875rem', fontWeight:600, color:'#0F172A' }}>{c.diagnosis?.current_prompt_name || 'prompt'}</span>
+                <span style={{ display:'inline-flex', padding:'1px 7px', background:'#FFFBEB', color:'#C07818', border:'1px solid #FEE9A0', borderRadius:4, fontSize:'.625rem', fontWeight:600 }}>PENDING</span>
+              </div>
+              <div style={{ fontSize:'.6875rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums', marginBottom:8 }}>
+                {(c.diagnosis?.hallucination_rate*100||0).toFixed(0)}% failure rate
+              </div>
+              <div style={{ display:'flex', gap:10, marginBottom:8 }}>
+                <span style={{ fontSize:'.6875rem', color:'#64748B', fontVariantNumeric:'tabular-nums' }}>Before: <b>{(c.validation_score_before||0).toFixed(1)}</b></span>
+                <span style={{ fontSize:'.6875rem', color:'#64748B', fontVariantNumeric:'tabular-nums' }}>After: <b>{(c.validation_score_after||0).toFixed(1)}</b></span>
+                <span style={{ fontSize:'.6875rem', fontWeight:700, fontVariantNumeric:'tabular-nums', color:imp>=0?'#1A9652':'#E05555' }}>{imp>=0?'+':''}{imp.toFixed(2)}</span>
+              </div>
+              <div style={{ display:'flex', gap:7 }}>
+                <button onClick={() => onApprove?.(c.candidate_id)} style={{ padding:'4px 11px', borderRadius:5, fontSize:'.75rem', fontWeight:600, background:'#1A9652', color:'#fff', border:'none', fontFamily:'inherit', cursor:'pointer' }}>Approve</button>
+                <button onClick={() => onReject?.(c.candidate_id)} style={{ padding:'4px 11px', borderRadius:5, fontSize:'.75rem', fontWeight:600, background:'#fff', color:'#E05555', border:'1px solid #FFD4D4', fontFamily:'inherit', cursor:'pointer' }}>Reject</button>
+              </div>
+            </div>
+          );
+        })}
+      </Panel>
+
+      <Panel title="Healing History" dotColor="#1A9652" meta={`${history.length} entries`}>
+        {history.length === 0 ? (
+          <div style={{ padding:'28px 16px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No history yet</div>
+        ) : history.map((h, i) => {
+          const imp = h.improvement_score || 0;
+          const pos = imp >= 0;
+          return (
+            <div key={i} style={{ borderBottom:'1px solid #F1F5F9', padding:'11px 16px', display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ display:'inline-flex', padding:'1px 7px', borderRadius:4, fontSize:'.625rem', fontWeight:700, fontVariantNumeric:'tabular-nums', background:pos?'#EDFBF3':'#FFF1F1', color:pos?'#1A9652':'#C43434', border:`1px solid ${pos?'#D6F5E3':'#FFD4D4'}` }}>{pos?'+':''}{imp.toFixed(2)}</span>
+              <span style={{ fontSize:'.75rem', color:'#64748B', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.diagnosis?.current_prompt_name || 'prompt'} · {h.status}</span>
+            </div>
+          );
+        })}
+      </Panel>
+    </div>
+  );
+}
+
+/* ── AnalyticsGrid ───────────────────────────────────────────────────────── */
+const SERIES = [
+  { key:'info',    color:'#3B82F6', label:'info' },
+  { key:'warning', color:'#C07818', label:'warning' },
+  { key:'critical',color:'#E05555', label:'critical' },
+];
+
+function AnalyticsGrid({ analytics = {} }) {
+  const { evaluator_stats={}, severity_timeline=[], query_type_breakdown={} } = analytics;
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14, marginBottom:14 }}>
+      {/* Heatmap */}
+      <Panel title="Evaluator Heatmap" dotColor="#E05555">
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'.8125rem' }}>
+          <thead><tr>{['Evaluator','Runs','Fail','Avg'].map(h => <th key={h} style={{ padding:'7px 12px', fontSize:'.625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.08em', color:'#94A3B8', borderBottom:'1px solid #E2E8F0', background:'#F8FAFC', textAlign:h==='Evaluator'?'left':'right' }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {Object.entries(evaluator_stats).map(([name, s]) => {
+              const fr = s.runs > 0 ? s.failures/s.runs : 0;
+              return (
+                <tr key={name} style={{ background:fr>0.4?'#FFF5F5':fr>0.2?'#FFFCF0':'transparent' }}>
+                  <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', fontSize:'.75rem', fontWeight:500, color:'#334155' }}>{name}</td>
+                  <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', textAlign:'right', fontVariantNumeric:'tabular-nums', fontSize:'.75rem', color:'#64748B' }}>{s.runs}</td>
+                  <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', textAlign:'right', fontVariantNumeric:'tabular-nums', fontSize:'.75rem', color:s.failures>0?'#C43434':'#64748B', fontWeight:s.failures>0?600:400 }}>{s.failures}</td>
+                  <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', textAlign:'right', fontVariantNumeric:'tabular-nums', fontSize:'.75rem', color:'#64748B' }}>{s.avg_score!=null?s.avg_score.toFixed(1):'—'}</td>
+                </tr>
+              );
+            })}
+            {Object.keys(evaluator_stats).length === 0 && <tr><td colSpan={4} style={{ padding:'16px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No data</td></tr>}
+          </tbody>
+        </table>
+      </Panel>
+
+      {/* Timeline */}
+      <Panel title="Severity Timeline" dotColor="#3B82F6" meta="by minute">
+        {severity_timeline.length === 0 ? (
+          <div style={{ padding:'28px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No data</div>
+        ) : (
+          <div style={{ padding:'8px 12px 4px' }}>
+            {(() => {
+              const W=340,H=120,PL=8,PR=8,PT=12,PB=24;
+              const cW=W-PL-PR, cH=H-PT-PB;
+              const n = severity_timeline.length;
+              const maxVal = Math.max(1, ...severity_timeline.flatMap(b => SERIES.map(s => b[s.key]||0)));
+              const xOf = i => PL + (i/(n-1||1))*cW;
+              const yOf = v => PT + cH - (v/maxVal)*cH;
+              function smooth(pts) {
+                if (pts.length < 2) return '';
+                let d = `M ${pts[0].x},${pts[0].y}`;
+                for (let i=1;i<pts.length;i++) {
+                  const dx = (pts[i].x-pts[i-1].x)*0.42;
+                  d += ` C ${pts[i-1].x+dx},${pts[i-1].y} ${pts[i].x-dx},${pts[i].y} ${pts[i].x},${pts[i].y}`;
+                }
+                return d;
+              }
+              return (
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block' }}>
+                  <line x1={PL} y1={PT+cH} x2={W-PR} y2={PT+cH} stroke="#E2E8F0" strokeWidth={1}/>
+                  {SERIES.map(({key,color}) => {
+                    const pts = severity_timeline.map((b,i) => ({x:xOf(i),y:yOf(b[key]||0)}));
+                    return (
+                      <g key={key}>
+                        <path d={smooth(pts)} fill="none" stroke={color} strokeWidth={key==='info'?2:1.5} strokeLinecap="round" strokeDasharray={key!=='info'?'4 2':undefined}/>
+                        {pts.map((p,i) => (b => b>0 ? <circle key={i} cx={p.x} cy={p.y} r={3} fill={color}/> : null)(severity_timeline[i][key]||0))}
+                      </g>
+                    );
+                  })}
+                  {[0, Math.floor((n-1)/2), n-1].filter((v,i,a)=>a.indexOf(v)===i).map(i => (
+                    <text key={i} x={xOf(i)} y={H-2} textAnchor="middle" style={{ fontFamily:'inherit', fontSize:7, fill:'#94A3B8' }}>{(severity_timeline[i]?.ts||'').slice(0,5)}</text>
+                  ))}
+                </svg>
+              );
+            })()}
+            <div style={{ display:'flex', gap:12, padding:'4px 0' }}>
+              {SERIES.map(s => <div key={s.key} style={{ display:'flex', alignItems:'center', gap:4, fontSize:'.6875rem', color:'#64748B' }}><div style={{ width:8, height:8, borderRadius:'50%', background:s.color }}/>{s.label}</div>)}
+            </div>
+          </div>
+        )}
+      </Panel>
+
+      {/* Query type */}
+      <Panel title="Query Type Breakdown" dotColor="#C07818">
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'.8125rem' }}>
+          <thead><tr>{['Type','Count','Fail%'].map(h => <th key={h} style={{ padding:'7px 12px', fontSize:'.625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.08em', color:'#94A3B8', borderBottom:'1px solid #E2E8F0', background:'#F8FAFC', textAlign:h==='Type'?'left':'right' }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {Object.entries(query_type_breakdown).map(([qt, v]) => (
+              <tr key={qt}>
+                <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', fontSize:'.75rem', fontWeight:500, color:'#334155' }}>{qt.replace(/_/g,' ')}</td>
+                <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', textAlign:'right', fontVariantNumeric:'tabular-nums', fontSize:'.75rem', color:'#64748B' }}>{v.count}</td>
+                <td style={{ padding:'7px 12px', borderBottom:'1px solid #F1F5F9', textAlign:'right', fontVariantNumeric:'tabular-nums', fontSize:'.75rem', color:v.failure_rate>0.3?'#C43434':'#64748B' }}>{(v.failure_rate*100).toFixed(0)}%</td>
+              </tr>
+            ))}
+            {Object.keys(query_type_breakdown).length===0 && <tr><td colSpan={3} style={{ padding:'16px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No data</td></tr>}
+          </tbody>
+        </table>
+      </Panel>
+    </div>
+  );
+}
+
+/* ── TraceInspector ──────────────────────────────────────────────────────── */
+function TraceInspector({ traces = [], selectedId, onSelect }) {
+  const [filter, setFilter] = React.useState('');
+  const selected = traces.find(t => t.trace_id === selectedId);
+  const filtered = filter ? traces.filter(t => t.severity === filter) : traces;
+  const SEV_DOT = { critical:'#E05555', warning:'#C07818', info:'#3B82F6' };
+
+  return (
+    <div style={{ display:'flex', height:'100%', overflow:'hidden' }}>
+      {/* List */}
+      <div style={{ width:300, flexShrink:0, borderRight:'1px solid #E2E8F0', background:'#fff', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ padding:'10px 12px', borderBottom:'1px solid #E2E8F0', background:'#F8FAFC', flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
+          <select value={filter} onChange={e=>setFilter(e.target.value)} style={{ flex:1, fontSize:'.75rem', fontFamily:'inherit', color:'#334155', border:'1px solid #E2E8F0', background:'#fff', borderRadius:5, padding:'4px 7px', cursor:'pointer' }}>
+            <option value="">All severities</option>
+            <option value="critical">Critical</option>
+            <option value="warning">Warning</option>
+            <option value="info">Info</option>
+          </select>
+          <span style={{ fontSize:'.625rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>{filtered.length}</span>
+        </div>
+        <div style={{ overflowY:'auto', flex:1 }}>
+          {filtered.map(t => (
+            <div key={t.trace_id} onClick={() => onSelect(t.trace_id)} style={{ padding:'10px 12px', borderBottom:'1px solid #F1F5F9', cursor:'pointer', background:t.trace_id===selectedId?'#EFF6FF':'transparent', borderLeft:t.trace_id===selectedId?'3px solid #1D4ED8':'3px solid transparent', paddingLeft:t.trace_id===selectedId?9:12 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:SEV_DOT[t.severity]||'#3B82F6', flexShrink:0 }}/>
+                <span style={{ fontSize:'.8125rem', fontWeight:500, color:'#0F172A', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{(t.query_type||'general').replace(/_/g,' ')}</span>
+                <span style={{ fontSize:'.6rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>{(t.timestamp||'').slice(11,19)}</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ fontSize:'.6875rem', color:'#64748B', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.agent_name||'—'}</span>
+                <span style={{ fontSize:'.6rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums' }}>{(t.evaluations||[]).length} evals</span>
+              </div>
+            </div>
+          ))}
+          {filtered.length===0 && <div style={{ padding:'28px', textAlign:'center', color:'#94A3B8', fontSize:'.8125rem' }}>No traces</div>}
+        </div>
+      </div>
+
+      {/* Detail */}
+      <div style={{ flex:1, overflowY:'auto', background:'#F8FAFC' }}>
+        {selected ? (
+          <div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', background:'#fff', borderBottom:'1px solid #E2E8F0', position:'sticky', top:0, zIndex:10, flexWrap:'wrap', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                {(() => { const s=SEV_STYLES[selected.severity]||SEV_STYLES.info; return <span style={{ display:'inline-flex', padding:'1px 7px', borderRadius:4, fontSize:'.625rem', fontWeight:600, background:s.bg, color:s.text, border:`1px solid ${s.border}` }}>{(selected.severity||'INFO').toUpperCase()}</span>; })()}
+                <span style={{ fontSize:'.875rem', fontWeight:600, color:'#0F172A', textTransform:'capitalize' }}>{(selected.query_type||'general').replace(/_/g,' ')}</span>
+                <span style={{ fontSize:'.75rem', color:'#94A3B8' }}>·</span>
+                <span style={{ fontSize:'.8125rem', color:'#64748B' }}>{selected.agent_name}</span>
+              </div>
+              <span style={{ fontSize:'.6875rem', color:'#94A3B8', fontVariantNumeric:'tabular-nums', background:'#F1F5F9', padding:'2px 8px', borderRadius:4 }}>#{(selected.trace_id||'').slice(0,8)}</span>
+            </div>
+            <div style={{ padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <CaseSection label="Input Prompt"><CaseText>{selected.input_prompt||'No prompt recorded'}</CaseText></CaseSection>
+                <CaseSection label="Patient Context">
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                    {(() => {
+                      const ctx = selected.retrieved_context||{};
+                      const chips = [];
+                      if (ctx.patient_id) chips.push(ctx.patient_id);
+                      if (ctx.age&&ctx.weight_kg) chips.push(`${ctx.age}yr · ${ctx.weight_kg}kg`);
+                      (ctx.medications||[]).forEach(m => chips.push(m));
+                      (ctx.allergies||[]).forEach(a => chips.push(`${a} allergy`));
+                      (ctx.diagnoses||[]).forEach(d => chips.push(d));
+                      return chips.length > 0 ? chips.map((c,i) => (
+                        <span key={i} style={{ display:'inline-flex', alignItems:'center', padding:'3px 8px', borderRadius:4, fontSize:'.6875rem', fontWeight:500, background:'#F1F5F9', color:'#334155', border:'1px solid #E2E8F0' }}>{c}</span>
+                      )) : <span style={{ fontSize:'.8125rem', color:'#94A3B8' }}>No context</span>;
+                    })()}
+                  </div>
+                </CaseSection>
+              </div>
+              <CaseSection label={`AI Output${selected.severity!=='info'?' — '+selected.severity.toUpperCase():''}`}>
+                <CaseText severity={selected.severity}>{selected.output_text||'No output recorded'}</CaseText>
+              </CaseSection>
+              {(selected.evaluations||[]).length > 0 && (
+                <div>
+                  <div style={{ fontSize:'.625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.08em', color:'#94A3B8', marginBottom:10 }}>Evaluator Results ({selected.evaluations.length})</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+                    {selected.evaluations.map((ev,i) => <EvalCard key={ev.evaluator||i} evaluation={ev}/>)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{ height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'#CBD5E1', gap:12 }}>
+            <IconEye size={36}/><p style={{ fontSize:'.875rem', color:'#94A3B8' }}>Select a trace to inspect</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CaseSection({ label, children }) {
+  return <div style={{ display:'flex', flexDirection:'column', gap:6 }}><div style={{ fontSize:'.625rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'.08em', color:'#94A3B8' }}>{label}</div>{children}</div>;
+}
+function CaseText({ children, severity }) {
+  const b = { critical:'1px solid #E05555', warning:'1px solid #C07818' };
+  return <div style={{ fontFamily:'inherit', fontSize:'.8125rem', color:'#334155', background:'#fff', border:b[severity]||'1px solid #E2E8F0', borderRadius:7, padding:'12px 14px', whiteSpace:'pre-wrap', wordBreak:'break-word', lineHeight:1.5, maxHeight:160, overflowY:'auto' }}>{children}</div>;
+}
+
+/* ── Gallery App ─────────────────────────────────────────────────────────── */
+
+const SAMPLE_STATS = { traces: 128, hallucinations: 14, selfHeals: 3, escalations: 2, passRate: '84%', criticalRate: '11%' };
+
+const SAMPLE_ALERTS = [
+  { severity:'critical', agent_name:'ORION', message:'drug_dosage — vancomycin 8000mg — CRITICAL', time:'12:34:07' },
+  { severity:'warning',  agent_name:'ORION', message:'attribution — source not cited',             time:'12:33:51' },
+  { severity:'info',     agent_name:'ORION', message:'surgical_phase — all evaluations clear',    time:'12:33:22' },
+];
+
+const SAMPLE_ANALYTICS = {
+  evaluator_stats: {
+    dosage_boundary:      { runs:9,  failures:6, avg_score:3.2, critical_count:5 },
+    factual_hallucination:{ runs:12, failures:1, avg_score:8.4, critical_count:0 },
+    drug_interaction:     { runs:7,  failures:0, avg_score:9.1, critical_count:0 },
+    attribution:          { runs:11, failures:2, avg_score:7.2, critical_count:1 },
+    context_gap:          { runs:8,  failures:1, avg_score:7.9, critical_count:0 },
+  },
+  severity_timeline: [
+    {ts:'12:23',info:3,warning:1,critical:0},{ts:'12:24',info:2,warning:0,critical:0},
+    {ts:'12:25',info:4,warning:1,critical:1},{ts:'12:26',info:2,warning:2,critical:0},
+    {ts:'12:27',info:3,warning:0,critical:0},{ts:'12:28',info:5,warning:1,critical:1},
+    {ts:'12:29',info:2,warning:3,critical:2},{ts:'12:30',info:4,warning:1,critical:0},
+    {ts:'12:31',info:3,warning:0,critical:1},{ts:'12:32',info:6,warning:2,critical:0},
+    {ts:'12:33',info:2,warning:1,critical:0},{ts:'12:34',info:4,warning:2,critical:2},
+  ],
+  query_type_breakdown: {
+    drug_dosage:  { count:9,  failure_rate:0.67 },
+    surgical_phase:{ count:8, failure_rate:0.13 },
+    allergy_check:{ count:7,  failure_rate:0.14 },
+    general:      { count:5,  failure_rate:0.0  },
+  },
+};
+
+const SAMPLE_EVALS = [
+  { evaluator:'dosage_boundary', score:2.1, severity:'critical', rationale:'Vancomycin 8000mg stated. CrCl=28. Max dose 500mg q48h. 16x threshold.', confidence:0.92, reasoning_chain:['Extracted: vancomycin 8000mg','Patient CrCl=28 — Stage 4 CKD','Max renally-adjusted = 500mg q48h','16x above threshold'], flagged_claims:['vancomycin 8000mg'] },
+  { evaluator:'factual_hallucination', score:8.7, severity:'info', rationale:'All drug names verified against context. No unsupported claims.', confidence:0.94, reasoning_chain:[], flagged_claims:[] },
+  { evaluator:'drug_interaction', score:9.1, severity:'info', rationale:'No significant interactions found.', confidence:0.87, reasoning_chain:[], flagged_claims:[] },
+  { evaluator:'attribution', score:7.2, severity:'info', rationale:'Sources cited for dosage recommendation.', confidence:0.80, reasoning_chain:[], flagged_claims:[] },
+  { evaluator:'allergy_contraindication', score:8.9, severity:'info', rationale:'Recommended drug not in allergy list.', confidence:0.95, reasoning_chain:[], flagged_claims:[] },
+  { evaluator:'context_gap', score:9.3, severity:'info', rationale:'All required context fields present.', confidence:0.91, reasoning_chain:[], flagged_claims:[] },
+  { evaluator:'surgical_phase', skipped:true, confidence:1.0, reasoning_chain:[], flagged_claims:[] },
+];
+
+const SAMPLE_TRACES = [
+  { trace_id:'a3f2c1d4e5', timestamp:'2026-05-27T12:34:07Z', agent_name:'ORION-surgical', agent_version:'v2', query_type:'drug_dosage', severity:'critical', input_prompt:'What is the safe dose of vancomycin for this patient?', output_text:'Vancomycin 8000mg IV can be administered safely to this patient…', retrieved_context:{ patient_id:'PT-00142', age:58, weight_kg:74, creatinine_clearance:28, medications:['metformin 1000mg','warfarin 5mg'], allergies:['penicillin'], diagnoses:['CKD Stage 4'] }, latency_ms:1204, evaluations: SAMPLE_EVALS },
+  { trace_id:'b1c2d3e4f5', timestamp:'2026-05-27T12:33:51Z', agent_name:'ORION-surgical', agent_version:'v2', query_type:'surgical_phase', severity:'warning', input_prompt:'Is this the correct surgical phase for the incision?', output_text:'Based on the procedure logs, the incision should proceed…', retrieved_context:{}, latency_ms:890, evaluations:[] },
+  { trace_id:'c4d5e6f7a8', timestamp:'2026-05-27T12:33:22Z', agent_name:'ORION-surgical', agent_version:'v2', query_type:'allergy_check', severity:'info', input_prompt:'Can we use cephalexin for this patient?', output_text:'Cephalexin 500mg is appropriate for this patient…', retrieved_context:{}, latency_ms:672, evaluations:[] },
+];
+
+const TABS = [
+  { id:'overview', label:'Overview' },
+  { id:'traces',   label:'Traces' },
+  { id:'healing',  label:'Healing' },
+];
+
+function App() {
+  const [tab, setTab]           = React.useState('overview');
+  const [selected, setSelected] = React.useState(SAMPLE_TRACES[0].trace_id);
+
+  return (
+    <div>
+      {/* Gallery heading */}
+      <div className="gallery-header">
+        <div>
+          <div className="gallery-title">IRIS — Dashboard UI Kit</div>
+          <div className="gallery-subtitle">React 18 · Babel standalone · zero-build</div>
+        </div>
+        <div style={{ fontSize:'.75rem', color:'#94A3B8' }}>Serve via HTTP to use — <code>python -m http.server 4200</code></div>
+      </div>
+
+      <div className="gallery-body">
+
+        {/* TopBar */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">topbar</div>
+          <div className="gallery-demo-box">
+            <div className="demo-label">TopBar.jsx</div>
+            <TopBar lastRefreshed="12:34:07" scanLoading={false} onRefresh={() => {}} onScan={() => {}}/>
+          </div>
+        </div>
+
+        {/* TabNav */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">tab navigation</div>
+          <div className="gallery-demo-box">
+            <div className="demo-label">TabNav.jsx</div>
+            <TabNav tabs={TABS} activeTab={tab} onChange={setTab}/>
+          </div>
+        </div>
+
+        {/* StatRow */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">stat row</div>
+          <div className="gallery-demo-box" style={{ padding:'16px' }}>
+            <div className="demo-label" style={{ margin:'-16px -16px 16px', borderRadius:'12px 12px 0 0' }}>StatRow.jsx</div>
+            <StatRow stats={SAMPLE_STATS}/>
+          </div>
+        </div>
+
+        {/* AnalyticsGrid */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">analytics grid</div>
+          <div className="gallery-demo-box" style={{ padding:'16px' }}>
+            <div className="demo-label" style={{ margin:'-16px -16px 16px', borderRadius:'12px 12px 0 0' }}>AnalyticsGrid.jsx</div>
+            <AnalyticsGrid analytics={SAMPLE_ANALYTICS}/>
+          </div>
+        </div>
+
+        {/* AlertFeed */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">alert feed</div>
+          <div className="gallery-demo-box" style={{ maxWidth:480 }}>
+            <div className="demo-label">AlertFeed.jsx</div>
+            <AlertFeed alerts={SAMPLE_ALERTS}/>
+          </div>
+        </div>
+
+        {/* EvalCard grid */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">eval cards (4-column)</div>
+          <div className="gallery-demo-box" style={{ padding:'16px' }}>
+            <div className="demo-label" style={{ margin:'-16px -16px 16px', borderRadius:'12px 12px 0 0' }}>EvalCard.jsx</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+              {SAMPLE_EVALS.map((ev,i) => <EvalCard key={i} evaluation={ev}/>)}
+            </div>
+          </div>
+        </div>
+
+        {/* TraceInspector */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">trace inspector</div>
+          <div className="gallery-demo-box full-height">
+            <div className="demo-label">TraceInspector.jsx</div>
+            <div style={{ height:'440px' }}>
+              <TraceInspector traces={SAMPLE_TRACES} selectedId={selected} onSelect={setSelected}/>
+            </div>
+          </div>
+        </div>
+
+        {/* HealingPanel */}
+        <div className="gallery-section">
+          <div className="gallery-section-label">healing panel</div>
+          <div className="gallery-demo-box">
+            <div className="demo-label">HealingPanel.jsx</div>
+            <HealingPanel
+              candidates={[{ candidate_id:'cand-001', improvement_score:4.6, validation_score_before:3.2, validation_score_after:7.8, mutation_rationale:'Added renal dose adjustment constraint for CrCl < 30', diagnosis:{ current_prompt_name:'orion-clinical-safety', query_type:'drug_dosage', hallucination_rate:0.67 } }]}
+              history={[{ candidate_id:'hist-001', improvement_score:0.38, status:'auto_approved', deployed_at:'2026-05-27T12:01:00Z', diagnosis:{ current_prompt_name:'orion-clinical-safety' } }]}
+              onApprove={() => {}} onReject={() => {}}
+            />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

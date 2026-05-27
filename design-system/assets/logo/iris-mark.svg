@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <!-- Rounded square base -->
+  <rect width="40" height="40" rx="9" fill="#0F172A"/>
+  <!-- Iris mark: concentric arcs forming an eye/iris shape -->
+  <!-- Outer arc ring -->
+  <circle cx="20" cy="20" r="11" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="17 52.83" stroke-dashoffset="-4" stroke-linecap="round"/>
+  <!-- Middle arc ring -->
+  <circle cx="20" cy="20" r="7.5" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="12 47.12" stroke-dashoffset="-2.5" stroke-linecap="round"/>
+  <!-- Center dot -->
+  <circle cx="20" cy="20" r="2.5" fill="#FFFFFF"/>
+  <!-- Subtle pulse circle (outer glow ring, low opacity) -->
+  <circle cx="20" cy="20" r="14.5" stroke="#FFFFFF" stroke-width="0.75" opacity="0.15"/>
+</svg>
