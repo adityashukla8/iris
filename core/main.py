@@ -315,6 +315,45 @@ async def get_analytics() -> dict:
     return {"analytics": _compute_analytics(list(recent_traces))}
 
 
+@app.post("/simulate")
+async def simulate_scenarios(request: Request) -> dict:
+    """Run selected ORION demo scenarios through the live evaluation pipeline."""
+    body = await request.json()
+    scenario_nums: list[int] = body.get("scenarios", list(range(1, 10)))
+    delay_ms: float = float(body.get("delay_ms", 1500))
+
+    from demo.mock_agents.bad_orion import SCENARIOS as _DEMO_SCENARIOS  # type: ignore[import]
+    import copy
+
+    selected = []
+    for num in scenario_nums:
+        if 1 <= num <= len(_DEMO_SCENARIOS):
+            name, payload = _DEMO_SCENARIOS[num - 1]
+            selected.append((num, name, copy.deepcopy(payload)))
+
+    if not selected:
+        raise HTTPException(status_code=400, detail="No valid scenario numbers provided")
+
+    asyncio.create_task(_run_simulations(selected, delay_ms))
+    return {"status": "started", "scenario_count": len(selected)}
+
+
+async def _run_simulations(selected: list[tuple], delay_ms: float) -> None:
+    total = len(selected)
+    push_activity(f"Simulator: starting {total} scenario(s)", "info")
+    for i, (num, name, payload) in enumerate(selected, 1):
+        payload["trace_id"] = str(uuid.uuid4())
+        push_activity(f"Simulator [{i}/{total}]: {name}", "info")
+        try:
+            event = IrisEvent.model_validate(payload)
+            await submit_event(event)
+        except Exception as exc:
+            push_activity(f"Simulator: scenario {num} error — {str(exc)[:80]}", "critical")
+        if delay_ms > 0 and i < total:
+            await asyncio.sleep(delay_ms / 1000)
+    push_activity(f"Simulator: complete — {total} scenario(s) processed", "heal")
+
+
 @app.post("/mcp/chat")
 async def mcp_chat(request: Request) -> dict:
     """

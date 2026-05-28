@@ -557,6 +557,204 @@
     @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr; } .case-io-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px)  { .trace-list-panel { width: 260px; } }
     @media (max-width: 640px)  { .stats-row { grid-template-columns: repeat(2,1fr); } .main { padding: 12px; } .grid-2 { grid-template-columns: 1fr; } .grid-healing { grid-template-columns: 1fr; } .trace-inspector { flex-direction: column; } .trace-list-panel { width: 100%; height: 220px; } }
+
+    /* ── Simulate Button ────────────────────────────────────────────── */
+    .btn-simulate {
+      background: var(--white); color: var(--gray-700);
+      border: 1px solid var(--gray-200);
+    }
+    .btn-simulate:hover { background: var(--gray-50); border-color: var(--gray-300); }
+
+    /* ── Simulate Modal Overlay ─────────────────────────────────────── */
+    .sim-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(15,23,42,.55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .sim-overlay[hidden] { display: none !important; }
+
+    .sim-modal {
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 14px; width: 100%; max-width: 680px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.18), 0 8px 20px rgba(0,0,0,.1);
+      display: flex; flex-direction: column; max-height: calc(100vh - 48px);
+      overflow: hidden;
+    }
+
+    /* Header — dark surface */
+    .sim-header {
+      background: var(--gray-900); padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-shrink: 0;
+    }
+    .sim-header-left { display: flex; align-items: center; gap: 12px; }
+    .sim-icon-wrap {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: #e2e8f0;
+    }
+    .sim-title { font-size: .9375rem; font-weight: 700; color: var(--white); line-height: 1.2; }
+    .sim-subtitle { font-size: .75rem; color: #94A3B8; margin-top: 1px; }
+    .sim-close {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+      color: #94A3B8; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .15s;
+    }
+    .sim-close:hover { background: rgba(255,255,255,.15); color: var(--white); }
+
+    /* Scenario list */
+    .sim-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+
+    .sim-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .sim-toolbar-left { display: flex; gap: 6px; align-items: center; }
+    .sim-quick-btn {
+      padding: 3px 10px; border-radius: 5px; font-size: .75rem; font-weight: 500;
+      background: var(--gray-100); color: var(--gray-600);
+      border: 1px solid var(--gray-200); cursor: pointer; transition: all .12s;
+    }
+    .sim-quick-btn:hover { background: var(--gray-200); color: var(--gray-800); }
+    .sim-count-label { font-size: .75rem; color: var(--gray-400); font-variant-numeric: tabular-nums; }
+
+    .sim-scenario-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+    }
+
+    /* Individual scenario card */
+    .sim-scenario-card {
+      border: 1px solid var(--gray-200); border-radius: 8px; padding: 0;
+      cursor: pointer; transition: border-color .12s, background .12s;
+      overflow: hidden; position: relative; background: var(--white);
+    }
+    .sim-scenario-card:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .sim-scenario-card.selected {
+      border-color: var(--gray-900); background: var(--gray-50);
+    }
+    /* Left rail — severity color via ::before */
+    .sim-scenario-card::before {
+      content: ''; position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px; border-radius: 2px 0 0 2px;
+      background: var(--gray-300);
+    }
+    .sim-scenario-card.sev-critical::before { background: var(--red-600); }
+    .sim-scenario-card.sev-warning::before  { background: var(--amber-700); }
+    .sim-scenario-card.sev-pass::before     { background: var(--green-700); }
+
+    .sim-card-inner {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px 10px 16px;
+    }
+    .sim-checkbox-wrap { flex-shrink: 0; margin-top: 1px; }
+    .sim-checkbox {
+      width: 15px; height: 15px; border-radius: 3px;
+      border: 1.5px solid var(--gray-300); background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all .12s;
+    }
+    .sim-scenario-card.selected .sim-checkbox {
+      background: var(--gray-900); border-color: var(--gray-900);
+    }
+    .sim-checkbox-check { display: none; }
+    .sim-scenario-card.selected .sim-checkbox-check { display: block; }
+
+    .sim-card-body { flex: 1; min-width: 0; }
+    .sim-card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+    .sim-snum {
+      font-size: .5625rem; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--gray-400); white-space: nowrap;
+    }
+    .sim-sev-chip {
+      display: inline-flex; align-items: center; padding: 1px 6px;
+      border-radius: 3px; font-size: .5rem; font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+    }
+    .chip-critical { background: #FFF1F1; color: #C43434; border: 1px solid #FFD4D4; }
+    .chip-warning  { background: #FFFBEB; color: #C07818; border: 1px solid #FEE9A0; }
+    .chip-pass     { background: #EDFBF3; color: #1A9652; border: 1px solid #D6F5E3; }
+    .sim-qtype-chip {
+      display: inline-flex; padding: 1px 6px; border-radius: 3px;
+      font-size: .5rem; font-weight: 500; background: var(--gray-100);
+      color: var(--gray-500); border: 1px solid var(--gray-200); white-space: nowrap;
+    }
+    .sim-card-title {
+      font-size: .75rem; font-weight: 500; color: var(--gray-800);
+      line-height: 1.35; overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+
+    /* Options row */
+    .sim-options {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 14px; padding: 10px 14px;
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 8px;
+    }
+    .sim-option-label { font-size: .75rem; font-weight: 500; color: var(--gray-600); white-space: nowrap; }
+    .sim-delay-slider {
+      flex: 1; accent-color: var(--gray-900); cursor: pointer; height: 3px;
+    }
+    .sim-delay-val {
+      font-size: .75rem; font-variant-numeric: tabular-nums;
+      color: var(--gray-700); font-weight: 600; min-width: 28px; text-align: right;
+    }
+
+    /* Footer */
+    .sim-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-top: 1px solid var(--gray-200);
+      background: var(--gray-50); flex-shrink: 0;
+    }
+    .sim-sel-info { font-size: .8125rem; color: var(--gray-500); }
+    .sim-sel-count { font-weight: 700; color: var(--gray-900); font-variant-numeric: tabular-nums; }
+    .sim-run-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 7px;
+      background: var(--gray-900); color: var(--white);
+      border: none; font-size: .875rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .sim-run-btn:hover { background: var(--gray-800); }
+    .sim-run-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Running state — overlays the modal body */
+    .sim-running-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: var(--white); border-radius: 14px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px; padding: 32px;
+    }
+    .sim-running-overlay[hidden] { display: none !important; }
+    .sim-running-icon { color: var(--gray-300); }
+    .sim-running-title { font-size: 1rem; font-weight: 700; color: var(--gray-900); }
+    .sim-running-sub   { font-size: .8125rem; color: var(--gray-500); text-align: center; max-width: 320px; }
+    .sim-progress-wrap { width: 100%; max-width: 360px; }
+    .sim-progress-track {
+      width: 100%; height: 4px; background: var(--gray-200);
+      border-radius: 2px; overflow: hidden; margin-bottom: 8px;
+    }
+    .sim-progress-fill {
+      height: 100%; background: var(--gray-900);
+      border-radius: 2px; transition: width .4s ease;
+      width: 0%;
+    }
+    .sim-progress-label {
+      display: flex; justify-content: space-between;
+      font-size: .6875rem; color: var(--gray-400); font-variant-numeric: tabular-nums;
+    }
+    .sim-done-check {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--green-50); border: 1.5px solid var(--green-100);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--green-700);
+    }
+    .sim-done-actions { display: flex; gap: 8px; }
   </style>
 </head>
 <body>
@@ -582,6 +780,10 @@
       <button class="btn-sm btn-refresh" onclick="refreshAll()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
         Refresh
+      </button>
+      <button class="btn-sm btn-simulate" onclick="openSimModal()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Simulate
       </button>
       <button class="btn-sm btn-primary" id="scanBtn" onclick="triggerScan()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1685,6 +1887,279 @@
     h.appendChild(d);
     h.scrollTop = h.scrollHeight;
   }
+
+  /* ─── Simulate Modal ─────────────────────────────────────────── */
+
+  const SIM_SCENARIOS = [
+    { num:1, title:"Drug name hallucination — cephalexim doesn't exist",      sev:"critical", qtype:"drug_interaction" },
+    { num:2, title:"Vancomycin 8000mg IV — patient has CKD stage 3",           sev:"critical", qtype:"drug_dosage" },
+    { num:3, title:"Deepen anesthesia during surgical closure phase",          sev:"critical", qtype:"procedure" },
+    { num:4, title:"Digoxin dose without creatinine clearance on record",      sev:"warning",  qtype:"drug_dosage" },
+    { num:5, title:"Metformin + contrast — correct hold 48h guidance",         sev:"pass",     qtype:"drug_interaction" },
+    { num:6, title:"Gentamicin 480mg — toxic in CKD stage 4 patient",          sev:"critical", qtype:"drug_dosage" },
+    { num:7, title:"Methotrexate 500mg/week — 20× over therapeutic dose",      sev:"critical", qtype:"drug_dosage" },
+    { num:8, title:"Warfarin + metronidazole — severe DDI, bleeding risk 3×",  sev:"critical", qtype:"drug_interaction" },
+    { num:9, title:"Amoxicillin for penicillin-allergic patient — direct contraindication", sev:"critical", qtype:"allergy_check" },
+  ];
+
+  const SIM_SEV_LABEL = { critical:"CRITICAL", warning:"WARNING", pass:"PASS" };
+  const SIM_SEV_CLASS = { critical:"chip-critical sev-critical", warning:"chip-warning sev-warning", pass:"chip-pass sev-pass" };
+
+  let _simSelected = new Set(SIM_SCENARIOS.map(s => s.num));
+  let _simRunning  = false;
+  let _simDone     = false;
+  let _simTotal    = 0;
+  let _simCompleted = 0;
+
+  function openSimModal() {
+    _simDone = false;
+    document.getElementById('simRunningOverlay').hidden = true;
+    document.getElementById('simMainContent').hidden = false;
+    _renderSimGrid();
+    _updateSimFooter();
+    document.getElementById('simOverlay').hidden = false;
+  }
+
+  function closeSimModal() {
+    if (_simRunning) return;
+    document.getElementById('simOverlay').hidden = true;
+  }
+
+  function _renderSimGrid() {
+    const grid = document.getElementById('simGrid');
+    grid.innerHTML = SIM_SCENARIOS.map(s => {
+      const sel = _simSelected.has(s.num);
+      const sevCardClass = `sev-${s.sev}`;
+      const chipClass = SIM_SEV_CLASS[s.sev];
+      return `
+        <div class="sim-scenario-card ${sevCardClass} ${sel ? 'selected' : ''}" id="simCard${s.num}" onclick="toggleSimScenario(${s.num})">
+          <div class="sim-card-inner">
+            <div class="sim-checkbox-wrap">
+              <div class="sim-checkbox">
+                <svg class="sim-checkbox-check" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            </div>
+            <div class="sim-card-body">
+              <div class="sim-card-top">
+                <span class="sim-snum">S${s.num}</span>
+                <span class="sim-sev-chip ${chipClass}">${SIM_SEV_LABEL[s.sev]}</span>
+                <span class="sim-qtype-chip">${s.qtype.replace(/_/g,' ')}</span>
+              </div>
+              <div class="sim-card-title">${s.title}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleSimScenario(num) {
+    if (_simRunning) return;
+    if (_simSelected.has(num)) _simSelected.delete(num);
+    else _simSelected.add(num);
+    const card = document.getElementById(`simCard${num}`);
+    card.classList.toggle('selected', _simSelected.has(num));
+    _updateSimFooter();
+  }
+
+  function simSelectAll() {
+    SIM_SCENARIOS.forEach(s => {
+      _simSelected.add(s.num);
+      document.getElementById(`simCard${s.num}`)?.classList.add('selected');
+    });
+    _updateSimFooter();
+  }
+
+  function simClearAll() {
+    _simSelected.clear();
+    SIM_SCENARIOS.forEach(s => document.getElementById(`simCard${s.num}`)?.classList.remove('selected'));
+    _updateSimFooter();
+  }
+
+  function _updateSimFooter() {
+    const n = _simSelected.size;
+    document.getElementById('simSelCount').textContent = n;
+    document.getElementById('simRunBtn').disabled = n === 0;
+    document.getElementById('simCountLabel').textContent = `${n} of ${SIM_SCENARIOS.length} selected`;
+  }
+
+  document.getElementById('simDelaySlider').addEventListener('input', function() {
+    document.getElementById('simDelayVal').textContent = (this.value / 1000).toFixed(1) + 's';
+  });
+
+  async function runSimulation() {
+    if (_simSelected.size === 0 || _simRunning) return;
+    _simRunning = true;
+    _simTotal = _simSelected.size;
+    _simCompleted = 0;
+
+    document.getElementById('simMainContent').hidden = true;
+    document.getElementById('simRunningOverlay').hidden = false;
+    document.getElementById('simOverlayTitle').textContent = 'Running Scenarios…';
+    document.getElementById('simOverlaySub').textContent = `Injecting ${_simTotal} clinical event(s) into the live IRIS pipeline. Watch the activity log for real-time updates.`;
+    document.getElementById('simProgressFill').style.width = '0%';
+    document.getElementById('simProgressCurrent').textContent = '0';
+    document.getElementById('simProgressTotal').textContent = _simTotal;
+    document.getElementById('simSuccessIcon').hidden = true;
+    document.getElementById('simDoneActions').hidden = true;
+    document.getElementById('simSpinSection').hidden = false;
+
+    const delayMs = parseInt(document.getElementById('simDelaySlider').value, 10);
+    const scenarios = [..._simSelected].sort((a,b) => a-b);
+
+    try {
+      const resp = await fetch('/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarios, delay_ms: delayMs }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    } catch (err) {
+      _simRunning = false;
+      document.getElementById('simOverlayTitle').textContent = 'Error';
+      document.getElementById('simOverlaySub').textContent = String(err);
+      return;
+    }
+
+    // Watch activity SSE for progress
+    _watchSimProgress(_simTotal, delayMs);
+  }
+
+  function _watchSimProgress(total, delayMs) {
+    const estMs = total * (delayMs + 8000);
+    let seen = 0;
+
+    function onActivity(evt) {
+      try {
+        const data = JSON.parse(evt.data);
+        const msg = (data.message || '').toLowerCase();
+        if (msg.includes('simulator [')) {
+          seen++;
+          const pct = Math.min(95, Math.round((seen / total) * 100));
+          document.getElementById('simProgressFill').style.width = pct + '%';
+          document.getElementById('simProgressCurrent').textContent = seen;
+        }
+        if (msg.includes('simulator: complete')) {
+          _finishSim(total);
+          window._simActivitySrc?.removeEventListener('message', onActivity);
+        }
+      } catch(_) {}
+    }
+
+    if (!window._simActivitySrc || window._simActivitySrc.readyState === EventSource.CLOSED) {
+      window._simActivitySrc = new EventSource('/stream/activity');
+    }
+    window._simActivitySrc.addEventListener('message', onActivity);
+
+    // Fallback: if SSE doesn't report completion, poll after estimated time + buffer
+    setTimeout(() => {
+      if (_simRunning) _finishSim(total);
+    }, estMs + 15000);
+  }
+
+  function _finishSim(total) {
+    _simRunning = false;
+    _simDone = true;
+    document.getElementById('simProgressFill').style.width = '100%';
+    document.getElementById('simProgressCurrent').textContent = total;
+    document.getElementById('simOverlayTitle').textContent = 'Simulation Complete';
+    document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview and Trace Inspector tabs for results.`;
+    document.getElementById('simSpinSection').hidden = true;
+    document.getElementById('simSuccessIcon').hidden = false;
+    document.getElementById('simDoneActions').hidden = false;
+    refreshAll();
+  }
+
+  // Close on backdrop click
+  document.getElementById('simOverlay').addEventListener('click', function(e) {
+    if (e.target === this && !_simRunning) closeSimModal();
+  });
 </script>
+
+<!-- ── Simulate Modal ──────────────────────────────────────────────── -->
+<div class="sim-overlay" id="simOverlay" hidden>
+
+  <div class="sim-modal" style="position:relative;">
+
+    <!-- Running overlay (shown after submit) -->
+    <div class="sim-running-overlay" id="simRunningOverlay" hidden>
+      <div id="simSpinSection">
+        <svg class="sim-running-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </div>
+      <div id="simSuccessIcon" hidden>
+        <div class="sim-done-check">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+      <div>
+        <div class="sim-running-title" id="simOverlayTitle">Running…</div>
+        <div class="sim-running-sub" id="simOverlaySub">Starting simulation…</div>
+      </div>
+      <div class="sim-progress-wrap">
+        <div class="sim-progress-track">
+          <div class="sim-progress-fill" id="simProgressFill" style="width:0%"></div>
+        </div>
+        <div class="sim-progress-label">
+          <span>Scenario <span id="simProgressCurrent">0</span> of <span id="simProgressTotal">0</span></span>
+        </div>
+      </div>
+      <div class="sim-done-actions" id="simDoneActions" hidden>
+        <button class="btn-sm btn-ghost" onclick="openSimModal()">Run Again</button>
+        <button class="btn-sm btn-primary" onclick="closeSimModal(); showTab('traces')">View Traces</button>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div id="simMainContent">
+
+      <!-- Header -->
+      <div class="sim-header">
+        <div class="sim-header-left">
+          <div class="sim-icon-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <div>
+            <div class="sim-title">ORION Simulator</div>
+            <div class="sim-subtitle">Inject clinical AI failure scenarios into the live IRIS pipeline</div>
+          </div>
+        </div>
+        <button class="sim-close" onclick="closeSimModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="sim-body">
+        <div class="sim-toolbar">
+          <div class="sim-toolbar-left">
+            <button class="sim-quick-btn" onclick="simSelectAll()">Select All</button>
+            <button class="sim-quick-btn" onclick="simClearAll()">Clear</button>
+          </div>
+          <span class="sim-count-label" id="simCountLabel">9 of 9 selected</span>
+        </div>
+
+        <div class="sim-scenario-grid" id="simGrid">
+          <!-- populated by JS -->
+        </div>
+
+        <div class="sim-options">
+          <span class="sim-option-label">Delay between events</span>
+          <input type="range" class="sim-delay-slider" id="simDelaySlider" min="500" max="5000" step="500" value="1500">
+          <span class="sim-delay-val" id="simDelayVal">1.5s</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="sim-footer">
+        <div class="sim-sel-info"><span class="sim-sel-count" id="simSelCount">9</span> scenario(s) selected</div>
+        <button class="sim-run-btn" id="simRunBtn" onclick="runSimulation()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run Simulation
+        </button>
+      </div>
+
+    </div><!-- /simMainContent -->
+  </div><!-- /sim-modal -->
+</div><!-- /sim-overlay -->
+
 </body>
 </html>
