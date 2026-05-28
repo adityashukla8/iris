@@ -9,6 +9,8 @@ import re
 
 import httpx
 
+from ipdb import set_trace as ipdb
+
 RXNAV_BASE = "https://rxnav.nlm.nih.gov/REST"
 
 
@@ -111,7 +113,7 @@ async def extract_drug_doses(text: str) -> list[dict]:
     try:
         client = _get_llm_client()
         response = await client.aio.models.generate_content(
-            model=settings.gemini_model,
+            model=settings.eval_gemini_model,
             contents=_EXTRACT_PROMPT.format(text=text.strip()),
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",

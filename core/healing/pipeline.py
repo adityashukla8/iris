@@ -45,22 +45,45 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     # a minimal representation for the local pipeline.
     failing_examples = _extract_examples_from_diagnosis(diagnosis)
 
+    print(f"\n[HealingPipeline] Starting pipeline for {diagnosis.query_type}")
+    print(f"[HealingPipeline] hallucination_rate={diagnosis.hallucination_rate}")
+    print(f"[HealingPipeline] failing_span_ids={diagnosis.failing_span_ids}")
+    print(f"[HealingPipeline] current_prompt_text={diagnosis.current_prompt_text[:200]!r}")
+    print(f"[HealingPipeline] failure_analysis={diagnosis.failure_analysis!r}")
+    print(f"[HealingPipeline] examples built: {len(failing_examples)}")
+
+    # If prompt text is empty (not yet in Phoenix), use a seed placeholder so
+    # the mutation engine can still generate a constraint to inject
+    effective_prompt = diagnosis.current_prompt_text or (
+        f"You are a clinical AI assistant helping with {diagnosis.query_type} queries. "
+        "Always provide accurate, safe clinical information."
+    )
+    if not diagnosis.current_prompt_text:
+        push_activity(
+            f"HealingPipeline: prompt '{diagnosis.current_prompt_name}' not in Phoenix — using seed prompt",
+            "warn",
+        )
+        print(f"[HealingPipeline] WARNING: current_prompt_text empty, using seed prompt")
+
     # ── Phase 3a: GENERATE candidate prompt ──────────────────────────────────
     push_activity("HealingPipeline: mutation engine running (TextGrad)", "heal")
     try:
         mutation_result = await generate_candidate_prompt(
-            current_prompt=diagnosis.current_prompt_text,
+            current_prompt=effective_prompt,
             failing_examples=failing_examples,
             query_type=diagnosis.query_type,
             failure_rate=diagnosis.hallucination_rate,
         )
     except Exception as exc:
         push_activity(f"HealingPipeline: mutation failed — {str(exc)[:100]}", "critical")
+        print(f"[HealingPipeline] mutation EXCEPTION: {exc}")
         return None
 
     new_prompt = mutation_result.get("new_prompt", "")
-    if not new_prompt or new_prompt == diagnosis.current_prompt_text:
+    print(f"[HealingPipeline] mutation result: new_prompt length={len(new_prompt)}, constraint={mutation_result.get('injected_constraint','')[:100]!r}")
+    if not new_prompt or new_prompt == effective_prompt:
         push_activity("HealingPipeline: mutation produced no change — aborting", "warn")
+        print(f"[HealingPipeline] ABORT: mutation produced no change (new == old)")
         return None
 
     constraint = mutation_result.get("injected_constraint", "")
@@ -69,16 +92,17 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
     # ── Phase 3b: VALIDATE candidate prompt ──────────────────────────────────
     push_activity("HealingPipeline: validating candidate prompt", "heal")
     validation = await validate_candidate(
-        old_prompt=diagnosis.current_prompt_text,
+        old_prompt=effective_prompt,
         new_prompt=new_prompt,
         failing_examples=failing_examples,
         query_type=diagnosis.query_type,
     )
+    print(f"[HealingPipeline] validation: score_before={validation['score_before']:.2f} score_after={validation['score_after']:.2f} improvement={validation['improvement']:+.2f} passed={validation['passed']}")
 
     candidate = HealingCandidate(
         candidate_id=diagnosis.candidate_id,
         diagnosis=diagnosis,
-        old_prompt_text=diagnosis.current_prompt_text,
+        old_prompt_text=effective_prompt,
         new_prompt_text=new_prompt,
         injected_constraint=mutation_result.get("injected_constraint", ""),
         mutation_rationale=mutation_result.get("mutation_rationale", ""),
@@ -212,20 +236,41 @@ async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
 
 def _extract_examples_from_diagnosis(diagnosis: HealingDiagnosis) -> list[dict]:
     """
-    Build minimal failing example dicts from the diagnosis.
-    In production these would come from Phoenix span data; here we reconstruct
-    from what the MCP agent captured in failure_analysis.
+    Build failing example dicts for the mutation engine and validator.
+    Uses real span IDs when available; synthesises from cluster metadata otherwise.
+    All content is derived from the diagnosis — nothing hardcoded by query type.
     """
-    # The MCP agent stores the failure analysis as a string; we create synthetic
-    # example dicts for the mutation engine and validator to work with.
+    base_score = max(0.0, min(4.9, 10.0 * (1.0 - diagnosis.hallucination_rate)))
+    violation = (diagnosis.failure_analysis or "Clinical AI safety evaluation failed")[:300]
+    worst = diagnosis.failure_cluster.get("worst_score", 0.0)
+
+    if diagnosis.failing_span_ids:
+        return [
+            {
+                "input_prompt": f"[{diagnosis.query_type} cluster] Clinical query to agent {diagnosis.agent_name}",
+                "output_text": f"[Span {span_id}] Unsafe {diagnosis.query_type} response (score {worst:.1f})",
+                "violation": violation,
+                "score": base_score,
+            }
+            for span_id in diagnosis.failing_span_ids[:settings.healing_validation_examples]
+        ]
+
+    # No real span IDs — derive count from cluster metadata
+    n = min(settings.healing_validation_examples, max(1, diagnosis.failure_cluster.get("span_count", 3)))
     return [
         {
-            "input_prompt": f"[cluster: {diagnosis.query_type}] Clinical query",
-            "output_text": f"[Span {span_id}] Unsafe clinical AI output",
-            "violation": diagnosis.failure_analysis[:200] if diagnosis.failure_analysis else "Safety evaluation failed",
-            "score": max(0.0, min(4.9, 10.0 * (1.0 - diagnosis.hallucination_rate))),
+            "input_prompt": (
+                f"[{diagnosis.query_type} failure example {i + 1}/{n}] "
+                f"Clinical query requiring {diagnosis.query_type} assessment for agent {diagnosis.agent_name}"
+            ),
+            "output_text": (
+                f"Unsafe {diagnosis.query_type} response — "
+                f"failure rate {diagnosis.hallucination_rate:.0%}, worst score {worst:.1f}"
+            ),
+            "violation": violation,
+            "score": base_score,
         }
-        for span_id in diagnosis.failing_span_ids[:settings.healing_validation_examples]
+        for i in range(n)
     ]
 
 

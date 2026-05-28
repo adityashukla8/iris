@@ -158,8 +158,15 @@ async def run_healing_pipeline_tool(diagnosis_json: str) -> dict:
     import asyncio
     import json
     import re
+    import traceback
     from core.healing.models import HealingDiagnosis
     from core.healing.pipeline import run_healing_pipeline
+
+    _SEP = "─" * 60
+    print(f"\n{_SEP}")
+    print(f"[HealingTool] run_healing_pipeline_tool called")
+    print(f"[HealingTool] diagnosis_json ({len(diagnosis_json)} chars):\n{diagnosis_json}")
+    print(_SEP)
 
     # Strip markdown code fences if Gemini wrapped the JSON
     clean = re.sub(r"```(?:json)?\s*", "", diagnosis_json)
@@ -170,7 +177,25 @@ async def run_healing_pipeline_tool(diagnosis_json: str) -> dict:
 
     try:
         diagnosis = HealingDiagnosis.model_validate_json(clean)
-        asyncio.create_task(run_healing_pipeline(diagnosis))
+        print(f"[HealingTool] HealingDiagnosis parsed OK:")
+        print(f"  query_type={diagnosis.query_type}")
+        print(f"  hallucination_rate={diagnosis.hallucination_rate}")
+        print(f"  current_prompt_name={diagnosis.current_prompt_name!r}")
+        print(f"  current_prompt_text length={len(diagnosis.current_prompt_text)} chars")
+        print(f"  failing_span_ids={diagnosis.failing_span_ids}")
+        print(f"  examples_logged={diagnosis.examples_logged}")
+        print(f"  failure_analysis={diagnosis.failure_analysis[:200]!r}")
+
+        async def _run_with_error_log():
+            try:
+                await run_healing_pipeline(diagnosis)
+            except Exception as exc:
+                print(f"\n[HealingTool] PIPELINE CRASHED: {exc}")
+                traceback.print_exc()
+                from core.state import push_activity
+                push_activity(f"HealingPipeline: CRASHED — {str(exc)[:120]}", "critical")
+
+        asyncio.create_task(_run_with_error_log())
         return {
             "triggered": True,
             "candidate_id": diagnosis.candidate_id,
@@ -180,6 +205,8 @@ async def run_healing_pipeline_tool(diagnosis_json: str) -> dict:
             "message": "Pipeline started: TextGrad mutation → counterfactual validation → Phoenix prompt deploy",
         }
     except Exception as exc:
+        print(f"[HealingTool] HealingDiagnosis PARSE FAILED: {exc}")
+        print(f"[HealingTool] Cleaned JSON was:\n{clean[:500]}")
         return {"triggered": False, "error": str(exc)}
 
 

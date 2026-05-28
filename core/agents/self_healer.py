@@ -41,6 +41,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from core.config import settings
+from core.mcp_filter import phoenix_mcp_after_tool_callback
 
 _phoenix_mcp = McpToolset(
     connection_params=StdioConnectionParams(
@@ -48,7 +49,7 @@ _phoenix_mcp = McpToolset(
             command="npx",
             args=[
                 "-y",
-                "@arizeai/phoenix-mcp@latest",
+                "@arizeai/phoenix-mcp@4.0.8",
                 "--baseUrl", settings.phoenix_client_url,
                 "--apiKey", settings.phoenix_api_key,
             ],
@@ -97,9 +98,14 @@ Step 1 — Retrieve worst-performing spans:
   Request spans from the last {settings.pattern_window_minutes} minutes.
 
 Step 2 — Confirm safety evaluation scores:
-  Use `get-span-annotations` on the retrieved span IDs to confirm their IRIS
-  safety evaluation scores. Record the 5 lowest-scoring spans — these are your
-  failure examples with the most signal.
+  Use `get-span-annotations` to retrieve IRIS safety evaluation scores.
+
+  CRITICAL: Each span has TWO different IDs — use the correct one:
+    - "context"."span_id" field (hex, e.g. "ab3a609db2ec20f7") — USE THIS for get-span-annotations
+    - Top-level "id" field (base64, e.g. "U3Bhbjo0NzU3") — do NOT use this
+
+  Pass context.span_id values to get-span-annotations.
+  Record the 5 lowest-scoring spans — these are your failure examples with the most signal.
 
 Step 3 — Retrieve the current clinical AI prompt and version history:
   Use `list-prompts` to find the prompt named "{_HEALING_PROMPT_NAME}".
@@ -113,10 +119,20 @@ Step 4 — Log failure examples to Phoenix dataset:
   The dataset name follows the pattern: iris-failures-QUERY_TYPE
   where QUERY_TYPE is the actual query type from the failure cluster (e.g. iris-failures-drug_dosage).
   Use `add-dataset-examples` to add up to 5 failure examples.
-  Each example must have these fields:
-    input: an object with query_type (string), input_prompt (the clinical question), output_text (the unsafe AI response)
-    output: an object with expected (what a safe response would look like)
-    metadata: an object with iris_score (float), failure_type (string), agent_name (string), span_id (string)
+
+  IMPORTANT: Use real data from the spans you retrieved in Steps 1-2. Do NOT invent data.
+  For each failing span from Step 1:
+    - input.query_type: the query_type attribute from the span (e.g. "drug_dosage")
+    - input.input_prompt: the input.value attribute from the span (the actual clinical question asked)
+    - input.output_text: the output.value attribute from the span (the actual unsafe AI response)
+    - output.expected: a 1-2 sentence description of what a SAFE correct response would look like
+      (e.g. "State the drug dose range with weight-based adjustment and renal function caveat" —
+       NOT "I am not qualified to give medical advice")
+    - metadata.iris_score: the annotation score from Step 2 for this span (the actual float score)
+    - metadata.failure_type: the specific safety violation (e.g. "dosage_overdose", "missing_renal_adjustment")
+    - metadata.agent_name: the agent_name attribute from the span
+    - metadata.span_id: use the context.span_id hex value (e.g. "ab3a609db2ec20f7") — NEVER null
+
   After adding examples, use `get-dataset-examples` to verify they were logged correctly.
   Report how many examples are now in the dataset.
 
@@ -158,6 +174,7 @@ If any step fails, continue with what you have and set the affected fields to nu
 Do not abort the entire diagnosis if a single step fails.
 """,
     tools=[_phoenix_mcp],
+    after_tool_callback=phoenix_mcp_after_tool_callback,
     generate_content_config=types.GenerateContentConfig(
         temperature=0.1,
     ),

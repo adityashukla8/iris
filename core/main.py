@@ -20,6 +20,7 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -34,6 +35,7 @@ from phoenix.otel import register
 
 from core.agents.mcp_probe import mcp_probe_agent
 from core.agents.orchestrator import iris_orchestrator
+from core.agents.self_healer import self_healer_agent
 from core.config import settings
 from core.state import (
     _activity_subscribers,
@@ -85,17 +87,20 @@ _probe_runner = Runner(
 )
 _PROBE_USER_ID = "iris-probe"
 
+_healer_session_service = InMemorySessionService()
+_healer_runner = Runner(
+    agent=self_healer_agent,
+    app_name="iris-healer",
+    session_service=_healer_session_service,
+)
+_HEALER_USER_ID = "iris-healer"
+
 SHIFT_SESSION_ID = "shift-001"
 SYSTEM_USER_ID = "iris-system"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await _session_service.create_session(
-        app_name="iris-clinical",
-        user_id=SYSTEM_USER_ID,
-        session_id=SHIFT_SESSION_ID,
-    )
     asyncio.create_task(_scheduled_pattern_scan())
     yield
 
@@ -125,19 +130,36 @@ async def submit_event(event: IrisEvent) -> dict:
         parts=[types.Part(text=f"IrisEvent:\n{event_json}")],
     )
 
+    _SEP = "─" * 80
+    print(f"\n{_SEP}")
+    print(f"[IRIS /event] trace_id={event.trace_id}  agent={event.agent_name}  query_type={event.query_type}")
+    print(f"[IRIS /event] INPUT token estimate ≈ {len(event_json) // 4} tokens  ({len(event_json)} chars)")
+    print(f"[IRIS /event] INPUT JSON:\n{event_json}")
+    print(_SEP)
+
+    session_id = f"event-{event.trace_id}"
+    await _session_service.create_session(
+        app_name="iris-clinical",
+        user_id=SYSTEM_USER_ID,
+        session_id=session_id,
+    )
     result_text = ""
     try:
         async for adk_event in _runner.run_async(
             user_id=SYSTEM_USER_ID,
-            session_id=SHIFT_SESSION_ID,
+            session_id=session_id,
             new_message=message,
         ):
             _handle_adk_event(adk_event)
+            _print_adk_event(adk_event)
             if adk_event.is_final_response() and adk_event.content:
                 for part in adk_event.content.parts:
                     if part.text:
                         result_text = part.text
                         break
+
+        print(f"\n[IRIS /event] FINAL OUTPUT ({len(result_text)} chars):\n{result_text}")
+        print(_SEP)
 
         shift_stats["total_traces"] += 1
 
@@ -183,6 +205,7 @@ async def submit_event(event: IrisEvent) -> dict:
         }
 
     except Exception as exc:
+        print(f"[IRIS /event] ERROR: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -190,26 +213,46 @@ async def submit_event(event: IrisEvent) -> dict:
 async def trigger_pattern_scan() -> dict:
     """Manually trigger a pattern detection scan."""
     push_activity("ADK: iris_orchestrator invoked — SCAN_PATTERNS", "adk")
+    scan_session_id = f"scan-{uuid.uuid4().hex[:12]}"
+    await _session_service.create_session(
+        app_name="iris-clinical",
+        user_id=SYSTEM_USER_ID,
+        session_id=scan_session_id,
+    )
     message = types.Content(
         role="user",
         parts=[types.Part(text="SCAN_PATTERNS")],
     )
+    _SEP = "─" * 80
+    print(f"\n{_SEP}")
+    print(f"[IRIS /scan] session={scan_session_id}  input=SCAN_PATTERNS")
+    print(_SEP)
     result_text = ""
     try:
         async for adk_event in _runner.run_async(
             user_id=SYSTEM_USER_ID,
-            session_id=SHIFT_SESSION_ID,
+            session_id=scan_session_id,
             new_message=message,
         ):
             _handle_adk_event(adk_event)
+            _print_adk_event(adk_event)
             if adk_event.is_final_response() and adk_event.content:
                 for part in adk_event.content.parts:
                     if part.text:
                         result_text = part.text
+        print(f"\n[IRIS /scan] FINAL OUTPUT ({len(result_text)} chars):\n{result_text}")
+        print(_SEP)
         _push_scan_activity(result_text)
+
+        # ── Deterministic pipeline trigger ──────────────────────────────────
+        # The orchestrator LLM unreliably calls run_healing_pipeline_tool.
+        # Read session state directly and fire the pipeline from Python.
+        await _trigger_healing_from_session(scan_session_id)
+
         return {"status": "scan_complete", "result": result_text}
     except Exception as exc:
         err = str(exc)
+        print(f"[IRIS /scan] ERROR: {err}")
         push_activity(f"Scan error: {err[:120]}", "critical")
         return {"status": "error", "error": err}
 
@@ -455,6 +498,27 @@ def _handle_adk_event(event) -> None:
             push_activity(f"Tool result ← {fr.name}: {resp_preview}", "mcp")
 
 
+def _print_adk_event(event) -> None:
+    """Print full ADK event content to console for debugging."""
+    content = getattr(event, "content", None)
+    if not content:
+        return
+    author = getattr(event, "author", None) or "?"
+    for part in content.parts or []:
+        fc = getattr(part, "function_call", None)
+        if fc and fc.name:
+            args_str = json.dumps(dict(fc.args or {}), indent=2)
+            print(f"\n[ADK TOOL CALL] {author} → {fc.name}\n{args_str}")
+
+        fr = getattr(part, "function_response", None)
+        if fr and fr.name:
+            resp_str = json.dumps(fr.response or {}, indent=2)
+            print(f"\n[ADK TOOL RESP] ← {fr.name} ({len(resp_str)} chars)\n{resp_str}")
+
+        if getattr(part, "text", None) and not fc and not fr:
+            print(f"\n[ADK TEXT] {author}:\n{part.text}")
+
+
 def _trim(obj, max_len: int) -> str:
     s = json.dumps(obj) if not isinstance(obj, str) else obj
     return s[:max_len] + "…" if len(s) > max_len else s
@@ -620,6 +684,134 @@ def _parse_result(result_text: str) -> dict:
     return data
 
 
+async def _trigger_healing_from_session(session_id: str) -> None:
+    """
+    Deterministic healing trigger — bypasses the orchestrator LLM which
+    unreliably decides whether to invoke self_healer and run_healing_pipeline_tool.
+
+    Steps:
+    1. Check scan session for healing_diagnosis (in case orchestrator did set it).
+    2. If not set, read detected_patterns and run self_healer directly.
+    3. Fire run_healing_pipeline_tool with the resulting diagnosis.
+    """
+    import traceback
+    from core.agents.tools.eval_tools import run_healing_pipeline_tool
+
+    try:
+        session = await _session_service.get_session(
+            app_name="iris-clinical",
+            user_id=SYSTEM_USER_ID,
+            session_id=session_id,
+        )
+        if session is None:
+            print(f"[HealingTrigger] scan session {session_id} not found")
+            return
+
+        print(f"[HealingTrigger] scan session state keys: {list(session.state.keys())}")
+
+        # ── Path A: orchestrator already set healing_diagnosis ────────────────
+        diagnosis_raw = session.state.get("healing_diagnosis")
+        if diagnosis_raw:
+            print(f"[HealingTrigger] healing_diagnosis already in session — using it")
+        else:
+            # ── Path B: orchestrator skipped self_healer — run it directly ────
+            detected_raw = session.state.get("detected_patterns")
+            if not detected_raw:
+                print(f"[HealingTrigger] no detected_patterns in session — nothing to heal")
+                return
+
+            detected_str = detected_raw if isinstance(detected_raw, str) else json.dumps(detected_raw)
+            try:
+                detected = json.loads(re.sub(r"```(?:json)?\s*|```", "", detected_str).strip())
+            except Exception:
+                detected = detected_raw if isinstance(detected_raw, dict) else {}
+
+            print(f"[HealingTrigger] detected_patterns: healing_required={detected.get('healing_required')} clusters={len(detected.get('failure_clusters', []))}")
+
+            if not detected.get("healing_required") or not detected.get("failure_clusters"):
+                push_activity("HealingTrigger: no failure clusters — nothing to heal", "info")
+                return
+
+            # Run self_healer directly for each failure cluster
+            for cluster in detected["failure_clusters"]:
+                diagnosis_raw = await _run_self_healer(cluster)
+                if diagnosis_raw:
+                    break  # pipeline handles one cluster at a time
+
+        if not diagnosis_raw:
+            push_activity("HealingTrigger: self_healer produced no diagnosis", "critical")
+            return
+
+        # ── Fire the Python pipeline ──────────────────────────────────────────
+        push_activity("HealingTrigger: firing healing pipeline", "heal")
+        result = await run_healing_pipeline_tool(
+            diagnosis_raw if isinstance(diagnosis_raw, str) else json.dumps(diagnosis_raw)
+        )
+        print(f"[HealingTrigger] pipeline trigger result: {result}")
+        if not result.get("triggered"):
+            push_activity(f"HealingTrigger: pipeline not triggered — {result.get('error', 'unknown')}", "critical")
+
+    except Exception as exc:
+        print(f"[HealingTrigger] ERROR: {exc}")
+        traceback.print_exc()
+
+
+async def _run_self_healer(failure_cluster: dict) -> str | None:
+    """
+    Invoke self_healer agent directly with a failure cluster.
+    Returns the healing_diagnosis JSON string, or None on failure.
+    """
+    import traceback
+    healer_session_id = f"heal-{uuid.uuid4().hex[:12]}"
+    await _healer_session_service.create_session(
+        app_name="iris-healer",
+        user_id=_HEALER_USER_ID,
+        session_id=healer_session_id,
+    )
+    cluster_json = json.dumps(failure_cluster, indent=2)
+    message = types.Content(
+        role="user",
+        parts=[types.Part(text=f"Failure cluster detected:\n{cluster_json}")],
+    )
+    push_activity(f"SelfHealer: invoking directly for cluster {failure_cluster.get('query_type', '?')}", "heal")
+    print(f"\n[SelfHealer] Invoking self_healer for cluster: {cluster_json}")
+
+    try:
+        async for adk_event in _healer_runner.run_async(
+            user_id=_HEALER_USER_ID,
+            session_id=healer_session_id,
+            new_message=message,
+        ):
+            _handle_adk_event(adk_event)
+            _print_adk_event(adk_event)
+
+        healer_session = await _healer_session_service.get_session(
+            app_name="iris-healer",
+            user_id=_HEALER_USER_ID,
+            session_id=healer_session_id,
+        )
+        if healer_session is None:
+            print(f"[SelfHealer] session not found after run")
+            return None
+
+        print(f"[SelfHealer] session state keys after run: {list(healer_session.state.keys())}")
+        diagnosis = healer_session.state.get("healing_diagnosis")
+        if diagnosis:
+            diag_str = diagnosis if isinstance(diagnosis, str) else json.dumps(diagnosis)
+            print(f"[SelfHealer] healing_diagnosis set ({len(diag_str)} chars)")
+            push_activity(f"SelfHealer: HealingDiagnosis produced for {failure_cluster.get('query_type', '?')}", "heal")
+            return diag_str
+        else:
+            print(f"[SelfHealer] WARNING: healing_diagnosis NOT set in session state")
+            push_activity("SelfHealer: no healing_diagnosis in session after run", "critical")
+            return None
+
+    except Exception as exc:
+        print(f"[SelfHealer] ERROR: {exc}")
+        traceback.print_exc()
+        return None
+
+
 async def _scheduled_pattern_scan():
     """Background task: scan for patterns every N minutes via ADK orchestrator."""
     await asyncio.sleep(60)
@@ -628,13 +820,19 @@ async def _scheduled_pattern_scan():
         push_activity("ADK: scheduled SCAN_PATTERNS — iris_orchestrator invoked", "adk")
         result_text = ""
         try:
+            sched_session_id = f"scan-{uuid.uuid4().hex[:12]}"
+            await _session_service.create_session(
+                app_name="iris-clinical",
+                user_id=SYSTEM_USER_ID,
+                session_id=sched_session_id,
+            )
             message = types.Content(
                 role="user",
                 parts=[types.Part(text="SCAN_PATTERNS")],
             )
             async for adk_event in _runner.run_async(
                 user_id=SYSTEM_USER_ID,
-                session_id=SHIFT_SESSION_ID,
+                session_id=sched_session_id,
                 new_message=message,
             ):
                 _handle_adk_event(adk_event)
@@ -643,6 +841,7 @@ async def _scheduled_pattern_scan():
                         if part.text:
                             result_text = part.text
             _push_scan_activity(result_text)
+            await _trigger_healing_from_session(sched_session_id)
         except Exception as exc:
             push_activity(f"Scheduled scan error: {str(exc)[:120]}", "critical")
             print(f"[IRIS] Scheduled scan failed: {exc}")

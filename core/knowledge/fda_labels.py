@@ -10,6 +10,8 @@ from functools import lru_cache
 
 import httpx
 
+from ipdb import set_trace as ipdb
+
 OPENFDA_BASE = "https://api.fda.gov/drug/label.json"
 
 _LABEL_CACHE: dict[str, dict | None] = {}

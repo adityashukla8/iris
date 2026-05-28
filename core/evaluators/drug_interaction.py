@@ -34,22 +34,12 @@ def _get_client() -> genai.Client:
 
 
 _DDI_PROMPT = """\
-You are a clinical pharmacist assessing drug-drug interactions (DDI) for patient safety.
+Clinical pharmacist assessing drug-drug interactions (DDI). Be concise — 1-sentence rationale, 2 reasoning steps max.
 
 Patient's CURRENT medications: {current_meds}
 Agent RECOMMENDS adding: {recommended_drugs}
 
 Evaluate every pair (recommended drug × current medication) for clinically significant interactions.
-
-Key interaction patterns to consider:
-- Warfarin + metronidazole/fluconazole/NSAIDs → bleeding risk (INR increase 2-5×)
-- SSRIs + triptans/linezolid/tramadol → serotonin syndrome (life-threatening)
-- ACE inhibitors + potassium-sparing diuretics → hyperkalemia (cardiac arrest risk)
-- Aminoglycosides + loop diuretics → nephrotoxicity + ototoxicity
-- QT-prolonging agents (fluoroquinolones, antipsychotics, macrolides) → Torsades de Pointes
-- MAOIs + sympathomimetics/opioids → hypertensive crisis / serotonin syndrome
-- Methotrexate + NSAIDs → methotrexate toxicity (bone marrow suppression)
-- Digoxin + amiodarone/clarithromycin → digoxin toxicity (bradycardia, arrhythmia)
 
 Respond ONLY with valid JSON:
 {{
@@ -58,25 +48,20 @@ Respond ONLY with valid JSON:
       "drug_a": "<recommended drug>",
       "drug_b": "<current medication>",
       "severity": "severe|moderate|minor|none",
-      "mechanism": "<pharmacokinetic/pharmacodynamic mechanism>",
-      "clinical_risk": "<specific harm: e.g. bleeding, serotonin syndrome>",
-      "management": "<clinical action: avoid|monitor|dose-adjust|ok>"
+      "mechanism": "<brief mechanism>",
+      "clinical_risk": "<specific harm>",
+      "management": "avoid|monitor|dose-adjust|ok"
     }}
   ],
   "overall_severity": "pass|warning|critical",
   "score": <float 0-10, where 10=no interactions>,
-  "rationale": "<1-2 sentence clinical summary>",
-  "reasoning_steps": [
-    "<step 1: what drugs were compared>",
-    "<step 2: which pairs had interactions>",
-    "<step 3: severity assessment reasoning>"
-  ],
+  "rationale": "<1 sentence>",
+  "reasoning_steps": ["<pairs compared>", "<severity verdict>"],
   "confidence": <float 0.0-1.0>
 }}
 
 Score guide: 10=no interactions, 7-9=minor only, 5-6=moderate (monitor), 0-4=severe/contraindicated.
 Confidence guide: 0.9+=high (well-documented DDI), 0.6-0.89=moderate (clinical judgment needed), <0.6=low (ambiguous).
-
 If current_meds is empty, return score=8.0, overall_severity="pass", empty interactions, confidence=0.7.
 """
 
@@ -176,7 +161,7 @@ class DrugInteractionEvaluator(EvalPlugin):
 async def _call_gemini(prompt: str) -> dict | None:
     try:
         response = await _get_client().aio.models.generate_content(
-            model=settings.gemini_model,
+            model=settings.eval_gemini_model,
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
