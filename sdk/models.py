@@ -86,6 +86,13 @@ class IrisEvent(BaseModel):
     session_id: str = Field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     query_type: QueryType = QueryType.GENERAL
+    # The actual system prompt the monitored agent ran under. When present, IRIS evaluates
+    # it alongside the user prompt + response, and self-healing optimizes THIS prompt
+    # (versioned in Phoenix per (agent_name, prompt_hash)). Optional for backward compat.
+    system_prompt: str = ""
+    # For agents that already manage named/versioned prompts in their own registry.
+    prompt_name: str | None = None
+    prompt_version: str | None = None
     input_prompt: str
     retrieved_context: RetrievedContext = Field(default_factory=RetrievedContext)
     tool_calls: list[ToolCall] = Field(default_factory=list)

@@ -18,6 +18,7 @@ from core.config import settings
 from core.healing.experiment import validate_heal
 from core.healing.models import HealingCandidate, HealingDiagnosis
 from core.healing.mutation_engine import generate_candidate_prompt
+from core.healing.prompt_identity import agent_prompt_name, prompt_hash as compute_prompt_hash
 from core.healing.prompt_manager import prompt_manager
 from core.state import healing_candidates, healing_history, push_activity, shift_stats
 
@@ -77,9 +78,13 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
         f"passed={validation['passed']}"
     )
 
+    new_phash = compute_prompt_hash(new_prompt)
     candidate = HealingCandidate(
         candidate_id=diagnosis.candidate_id,
         diagnosis=diagnosis,
+        agent_name=diagnosis.agent_name,
+        old_prompt_hash=diagnosis.prompt_hash,
+        new_prompt_hash=new_phash,
         old_prompt_text=effective_prompt,
         new_prompt_text=new_prompt,
         injected_constraint=constraint,
@@ -147,12 +152,15 @@ async def reject_candidate(candidate_id: str, reason: str = "") -> HealingCandid
 
 
 async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
+    # Deploy under the agent's namespace in Phoenix: "{agent}-system"
+    pname = agent_prompt_name(candidate.agent_name or candidate.diagnosis.agent_name)
     description = (
-        f"IRIS auto-heal: {candidate.injected_constraint[:100]}... "
-        f"(improvement={candidate.improvement_score:+.2f}, cluster={candidate.diagnosis.query_type})"
+        f"IRIS auto-heal [{candidate.agent_name}]: {candidate.injected_constraint[:80]}... "
+        f"(improvement={candidate.improvement_score:+.2f}, "
+        f"prompt {candidate.old_prompt_hash[:6]}→{candidate.new_prompt_hash[:6]})"
     )
     version_data = await prompt_manager.create_prompt_version(
-        prompt_name=candidate.diagnosis.current_prompt_name,
+        prompt_name=pname,
         template=candidate.new_prompt_text,
         description=description,
         temperature=0.1,
@@ -163,21 +171,24 @@ async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
         version_id = version_data.get("id") or version_data.get("version", {}).get("id")
         candidate.phoenix_prompt_version_id = version_id
         if version_id:
-            tag = "production" if settings.healing_auto_approve else "candidate"
-            await prompt_manager.tag_prompt_version(version_id, tag)
+            # Tag with approval status AND new content hash so callers can verify identity
+            approval_tag = "production" if settings.healing_auto_approve else "candidate"
+            await prompt_manager.tag_prompt_version(version_id, approval_tag)
+            await prompt_manager.tag_prompt_version(version_id, candidate.new_prompt_hash[:12])
             candidate.status = "auto_approved" if settings.healing_auto_approve else "deployed"
             if settings.healing_auto_approve:
                 candidate.approved_at = now
         else:
             candidate.status = "deployed"
         push_activity(
-            f"Prompt deployed: {candidate.diagnosis.current_prompt_name} "
-            f"(v{version_id or 'unknown'}) improvement={candidate.improvement_score:+.2f}",
+            f"Prompt deployed: {pname} "
+            f"({candidate.old_prompt_hash[:6]}→{candidate.new_prompt_hash[:6]}) "
+            f"improvement={candidate.improvement_score:+.2f}",
             "heal",
         )
     else:
         candidate.status = "deployed"
-        push_activity("Prompt approved locally (Phoenix write failed)", "warn")
+        push_activity(f"Prompt approved locally for {pname} (Phoenix write failed)", "warn")
 
     candidate.deployed_at = now
     shift_stats["self_heals"] = shift_stats.get("self_heals", 0) + 1

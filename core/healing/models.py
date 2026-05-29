@@ -32,9 +32,11 @@ class HealingDiagnosis(BaseModel):
     # These drive mutation + validation — no fabricated stubs.
     failing_examples: list[dict] = Field(default_factory=list)
 
-    # Current prompt retrieved from Phoenix
-    current_prompt_name: str
-    current_prompt_text: str = ""
+    # Prompt identity — the actual system prompt from the failing examples
+    # (keyed by agent_name + prompt_hash, not a hardcoded name)
+    prompt_hash: str = "none"            # content hash of the system prompt being healed
+    current_prompt_name: str = ""        # Phoenix prompt name: "{agent}-system"
+    current_prompt_text: str = ""        # the actual system prompt text
     current_prompt_version: str | None = None
     prompt_version_count: int = 0
 
@@ -57,11 +59,14 @@ class HealingCandidate(BaseModel):
     # Source diagnosis
     diagnosis: HealingDiagnosis
 
-    # Prompt diff
-    old_prompt_text: str
-    new_prompt_text: str
-    injected_constraint: str  # the specific clause added
-    mutation_rationale: str   # why this constraint addresses the failures
+    # Prompt identity + diff
+    agent_name: str = ""
+    old_prompt_hash: str = "none"   # hash of the prompt being replaced
+    new_prompt_hash: str = "none"   # hash of the healed prompt (set after mutation)
+    old_prompt_text: str = ""
+    new_prompt_text: str = ""
+    injected_constraint: str = ""
+    mutation_rationale: str = ""
 
     # Validation results (before promotion)
     validation_score_before: float | None = None  # mean score on failing examples with old prompt

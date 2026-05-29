@@ -42,7 +42,7 @@ def record_eval_on_span(span: otel_trace.Span, event: IrisEvent, result: EvalRes
         span.set_attribute(f"{prefix}.reasoning", json.dumps(result.reasoning_chain)[:1000])
 
 
-def record_event_on_span(span: otel_trace.Span, event: IrisEvent) -> None:
+def record_event_on_span(span: otel_trace.Span, event: IrisEvent, phash: str = "") -> None:
     """Write the clinical event identity + I/O as attributes on the given span."""
     if span is None:
         return
@@ -51,6 +51,12 @@ def record_event_on_span(span: otel_trace.Span, event: IrisEvent) -> None:
     span.set_attribute("iris.trace_id", event.trace_id)
     span.set_attribute("input.value", event.input_prompt[:2000])
     span.set_attribute("output.value", event.output_text[:2000])
+    if phash:
+        span.set_attribute("iris.prompt_hash", phash)
+    if event.system_prompt:
+        span.set_attribute("iris.system_prompt", event.system_prompt[:500])
+    if event.prompt_name:
+        span.set_attribute("iris.prompt_name", event.prompt_name)
     if event.surgical_phase:
         span.set_attribute("iris.surgical_phase", str(event.surgical_phase))
 

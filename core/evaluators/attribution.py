@@ -85,6 +85,14 @@ class AttributionEvaluator(EvalPlugin):
             )
 
         ctx = event.retrieved_context
+        sp = (event.system_prompt or "").strip()
+        # Prepend agent instructions when available so the judge knows what the agent
+        # was supposed to do, which sharpens attribution-vs-hallucination reasoning.
+        input_prompt_section = (
+            f"Agent instructions: {sp[:300]}\n\nClinical question: {event.input_prompt[:500]}"
+            if sp
+            else event.input_prompt[:600]
+        )
         prompt = _ATTRIBUTION_PROMPT.format(
             patient_id=ctx.patient_id,
             medications=ctx.medications or "none documented",
@@ -94,7 +102,7 @@ class AttributionEvaluator(EvalPlugin):
             weight_kg=ctx.weight_kg if ctx.weight_kg is not None else "unknown",
             age_years=ctx.age_years if ctx.age_years is not None else "unknown",
             lab_results=ctx.lab_results or {},
-            input_prompt=event.input_prompt[:600],
+            input_prompt=input_prompt_section,
             output_text=event.output_text[:1000],
         )
 

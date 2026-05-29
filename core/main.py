@@ -25,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 from google.adk import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+from opentelemetry.trace import StatusCode as OTelStatusCode
 
 # Importing tracing configures Phoenix OTel + ADK instrumentation (side effects).
 # Must happen before any agent/genai client is constructed.
@@ -35,6 +36,7 @@ from core.agents.mcp_probe import mcp_probe_agent
 from core.alerts import dispatch_alert
 from core.config import settings
 from core.evaluators.service import EVALUATOR_NAMES, evaluate_event
+from core.healing.prompt_identity import agent_prompt_name, prompt_hash
 from core.healing.scan import run_self_healing_scan
 from core.state import (
     _activity_subscribers,
@@ -86,18 +88,26 @@ async def submit_event(event: IrisEvent) -> dict:
     eval results as attributes; after it is flushed we annotate it via REST so the
     Phoenix Annotations tab is populated for the trace.
     """
+    phash = prompt_hash(event.system_prompt)
     push_activity(f"Event received — {event.agent_name} · {event.query_type}", "info")
 
     _SEP = "─" * 80
     print(f"\n{_SEP}")
-    print(f"[IRIS /event] trace_id={event.trace_id}  agent={event.agent_name}  query_type={event.query_type}")
+    print(f"[IRIS /event] trace_id={event.trace_id}  agent={event.agent_name}  query_type={event.query_type}  prompt_hash={phash}")
 
     tracer = get_tracer()
     try:
         with tracer.start_as_current_span("iris.evaluate") as span:
-            record_event_on_span(span, event)
+            span.set_attribute("openinference.span.kind", "EVALUATOR")
+            record_event_on_span(span, event, phash=phash)
             outcome = await evaluate_event(event, span)
             sid = span_id_hex(span)
+            # Set OTel status so Phoenix shows OK/ERROR instead of "Unset".
+            # ERROR = critical safety finding; OK = eval ran cleanly (pass or warning).
+            span.set_status(
+                OTelStatusCode.ERROR if outcome.worst_severity.value == "critical"
+                else OTelStatusCode.OK
+            )
 
         # Span has ended — flush it to Phoenix, then attach annotations by span id.
         force_flush()
@@ -130,6 +140,9 @@ async def submit_event(event: IrisEvent) -> dict:
             "agent_version": event.agent_version,
             "query_type": str(event.query_type),
             "severity": final_severity,
+            "system_prompt": event.system_prompt,
+            "prompt_hash": phash,
+            "prompt_name": event.prompt_name,
             "input_prompt": event.input_prompt,
             "output_text": event.output_text,
             "retrieved_context": event.retrieved_context.model_dump() if event.retrieved_context else {},
@@ -155,6 +168,30 @@ async def submit_event(event: IrisEvent) -> dict:
 async def trigger_pattern_scan() -> dict:
     """Manually trigger a detect → diagnose → heal scan."""
     return await _run_scan()
+
+
+@app.get("/prompts/{agent_name}/production")
+async def get_production_prompt(agent_name: str) -> dict:
+    """Registry-pull endpoint — returns the latest approved system prompt for an agent.
+
+    The monitored agent calls this to adopt the healed prompt without a redeploy.
+    Only human-approved versions are tagged 'production', so nothing auto-reaches
+    clinical production without review (healing_auto_approve=False for clinical use).
+    """
+    from core.healing.prompt_manager import prompt_manager as _pm
+    pname = agent_prompt_name(agent_name)
+    data = await _pm.get_prompt(pname)
+    if not data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No healed prompt found for agent '{agent_name}' (name: {pname}). "
+                   "The healing loop has not yet produced an approved version.",
+        )
+    return {
+        "agent_name": agent_name,
+        "prompt_name": pname,
+        "prompt": data,
+    }
 
 
 @app.get("/stream/alerts")

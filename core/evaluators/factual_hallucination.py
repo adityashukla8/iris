@@ -35,7 +35,7 @@ def _get_client() -> genai.Client:
 _HALLUCINATION_JUDGE_PROMPT = """\
 Clinical fact-checker. Be concise — 1-sentence rationale per finding, 2 reasoning steps max.
 
-Patient: {patient_context}
+{system_prompt_section}Patient: {patient_context}
 Question: {input_prompt}
 Output: {output_text}
 
@@ -98,7 +98,12 @@ class FactualHallucinationEvaluator(EvalPlugin):
             f"age_years={ctx.age_years}"
         )
 
+        sp = (event.system_prompt or "").strip()
+        system_prompt_section = (
+            f"Agent instructions: {sp[:400]}\n\n" if sp else ""
+        )
         prompt = _HALLUCINATION_JUDGE_PROMPT.format(
+            system_prompt_section=system_prompt_section,
             patient_context=patient_context_str,
             input_prompt=event.input_prompt[:600],
             output_text=event.output_text[:1000],

@@ -122,14 +122,24 @@ async def _detect_patterns() -> dict:
 
 
 def _detect_from_traces() -> dict:
-    """Deterministic failure clustering over IRIS's own in-memory traces (no LLM, no MCP)."""
+    """Deterministic failure clustering over IRIS's own in-memory traces (no LLM, no MCP).
+
+    Groups by (agent_name, prompt_hash, query_type) so each cluster corresponds to a
+    specific prompt version from a specific agent. This is what we heal — not a global
+    query-type category, but a particular (agent, prompt) pair that is failing.
+    """
     groups: dict[str, dict] = {}
     for t in recent_traces:
+        agent = str(t.get("agent_name", "unknown"))
+        phash = str(t.get("prompt_hash", "none"))
         qt = str(t.get("query_type", "general"))
+        key = f"{agent}|{phash}|{qt}"
         worst = _worst_eval(t.get("evaluations", []))
-        g = groups.setdefault(qt, {
+        g = groups.setdefault(key, {
             "query_type": qt,
-            "agent_name": t.get("agent_name", "unknown"),
+            "agent_name": agent,
+            "prompt_hash": phash,
+            "system_prompt": t.get("system_prompt", ""),
             "span_count": 0,
             "failure_count": 0,
             "worst_score": 10.0,
@@ -142,6 +152,9 @@ def _detect_from_traces() -> dict:
                 g["sample_trace_ids"].append(t["trace_id"])
         if worst is not None:
             g["worst_score"] = min(g["worst_score"], worst[0])
+        # Keep the system_prompt populated from any trace in the group
+        if not g["system_prompt"] and t.get("system_prompt"):
+            g["system_prompt"] = t["system_prompt"]
 
     clusters = []
     for g in groups.values():
@@ -168,11 +181,19 @@ def _log_malformed(event) -> None:
 
 
 def _fetch_failing_examples(cluster: dict) -> list[dict]:
-    """Pull the worst-scoring REAL traces for this cluster's query type from live traces."""
+    """Pull the worst-scoring REAL traces for this cluster's (agent, prompt_hash, query_type)."""
     query_type = cluster.get("query_type")
+    agent_name = cluster.get("agent_name")
+    phash = cluster.get("prompt_hash", "none")
     candidates = []
     for t in recent_traces:
         if str(t.get("query_type")) != str(query_type):
+            continue
+        if str(t.get("agent_name")) != str(agent_name):
+            continue
+        # Match prompt_hash when available; fall back to any trace for this agent+query_type
+        # when prompt_hash was "none" (events sent without a system_prompt).
+        if phash != "none" and str(t.get("prompt_hash", "none")) != phash:
             continue
         if t.get("severity") == "info":
             continue
@@ -183,11 +204,13 @@ def _fetch_failing_examples(cluster: dict) -> list[dict]:
         candidates.append({
             "input_prompt": t.get("input_prompt", ""),
             "output_text": t.get("output_text", ""),
+            "system_prompt": t.get("system_prompt", ""),
+            "prompt_hash": t.get("prompt_hash", "none"),
             "violation": violation,
             "score": score,
             "retrieved_context": t.get("retrieved_context", {}),
             "surgical_phase": t.get("surgical_phase"),
-            "agent_name": t.get("agent_name", cluster.get("agent_name", "unknown")),
+            "agent_name": t.get("agent_name", agent_name or "unknown"),
         })
 
     candidates.sort(key=lambda e: e["score"])

@@ -38,20 +38,21 @@ async def log_failure_examples(
 
     try:
         import pandas as pd  # noqa: F401
-        import phoenix as px
+        from phoenix.client import Client  # arize-phoenix >= 6.0 or arize-phoenix-client
 
         df = _build_dataframe(inputs, outputs)
-        client = px.Client(endpoint=settings.phoenix_client_url, api_key=settings.phoenix_api_key)
-        # upload_dataset appends a new version when the name already exists.
+        client = Client(base_url=settings.phoenix_client_url, api_key=settings.phoenix_api_key)
+        # Each create_dataset call with the same name creates a new version in Phoenix —
+        # this gives a timestamped record of failures across healing runs.
         ds = await _run_blocking(
-            client.upload_dataset,
+            client.datasets.create_dataset,
+            name=dataset_name,
             dataframe=df,
-            dataset_name=dataset_name,
             input_keys=["query_type", "input_prompt"],
             output_keys=["unsafe_output", "violation", "iris_score"],
         )
         ds_id = getattr(ds, "id", None) or dataset_name
-        push_activity(f"Healing: logged {len(examples)} example(s) to dataset {dataset_name}", "heal")
+        push_activity(f"Healing: logged {len(examples)} example(s) to dataset '{dataset_name}'", "heal")
         return str(ds_id), len(examples)
     except Exception as exc:
         push_activity(f"Healing: dataset logging skipped ({str(exc)[:80]})", "warn")

@@ -42,10 +42,14 @@ class PhoenixPromptManager:
                 if resp.status_code == 404:
                     return None
                 resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if "text/html" in content_type:
+                    print(f"[PromptManager] '{prompt_name}' not in Phoenix yet (HTML response — prompt will be created on first heal)")
+                    return None
                 try:
                     return resp.json()
                 except (json.JSONDecodeError, ValueError) as je:
-                    print(f"[PromptManager] get_prompt non-JSON body ({resp.status_code}): {resp.text[:100]!r} — {je}")
+                    print(f"[PromptManager] get_prompt non-JSON body ({resp.status_code}): {je}")
                     return None
         except httpx.HTTPError as exc:
             print(f"[PromptManager] get_prompt failed: {exc}")
