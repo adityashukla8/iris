@@ -381,27 +381,20 @@ async def send_event(client: httpx.AsyncClient, name: str, payload: dict, iris_u
         resp = await client.post(f"{iris_url}/event", json=payload, timeout=180.0)
         resp.raise_for_status()
         data = resp.json()
-        result_text = data.get("result", "")
 
-        # Try to parse structured result
-        try:
-            result = json.loads(result_text) if isinstance(result_text, str) else result_text
-            severity = (result.get("final_severity") or result.get("worst_severity") or "?").upper()
-        except Exception:
-            result = {}
-            severity = "?"
-
+        severity = (data.get("severity") or "?").upper()
+        evaluations = data.get("evaluations", [])
         severity_str = _color(f"[{severity}]", severity.lower())
-        print(f"   status   : {resp.status_code} {severity_str}")
+        print(f"   status   : {resp.status_code} {severity_str}  annotated={data.get('annotated')}")
 
-        # Print self-heal info if present
-        if result.get("self_heal_triggered"):
-            print(f"   {_BOLD}\033[96m⚕  SELF-HEAL TRIGGERED{_RESET}")
-
-        # Print raw result excerpt for inspection
-        if result_text and len(result_text) > 10:
-            excerpt = result_text[:300].replace("\n", " ")
-            print(f"   result   : {excerpt}{'...' if len(result_text) > 300 else ''}")
+        # Show the failing evaluators for inspection
+        failed = [
+            f"{e.get('evaluator')}={e.get('score')}"
+            for e in evaluations
+            if not e.get("skipped") and not e.get("passed", True)
+        ]
+        if failed:
+            print(f"   flagged  : {', '.join(failed)}")
 
     except httpx.HTTPStatusError as exc:
         print(f"   {_color('ERROR', 'critical')} HTTP {exc.response.status_code}: {exc.response.text[:150]}")

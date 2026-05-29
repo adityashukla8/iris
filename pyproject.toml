@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "iris-clinical"
@@ -13,6 +13,8 @@ dependencies = [
     "google-adk>=2.1.0",
     "google-genai",
     "arize-phoenix-otel",
+    "arize-phoenix>=6.0.0",  # Phoenix client SDK — datasets + experiments for self-healing
+    "pandas>=2.0.0",         # dataset upload payloads
     "openinference-instrumentation-google-adk>=0.1.0",
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-exporter-otlp-proto-http>=1.25.0",

@@ -103,7 +103,7 @@ class TestEventEndpoint:
         data = resp.json()
         assert "trace_id" in data
         assert data["status"] == "evaluated"
-        assert "result" in data
+        assert "evaluations" in data
 
     def test_event_increments_total_traces(self):
         before = client.get("/status").json()["stats"]["total_traces"]

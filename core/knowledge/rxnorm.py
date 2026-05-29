@@ -9,8 +9,6 @@ import re
 
 import httpx
 
-from ipdb import set_trace as ipdb
-
 RXNAV_BASE = "https://rxnav.nlm.nih.gov/REST"
 
 
@@ -120,8 +118,9 @@ async def extract_drug_doses(text: str) -> list[dict]:
                 temperature=0.0,
             ),
         )
-        raw = response.text.strip()
-        mentions = json.loads(raw)
+        if not response.text:
+            return []
+        mentions = json.loads(response.text.strip())
         # Normalise: ensure dose is float, filter malformed entries
         result = []
         for m in mentions:

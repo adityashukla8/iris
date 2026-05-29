@@ -16,6 +16,7 @@ Two-stage pipeline:
 from __future__ import annotations
 
 import json
+import re
 
 from google import genai
 from google.genai import types as genai_types
@@ -83,6 +84,20 @@ Respond ONLY with valid JSON (be concise — 1-sentence rationale, 2 reasoning s
 
 Confidence guide: 0.9+=high (clear missing safety-critical variable), 0.6-0.89=moderate, <0.6=low (query context ambiguous).
 """
+
+def _parse_json_response(text: str | None) -> dict | None:
+    if not text:
+        return None
+    clean = re.sub(r"```(?:json)?\s*|```", "", text).strip()
+    start = clean.find("{")
+    end = clean.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        return json.loads(clean[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+
 
 # Context fields that can be directly checked for presence
 _CHECKABLE_FIELDS = {
@@ -183,9 +198,10 @@ async def _infer_required_variables(event: IrisEvent) -> list[str]:
                 temperature=0.1,
             ),
         )
-        data = json.loads(response.text)
+        data = _parse_json_response(response.text)
+        if not data:
+            return []
         raw = data.get("required_variables", [])
-        # Only keep variables we can actually check
         return [v for v in raw if v in _CHECKABLE_FIELDS]
     except Exception as exc:
         print(f"[ContextGap] Variable inference failed: {exc}")
@@ -209,7 +225,7 @@ async def _assess_gap_risk(event: IrisEvent, missing: list[str], present: list[s
                 temperature=0.1,
             ),
         )
-        return json.loads(response.text)
+        return _parse_json_response(response.text)
     except Exception as exc:
         print(f"[ContextGap] Risk assessment failed: {exc}")
         return None

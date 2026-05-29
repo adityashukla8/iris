@@ -22,24 +22,28 @@ class HealingDiagnosis(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     # Failure cluster from pattern_detector
-    failure_cluster: dict  # raw cluster JSON from pattern_detector
+    failure_cluster: dict = Field(default_factory=dict)  # raw cluster JSON from pattern_detector
     query_type: str
     agent_name: str
-    failing_span_ids: list[str]
-    hallucination_rate: float  # 0.0–1.0
+    failing_span_ids: list[str] = Field(default_factory=list)
+    hallucination_rate: float = 0.0  # 0.0–1.0
+
+    # Real failing examples (input/output/violation/score) pulled from live traces.
+    # These drive mutation + validation — no fabricated stubs.
+    failing_examples: list[dict] = Field(default_factory=list)
 
     # Current prompt retrieved from Phoenix
     current_prompt_name: str
-    current_prompt_text: str
+    current_prompt_text: str = ""
     current_prompt_version: str | None = None
+    prompt_version_count: int = 0
 
     # Failure examples logged to Phoenix dataset
-    dataset_name: str
-    examples_logged: int
+    dataset_name: str = ""
+    examples_logged: int = 0
 
-    # Gemini's raw analysis of WHY the failures occurred (the "textual gradient seed")
-    # The MCP agent writes this based on reading the failing spans
-    failure_analysis: str
+    # Gemini's analysis of WHY the failures occurred (the "textual gradient seed")
+    failure_analysis: str = ""
 
 
 class HealingCandidate(BaseModel):

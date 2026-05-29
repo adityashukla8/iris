@@ -13,6 +13,8 @@ REST endpoints used:
 """
 from __future__ import annotations
 
+import json
+
 import httpx
 
 from core.config import settings
@@ -40,7 +42,11 @@ class PhoenixPromptManager:
                 if resp.status_code == 404:
                     return None
                 resp.raise_for_status()
-                return resp.json()
+                try:
+                    return resp.json()
+                except (json.JSONDecodeError, ValueError) as je:
+                    print(f"[PromptManager] get_prompt non-JSON body ({resp.status_code}): {resp.text[:100]!r} — {je}")
+                    return None
         except httpx.HTTPError as exc:
             print(f"[PromptManager] get_prompt failed: {exc}")
             return None
@@ -90,7 +96,11 @@ class PhoenixPromptManager:
                     headers=self._headers,
                 )
                 resp.raise_for_status()
-                return resp.json()
+                try:
+                    return resp.json()
+                except (json.JSONDecodeError, ValueError) as je:
+                    print(f"[PromptManager] create_prompt_version non-JSON body ({resp.status_code}): {resp.text[:100]!r} — {je}")
+                    return None
         except httpx.HTTPStatusError as exc:
             print(f"[PromptManager] create_prompt_version {exc.response.status_code}: {exc.response.text[:200]}")
             return None
@@ -129,7 +139,11 @@ class PhoenixPromptManager:
                 if resp.status_code == 404:
                     return None
                 resp.raise_for_status()
-                return resp.json()
+                try:
+                    return resp.json()
+                except (json.JSONDecodeError, ValueError) as je:
+                    print(f"[PromptManager] get_prompt_by_tag non-JSON body: {resp.text[:100]!r} — {je}")
+                    return None
         except httpx.HTTPError as exc:
             print(f"[PromptManager] get_prompt_by_tag failed: {exc}")
             return None

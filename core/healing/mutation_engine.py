@@ -180,6 +180,8 @@ async def _compute_example_gradient(
                 temperature=0.2,
             ),
         )
+        if not response.text:
+            raise ValueError("empty gradient response")
         return json.loads(response.text)
     except Exception as exc:
         print(f"[MutationEngine] Gradient computation failed for example {example_num}: {exc}")
@@ -211,6 +213,8 @@ async def _synthesize_gradients(
                 temperature=0.1,
             ),
         )
+        if not response.text:
+            raise ValueError("empty synthesis response")
         return json.loads(response.text)
     except Exception as exc:
         print(f"[MutationEngine] Gradient synthesis failed: {exc}")

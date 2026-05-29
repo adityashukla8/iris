@@ -17,14 +17,9 @@ _mcp_toolset = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
             command="npx",
-            args=[
-                "-y",
-                "@arizeai/phoenix-mcp@latest",
-                "--baseUrl", settings.phoenix_client_url,
-                "--apiKey", settings.phoenix_api_key,
-            ],
+            args=settings.mcp_server_args(),
         ),
-        timeout=45.0,
+        timeout=settings.mcp_timeout_seconds,
     ),
     tool_filter=[
         "get-spans",

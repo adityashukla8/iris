@@ -17,16 +17,13 @@ _phoenix_mcp_read = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
             command="npx",
-            args=[
-                "-y",
-                "@arizeai/phoenix-mcp@4.0.8",
-                "--baseUrl", settings.phoenix_client_url,
-                "--apiKey", settings.phoenix_api_key,
-            ],
+            args=settings.mcp_server_args(),
         ),
-        timeout=120.0,
+        timeout=settings.mcp_timeout_seconds,
     ),
-    tool_filter=["get-spans", "get-span-annotations", "list-traces", "list-projects", "get-dataset-experiments"],
+    # Minimal read surface — just what clustering needs. Fewer tools = far fewer
+    # MALFORMED_FUNCTION_CALL errors from the model.
+    tool_filter=["get-spans", "get-span-annotations"],
 )
 
 pattern_detector_agent = LlmAgent(
@@ -44,7 +41,7 @@ You have access to Arize Phoenix MCP tools to query live observability data.
 When invoked, perform this analysis:
 
 Step 1 — Get recent spans:
-  Use `get-spans` with project_identifier="iris-clinical", last_n_minutes={settings.pattern_window_minutes}, limit=30.
+  Use `get-spans` with project_identifier="{settings.phoenix_project_name}", last_n_minutes={settings.pattern_window_minutes}, limit=30.
 
   From the returned spans, identify CLINICAL EVALUATION spans:
     - Spans whose attributes contain "iris.query_type" (e.g. "iris.query_type": "drug_dosage")
@@ -105,6 +102,6 @@ Output ONLY valid JSON:
         temperature=0.0,
     ),
     output_key="detected_patterns",
-    disallow_transfer_to_parent=False,
+    disallow_transfer_to_parent=True,
     disallow_transfer_to_peers=True,
 )

@@ -1,14 +1,23 @@
 """
 Phoenix observability client for IRIS eval results.
 
-Primary path  — OTel span attributes (always works, no REST needed):
-  Eval results are written as attributes on the current ADK span so they
-  appear natively in the Phoenix trace viewer.
+Two complementary paths, both keyed to the SAME span (the IRIS event span opened
+in the /event handler):
 
-Secondary path — REST /v1/span_annotations (requires span to exist first):
-  Attempted after the OTel write. Logged but never fatal if it fails.
+  1. OTel span attributes (`iris.eval.*`) — render under the span's Attributes tab.
+     Always written while the span is open.
+  2. REST /v1/span_annotations — render under the span's Annotations tab and make
+     the trace "evaluable" in the Phoenix UI. Written AFTER the span is flushed,
+     keyed by the span's OTel hex id, with a short retry for ingestion lag.
+
+The previous implementation wrote the annotation during evaluation (before the
+batched span reached Phoenix) using whatever span happened to be current — so the
+annotation 404'd and the Annotations tab stayed empty. Both bugs are fixed here.
 """
 from __future__ import annotations
+
+import asyncio
+import json
 
 import httpx
 from opentelemetry import trace as otel_trace
@@ -17,27 +26,8 @@ from core.config import settings
 from sdk.models import EvalResult, IrisEvent
 
 
-def _get_current_span() -> otel_trace.Span | None:
-    span = otel_trace.get_current_span()
-    ctx = span.get_span_context()
-    return span if (ctx and ctx.is_valid) else None
-
-
-def _current_span_id_hex() -> str | None:
-    span = _get_current_span()
-    if span:
-        return format(span.get_span_context().span_id, "016x")
-    return None
-
-
-def record_eval_on_span(event: IrisEvent, result: EvalResult) -> None:
-    """
-    Write eval result as attributes on the current OTel span.
-    Phoenix renders these in the trace viewer under the span's attributes.
-    This works regardless of whether the REST annotation API is available.
-    """
-    import json
-    span = _get_current_span()
+def record_eval_on_span(span: otel_trace.Span, event: IrisEvent, result: EvalResult) -> None:
+    """Write one eval result as attributes on the given span."""
     if span is None:
         return
     prefix = f"iris.eval.{result.evaluator}"
@@ -50,9 +40,26 @@ def record_eval_on_span(event: IrisEvent, result: EvalResult) -> None:
         span.set_attribute(f"{prefix}.flagged_claims", "; ".join(result.flagged_claims)[:500])
     if result.reasoning_chain:
         span.set_attribute(f"{prefix}.reasoning", json.dumps(result.reasoning_chain)[:1000])
+
+
+def record_event_on_span(span: otel_trace.Span, event: IrisEvent) -> None:
+    """Write the clinical event identity + I/O as attributes on the given span."""
+    if span is None:
+        return
     span.set_attribute("iris.agent_name", event.agent_name)
     span.set_attribute("iris.query_type", str(event.query_type))
     span.set_attribute("iris.trace_id", event.trace_id)
+    span.set_attribute("input.value", event.input_prompt[:2000])
+    span.set_attribute("output.value", event.output_text[:2000])
+    if event.surgical_phase:
+        span.set_attribute("iris.surgical_phase", str(event.surgical_phase))
+
+
+def span_id_hex(span: otel_trace.Span) -> str | None:
+    ctx = span.get_span_context() if span else None
+    if ctx and ctx.is_valid:
+        return format(ctx.span_id, "016x")
+    return None
 
 
 class PhoenixClient:
@@ -63,57 +70,72 @@ class PhoenixClient:
             "Content-Type": "application/json",
         }
 
-    async def annotate_span(self, event: IrisEvent, result: EvalResult) -> bool:
+    async def annotate_span(
+        self,
+        span_id: str,
+        event: IrisEvent,
+        results: list[EvalResult],
+        max_retries: int = 3,
+    ) -> bool:
         """
-        Write eval result via two paths:
-        1. OTel span attributes (primary — always fires when inside an ADK span)
-        2. Phoenix REST /v1/span_annotations (secondary — best-effort)
+        Write eval results as Phoenix span annotations for an already-exported span.
+        Batches all evaluators into one POST. Retries on 404 (span not ingested yet).
         """
-        # Primary: OTel attributes on the current span
-        record_eval_on_span(event, result)
+        if not span_id or not results:
+            return False
 
-        # Secondary: REST annotation (requires span already in Phoenix)
-        span_id = _current_span_id_hex() or event.trace_id
         payload = {
             "data": [
                 {
                     "span_id": span_id,
-                    "name": result.evaluator,
-                    "annotator_kind": "LLM" if result.metadata.get("llm_judged") else "CODE",
+                    "name": r.evaluator,
+                    "annotator_kind": "LLM" if r.metadata.get("llm_judged") else "CODE",
                     "result": {
-                        "label": result.severity.value.upper(),
-                        "score": round(result.score / 10.0, 3),
-                        "explanation": result.rationale,
+                        "label": r.severity.value.upper(),
+                        "score": round(r.score / 10.0, 3),
+                        "explanation": r.rationale[:1000],
                     },
                     "metadata": {
                         "agent_name": event.agent_name,
                         "query_type": str(event.query_type),
                         "iris_trace_id": event.trace_id,
-                        "passed": result.passed,
-                        "flagged_claims": result.flagged_claims,
-                        "confidence": result.confidence,
-                        "reasoning_chain": result.reasoning_chain,
-                        **result.metadata,
+                        "passed": r.passed,
+                        "confidence": r.confidence,
                     },
                 }
+                for r in results
             ]
         }
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.post(
-                    f"{self._base_url}/v1/span_annotations",
-                    json=payload,
-                    headers=self._headers,
+
+        backoff = 1.0
+        for attempt in range(1, max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        f"{self._base_url}/v1/span_annotations",
+                        json=payload,
+                        headers=self._headers,
+                    )
+                    if resp.status_code == 404 and attempt < max_retries:
+                        await asyncio.sleep(backoff)
+                        backoff *= 1.5
+                        continue
+                    resp.raise_for_status()
+                    return True
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404 and attempt < max_retries:
+                    await asyncio.sleep(backoff)
+                    backoff *= 1.5
+                    continue
+                print(
+                    f"[Phoenix] annotation {exc.response.status_code} for span {span_id}: "
+                    f"{exc.response.text[:150]}"
                 )
-                resp.raise_for_status()
-                return True
-        except httpx.HTTPStatusError as exc:
-            # Log once at debug level — not an error, OTel path already succeeded
-            if exc.response.status_code != 401:
-                print(f"[Phoenix] annotation {exc.response.status_code} for span {span_id}: {exc.response.text[:150]}")
-            return False
-        except httpx.HTTPError:
-            return False
+                return False
+            except httpx.HTTPError as exc:
+                print(f"[Phoenix] annotation transport error for span {span_id}: {exc}")
+                return False
+        return False
 
     async def health_check(self) -> bool:
         try:
