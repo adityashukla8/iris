@@ -22,6 +22,8 @@ from google import genai
 from google.genai import types as genai_types
 
 from core.config import settings
+from core.phoenix.tracing import get_tracer
+from opentelemetry.trace import StatusCode as OTelStatusCode
 
 _genai_client: genai.Client | None = None
 
@@ -118,40 +120,56 @@ async def generate_candidate_prompt(
             "gradients": list[dict]   # per-example analysis
         }
     """
-    # Pass 1: per-example textual gradients
-    gradients: list[dict] = []
-    for i, example in enumerate(failing_examples):
-        gradient = await _compute_example_gradient(
-            current_prompt=current_prompt,
-            example=example,
-            example_num=i + 1,
-            total_examples=len(failing_examples),
-            query_type=query_type,
-        )
-        if gradient:
-            gradients.append(gradient)
+    with get_tracer().start_as_current_span("iris.heal.generate") as span:
+        span.set_attribute("openinference.span.kind", "CHAIN")
+        span.set_attribute("iris.query_type", query_type)
+        span.set_attribute("iris.n_examples", len(failing_examples))
 
-    if not gradients:
-        # Fallback: single-pass direct mutation
-        return await _fallback_mutation(current_prompt, query_type, failure_rate)
+        # Pass 1: per-example textual gradients
+        gradients: list[dict] = []
+        for i, example in enumerate(failing_examples):
+            with get_tracer().start_as_current_span(f"iris.heal.gradient.{i + 1}") as gspan:
+                gspan.set_attribute("openinference.span.kind", "CHAIN")
+                gspan.set_attribute("iris.example_num", i + 1)
+                gradient = await _compute_example_gradient(
+                    current_prompt=current_prompt,
+                    example=example,
+                    example_num=i + 1,
+                    total_examples=len(failing_examples),
+                    query_type=query_type,
+                )
+                gspan.set_status(OTelStatusCode.OK if gradient else OTelStatusCode.ERROR)
+            if gradient:
+                gradients.append(gradient)
 
-    # Pass 2: synthesize gradients into one targeted constraint
-    dominant_mode = _dominant_failure_mode(gradients)
-    gradients_text = _format_gradients(gradients)
+        if not gradients:
+            return await _fallback_mutation(current_prompt, query_type, failure_rate)
 
-    synthesis = await _synthesize_gradients(
-        current_prompt=current_prompt,
-        gradients_text=gradients_text,
-        query_type=query_type,
-        failure_rate=failure_rate,
-        dominant_mode=dominant_mode,
-        n_examples=len(gradients),
-    )
+        # Pass 2: synthesize gradients into one targeted constraint
+        dominant_mode = _dominant_failure_mode(gradients)
+        gradients_text = _format_gradients(gradients)
 
-    if synthesis is None:
-        return await _fallback_mutation(current_prompt, query_type, failure_rate)
+        with get_tracer().start_as_current_span("iris.heal.synthesis") as sspan:
+            sspan.set_attribute("openinference.span.kind", "CHAIN")
+            sspan.set_attribute("iris.dominant_failure_mode", dominant_mode)
+            sspan.set_attribute("iris.n_gradients", len(gradients))
+            synthesis = await _synthesize_gradients(
+                current_prompt=current_prompt,
+                gradients_text=gradients_text,
+                query_type=query_type,
+                failure_rate=failure_rate,
+                dominant_mode=dominant_mode,
+                n_examples=len(gradients),
+            )
+            sspan.set_status(OTelStatusCode.OK if synthesis else OTelStatusCode.ERROR)
 
-    return {**synthesis, "gradients": gradients}
+        if synthesis is None:
+            result = await _fallback_mutation(current_prompt, query_type, failure_rate)
+            span.set_status(OTelStatusCode.OK)
+            return result
+
+        span.set_status(OTelStatusCode.OK)
+        return {**synthesis, "gradients": gradients}
 
 
 async def _compute_example_gradient(

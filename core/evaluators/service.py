@@ -15,6 +15,7 @@ import asyncio
 from dataclasses import dataclass, field
 
 from opentelemetry import trace as otel_trace
+from opentelemetry.trace import StatusCode as OTelStatusCode
 
 from core.evaluators.allergy_contraindication import AllergyContraindicationEvaluator
 from core.evaluators.attribution import AttributionEvaluator
@@ -25,6 +26,7 @@ from core.evaluators.drug_interaction import DrugInteractionEvaluator
 from core.evaluators.factual_hallucination import FactualHallucinationEvaluator
 from core.evaluators.surgical_phase import SurgicalPhaseEvaluator
 from core.phoenix.client import record_eval_on_span
+from core.phoenix.tracing import get_tracer
 from sdk.models import EvalResult, IrisEvent, Severity
 
 # Registry — add an evaluator here and it is automatically run + traced + analysed.
@@ -61,16 +63,26 @@ class EvaluationOutcome:
 
 
 async def _run_one(evaluator: EvalPlugin, event: IrisEvent) -> EvalResult | None:
-    try:
-        return await evaluator.evaluate(event)
-    except Exception as exc:
-        print(f"[EvaluationService] {evaluator.name} raised: {exc}")
-        return EvalResult.from_score(
-            evaluator=evaluator.name,
-            score=settings_warning_score(),
-            rationale=f"Evaluator error: {str(exc)[:200]}",
-            confidence=0.0,
-        )
+    with get_tracer().start_as_current_span(f"iris.eval.{evaluator.name}") as span:
+        span.set_attribute("openinference.span.kind", "EVALUATOR")
+        span.set_attribute("iris.evaluator", evaluator.name)
+        try:
+            result = await evaluator.evaluate(event)
+            if result is not None:
+                span.set_attribute("iris.score", result.score)
+                span.set_attribute("iris.severity", result.severity.value)
+                span.set_attribute("iris.passed", result.passed)
+            span.set_status(OTelStatusCode.OK)
+            return result
+        except Exception as exc:
+            span.set_status(OTelStatusCode.ERROR, str(exc))
+            print(f"[EvaluationService] {evaluator.name} raised: {exc}")
+            return EvalResult.from_score(
+                evaluator=evaluator.name,
+                score=settings_warning_score(),
+                rationale=f"Evaluator error: {str(exc)[:200]}",
+                confidence=0.0,
+            )
 
 
 def settings_warning_score() -> float:

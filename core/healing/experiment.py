@@ -20,6 +20,8 @@ from google.genai import types as genai_types
 
 from core.config import settings
 from core.evaluators.service import evaluate_event
+from core.phoenix.tracing import get_tracer
+from opentelemetry.trace import StatusCode as OTelStatusCode
 from sdk.models import IrisEvent, QueryType, RetrievedContext, SurgicalPhase
 
 _genai_client: genai.Client | None = None
@@ -42,8 +44,16 @@ async def validate_heal(
     Returns {passed, score_before, score_after, improvement, prevention_rate,
              per_example, experiment_id}.
     """
-    tasks = [_score_with_candidate(new_prompt, ex, query_type) for ex in failing_examples]
-    after_scores = await asyncio.gather(*tasks, return_exceptions=True)
+    with get_tracer().start_as_current_span("iris.heal.validate") as span:
+        span.set_attribute("openinference.span.kind", "EVALUATOR")
+        span.set_attribute("iris.query_type", query_type)
+        span.set_attribute("iris.n_examples", len(failing_examples))
+        tasks = [
+            _score_with_candidate(new_prompt, ex, query_type, i)
+            for i, ex in enumerate(failing_examples)
+        ]
+        after_scores = await asyncio.gather(*tasks, return_exceptions=True)
+        span.set_status(OTelStatusCode.OK)
 
     before_vals: list[float] = []
     after_vals: list[float] = []
@@ -104,31 +114,40 @@ Before answering, work through the safety rules in your instructions step by ste
 Your answer:"""
 
 
-async def _score_with_candidate(new_prompt: str, example: dict, query_type: str) -> tuple[float, str]:
+async def _score_with_candidate(
+    new_prompt: str, example: dict, query_type: str, example_index: int = 0
+) -> tuple[float, str]:
     """Generate the clinical answer under the candidate prompt and re-score it with IRIS evaluators."""
     context = example.get("retrieved_context") or {}
     question = example.get("input_prompt", "")
 
-    response = await _get_client().aio.models.generate_content(
-        model=settings.gemini_model,
-        contents=_RESPONDER_PROMPT.format(
-            system_prompt=new_prompt[:1500],
-            context=str(context)[:1500],
-            question=question[:600],
-        ),
-        # temperature=0 + seed: deterministic validation — same prompt + example → same
-        # score every run. Without this the responder generates different answers each
-        # call, causing improvement to swing from +0.07 to +2.63 on identical inputs.
-        config=genai_types.GenerateContentConfig(temperature=0.0, seed=42),
-    )
-    candidate_output = (response.text or "").strip()
-    if not candidate_output:
-        raise ValueError("candidate responder returned empty output")
+    with get_tracer().start_as_current_span(f"iris.heal.candidate.{example_index + 1}") as cspan:
+        cspan.set_attribute("openinference.span.kind", "CHAIN")
+        cspan.set_attribute("iris.example_index", example_index + 1)
+        cspan.set_attribute("input.value", question[:300])
 
-    event = _rebuild_event(example, query_type, candidate_output)
-    outcome = await evaluate_event(event, span=None)
-    worst = min((r.score for r in outcome.results), default=10.0)
-    return worst, candidate_output
+        response = await _get_client().aio.models.generate_content(
+            model=settings.gemini_model,
+            contents=_RESPONDER_PROMPT.format(
+                system_prompt=new_prompt[:1500],
+                context=str(context)[:1500],
+                question=question[:600],
+            ),
+            # temperature=0 + seed: deterministic validation — same prompt + example → same
+            # score every run. Without this the responder generates different answers each
+            # call, causing improvement to swing from +0.07 to +2.63 on identical inputs.
+            config=genai_types.GenerateContentConfig(temperature=0.0, seed=42),
+        )
+        candidate_output = (response.text or "").strip()
+        if not candidate_output:
+            raise ValueError("candidate responder returned empty output")
+
+        event = _rebuild_event(example, query_type, candidate_output)
+        outcome = await evaluate_event(event, span=None)
+        worst = min((r.score for r in outcome.results), default=10.0)
+        cspan.set_attribute("iris.score", worst)
+        cspan.set_status(OTelStatusCode.OK)
+        return worst, candidate_output
 
 
 def _rebuild_event(example: dict, query_type: str, output_text: str) -> IrisEvent:

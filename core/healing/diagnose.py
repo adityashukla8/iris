@@ -19,7 +19,9 @@ from core.healing.dataset import log_failure_examples
 from core.healing.models import HealingDiagnosis
 from core.healing.prompt_identity import agent_prompt_name
 from core.healing.prompt_manager import prompt_manager
+from core.phoenix.tracing import get_tracer
 from core.state import push_activity
+from opentelemetry.trace import StatusCode as OTelStatusCode
 
 _genai_client: genai.Client | None = None
 
@@ -48,6 +50,25 @@ async def diagnose_cluster(cluster: dict, examples: list[dict]) -> HealingDiagno
     agent_name = cluster.get("agent_name", "unknown")
     rate = float(cluster.get("hallucination_rate") or 0.0)
     phash = cluster.get("prompt_hash", "none")
+    with get_tracer().start_as_current_span("iris.heal.diagnose") as span:
+        span.set_attribute("openinference.span.kind", "CHAIN")
+        span.set_attribute("iris.agent_name", agent_name)
+        span.set_attribute("iris.query_type", query_type)
+        span.set_attribute("iris.prompt_hash", phash)
+        span.set_attribute("iris.failure_rate", rate)
+        try:
+            result = await _diagnose_cluster_inner(cluster, examples, query_type, agent_name, rate, phash)
+            span.set_status(OTelStatusCode.OK)
+            return result
+        except Exception as exc:
+            span.set_status(OTelStatusCode.ERROR, str(exc))
+            raise
+
+
+async def _diagnose_cluster_inner(
+    cluster: dict, examples: list[dict],
+    query_type: str, agent_name: str, rate: float, phash: str,
+) -> HealingDiagnosis:
 
     # Source the real system prompt from the failing examples (they share a prompt_hash).
     # Fallback order: examples → Phoenix latest version → seed prompt.
