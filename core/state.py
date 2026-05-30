@@ -5,6 +5,7 @@ Single source of truth for dashboard + orchestrator + healing pipeline.
 from __future__ import annotations
 
 import asyncio
+import time
 from collections import deque
 from datetime import datetime, timezone
 
@@ -42,7 +43,32 @@ shift_stats: dict[str, int | float] = {
     "human_escalations": 0,
 }
 
-# Self-healing pipeline state
+# ── Autonomous scan guards ─────────────────────────────────────────────────────
+# Only one scan may run at a time. Any trigger that finds the lock held is
+# silently skipped (logged to activity feed).
+scan_lock: asyncio.Lock = asyncio.Lock()
+
+# Monotonic timestamp of the most recent scan start. Used for scheduler debounce
+# (skip the 30-min slot if a manual or event-driven scan just ran).
+last_scan_time: float = 0.0
+
+# Per-cluster cooldown after a heal attempt. Keyed by f"{agent}|{prompt_hash}|{query_type}".
+# Value = monotonic time of the most recent heal attempt for that cluster.
+heal_cooldowns: dict[str, float] = {}
+
+
+def record_heal_cooldown(agent: str, prompt_hash: str, query_type: str) -> None:
+    key = f"{agent}|{prompt_hash}|{query_type}"
+    heal_cooldowns[key] = time.monotonic()
+
+
+def is_cluster_in_cooldown(agent: str, prompt_hash: str, query_type: str, cooldown_seconds: float) -> bool:
+    key = f"{agent}|{prompt_hash}|{query_type}"
+    last = heal_cooldowns.get(key)
+    return last is not None and (time.monotonic() - last) < cooldown_seconds
+
+
+# ── Self-healing pipeline state ────────────────────────────────────────────────
 # Imported lazily to avoid circular import at module load time
 # (core.healing.models imports core.config which imports nothing from core.state)
 from core.healing.models import HealingCandidate  # noqa: E402

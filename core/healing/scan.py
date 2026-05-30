@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import uuid
 
 from google.adk import Runner
@@ -26,7 +27,14 @@ from core.agents.pattern_detector import pattern_detector_agent
 from core.config import settings
 from core.healing.diagnose import diagnose_cluster
 from core.healing.pipeline import run_healing_pipeline
-from core.state import push_activity, recent_traces
+from core.state import (
+    is_cluster_in_cooldown,
+    push_activity,
+    recent_traces,
+    record_heal_cooldown,
+    scan_lock,
+)
+import core.state as _state
 
 _SCAN_USER_ID = "iris-scanner"
 _session_service = InMemorySessionService()
@@ -38,7 +46,26 @@ _runner = Runner(
 
 
 async def run_self_healing_scan() -> dict:
-    """Run a full detect → diagnose → heal pass. Returns the detection summary."""
+    """Run a full detect → diagnose → heal pass. Returns the detection summary.
+
+    Guards:
+    - Only one scan runs at a time (scan_lock). Concurrent callers receive a
+      fast "already running" response so the /scan endpoint never blocks.
+    - last_scan_time is updated at entry so the scheduler debounce works across
+      all trigger tiers (manual, event-driven, scheduled).
+    """
+    if scan_lock.locked():
+        push_activity("Scanner: scan already running — skipping concurrent request", "warn")
+        print("[Scanner] scan already running — skipping")
+        return {"status": "skipped", "reason": "scan_already_running"}
+
+    async with scan_lock:
+        _state.last_scan_time = time.monotonic()
+        return await _run_scan_body()
+
+
+async def _run_scan_body() -> dict:
+    """Inner scan body — only called while scan_lock is held."""
     detected = await _detect_patterns()
     clusters = detected.get("failure_clusters") or []
 
@@ -75,11 +102,26 @@ async def run_self_healing_scan() -> dict:
         push_activity("Scanner: no failure clusters — system healthy", "heal")
         return {"status": "scan_complete", "healing_required": False, "result": json.dumps(detected)}
 
+    cooldown_secs = settings.heal_cooldown_minutes * 60
+
     for cluster in clusters:
+        agent = cluster.get("agent_name", "unknown")
+        phash = cluster.get("prompt_hash", "none")
         qt = cluster.get("query_type", "?")
         rate = int((cluster.get("hallucination_rate") or 0) * 100)
+
+        # Skip clusters in cooldown — we healed this (agent, prompt, query_type)
+        # recently and need time to observe whether the fix worked.
+        if is_cluster_in_cooldown(agent, phash, qt, cooldown_secs):
+            push_activity(
+                f"Scanner: cluster {agent}/{phash[:6]}/{qt} in cooldown — skipping re-heal",
+                "warn",
+            )
+            print(f"[Scanner] cooldown active for {agent}|{phash[:6]}|{qt} — skipping")
+            continue
+
         push_activity(
-            f"Scanner: FAILURE CLUSTER — {qt} {rate}% failure rate "
+            f"Scanner: FAILURE CLUSTER — {agent}/{phash[:6]} {qt} {rate}% failure rate "
             f"(worst score {cluster.get('worst_score', '?')})",
             "critical",
         )
@@ -87,6 +129,11 @@ async def run_self_healing_scan() -> dict:
         if not examples:
             push_activity(f"Scanner: no live examples for {qt} — skipping heal", "warn")
             continue
+
+        # Record cooldown before heal attempt so concurrent scans can't race on
+        # the same cluster even if the lock somehow isn't preventing it.
+        record_heal_cooldown(agent, phash, qt)
+
         diagnosis = await diagnose_cluster(cluster, examples)
         await run_healing_pipeline(diagnosis)
 

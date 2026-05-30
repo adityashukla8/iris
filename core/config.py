@@ -33,11 +33,17 @@ class Settings(BaseSettings):
     # Self-healing pipeline
     # Prompts are versioned per-agent in Phoenix as "{agent_slug}-system" (see prompt_identity.py).
     # The former single healing_prompt_name is gone — each agent owns its own namespace.
-    healing_improvement_threshold: float = 1.0            # score improvement required (0-10 scale)
+    healing_improvement_threshold: float = 0.5            # score improvement required (0-10 scale)
     healing_auto_approve: bool = True                    # True = skip human gate (demo mode only)
     healing_validation_examples: int = 5                  # failure examples to validate against
     healing_dataset_prefix: str = "iris-failures"         # dataset name = {prefix}-{query_type}
     healing_use_experiments: bool = True                  # run a Phoenix experiment to validate (SDK); fall back to in-process counterfactual
+
+    # Autonomous scan trigger guards
+    heal_cooldown_minutes: int = 30           # minimum gap before re-healing same (agent, prompt, query_type) cluster
+    scan_debounce_seconds: int = 60           # minimum gap between any two scans (all tiers)
+    event_trigger_multiplier: int = 3         # event-driven trigger fires when critical failure
+                                              # count >= pattern_min_samples × this value
 
     # Seed prompt used when the clinical safety prompt does not yet exist in Phoenix.
     # Intentionally specific — gives the mutation engine concrete constraints to improve on,

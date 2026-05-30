@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from contextlib import asynccontextmanager
 
@@ -492,10 +493,26 @@ async def _run_scan() -> dict:
 
 
 async def _scheduled_pattern_scan():
-    """Background task: run a pattern scan every pattern_window_minutes minutes."""
+    """Background task: run a pattern scan every pattern_window_minutes minutes.
+
+    Debounce: if a manual or event-driven scan ran within scan_debounce_seconds,
+    skip this slot — it would duplicate work and can cause heal storms.
+    """
+    from core.state import last_scan_time as _get_last
+    import core.state as _state
+
     await asyncio.sleep(60)
     while True:
         await asyncio.sleep(settings.pattern_window_minutes * 60)
+        elapsed = time.monotonic() - _state.last_scan_time
+        if elapsed < settings.scan_debounce_seconds:
+            push_activity(
+                f"Scanner: scheduled scan skipped — a scan ran {elapsed:.0f}s ago "
+                f"(debounce={settings.scan_debounce_seconds}s)",
+                "adk",
+            )
+            print(f"[IRIS] Scheduled scan debounced ({elapsed:.0f}s since last scan)")
+            continue
         push_activity("Scanner: scheduled pattern scan starting", "adk")
         try:
             await _run_scan()
