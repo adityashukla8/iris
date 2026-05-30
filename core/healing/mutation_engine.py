@@ -177,7 +177,8 @@ async def _compute_example_gradient(
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.2,
+                temperature=0.0,
+                seed=42,
             ),
         )
         if not response.text:
@@ -210,7 +211,8 @@ async def _synthesize_gradients(
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
+                temperature=0.0,
+                seed=42,
             ),
         )
         if not response.text:
