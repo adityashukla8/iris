@@ -76,7 +76,7 @@ async def _diagnose_cluster_inner(
     analysis = await _analyze(examples, query_type, agent_name, rate, prompt_text)
 
     phoenix_prompt_name = agent_prompt_name(agent_name)
-    dataset_name = settings.healing_dataset_name(query_type)
+    dataset_name = settings.healing_dataset_name(agent_name, query_type)
     _ds_id, logged = await log_failure_examples(dataset_name, examples, query_type)
 
     push_activity(

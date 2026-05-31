@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # Autonomous scan trigger guards
     heal_cooldown_minutes: int = 30           # minimum gap before re-healing same (agent, prompt, query_type) cluster
     scan_debounce_seconds: int = 60           # minimum gap between any two scans (all tiers)
-    event_trigger_multiplier: int = 3         # event-driven trigger fires when critical failure
+    event_trigger_multiplier: int = 1         # event-driven trigger fires when critical failure
                                               # count >= pattern_min_samples × this value
 
     # Seed prompt used when the clinical safety prompt does not yet exist in Phoenix.
@@ -75,8 +75,13 @@ class Settings(BaseSettings):
             "--apiKey", self.phoenix_api_key,
         ]
 
-    def healing_dataset_name(self, query_type: str) -> str:
-        return f"{self.healing_dataset_prefix}-{query_type}"
+    def healing_dataset_name(self, agent_name: str, query_type: str) -> str:
+        """Dataset name includes agent so each agent gets its own dataset in Phoenix.
+        e.g. 'iris-failures-orion-drug_dosage', 'iris-failures-scribe-drug_dosage'.
+        Prompt hash is kept in row metadata (not the name) to keep names readable.
+        """
+        from core.healing.prompt_identity import _slug
+        return f"{self.healing_dataset_prefix}-{_slug(agent_name)}-{query_type}"
 
 
 settings = Settings()

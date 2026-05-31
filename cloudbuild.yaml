@@ -1,0 +1,40 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/iris-clinical:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/iris-clinical:latest'
+      - '.'
+
+  # Push both tags
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '--all-tags', 'gcr.io/$PROJECT_ID/iris-clinical']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - iris-clinical
+      - '--image=gcr.io/$PROJECT_ID/iris-clinical:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--timeout=300'
+      - '--min-instances=0'
+      - '--max-instances=3'
+      - >-
+        --set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,PHOENIX_API_KEY=PHOENIX_API_KEY:latest,PHOENIX_CLIENT_URL=PHOENIX_CLIENT_URL:latest
+
+images:
+  - 'gcr.io/$PROJECT_ID/iris-clinical'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
