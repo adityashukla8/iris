@@ -96,7 +96,11 @@ def _get_llm_client():
     if _llm_client is None:
         from google import genai
         from core.config import settings
-        _llm_client = genai.Client(api_key=settings.google_api_key)
+        _llm_client = genai.Client(
+            vertexai=True,
+            project=settings.google_cloud_project,
+            location=settings.google_cloud_location,
+        )
     return _llm_client
 
 

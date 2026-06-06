@@ -18,8 +18,9 @@ from phoenix.otel import register
 from core.config import settings
 
 # Phoenix/Gemini credentials must be in the environment before register().
-os.environ["GOOGLE_API_KEY"] = settings.google_api_key
-os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "FALSE"
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "TRUE"
+os.environ["GOOGLE_CLOUD_PROJECT"] = settings.google_cloud_project
+os.environ["GOOGLE_CLOUD_LOCATION"] = settings.google_cloud_location
 os.environ["PHOENIX_API_KEY"] = settings.phoenix_api_key
 os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = settings.phoenix_client_url.rstrip("/")
 

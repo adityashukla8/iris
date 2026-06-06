@@ -33,7 +33,11 @@ _genai_client: genai.Client | None = None
 def _get_client() -> genai.Client:
     global _genai_client
     if _genai_client is None:
-        _genai_client = genai.Client(api_key=settings.google_api_key)
+        _genai_client = genai.Client(
+            vertexai=True,
+            project=settings.google_cloud_project,
+            location=settings.google_cloud_location,
+        )
     return _genai_client
 
 
