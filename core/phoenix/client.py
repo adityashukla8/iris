@@ -70,7 +70,7 @@ def span_id_hex(span: otel_trace.Span) -> str | None:
 
 class PhoenixClient:
     def __init__(self) -> None:
-        self._base_url = settings.phoenix_api_url
+        self._base_url = settings.phoenix_client_url.rstrip("/")
         self._headers = {
             "Authorization": f"Bearer {settings.phoenix_api_key}",
             "Content-Type": "application/json",

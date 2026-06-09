@@ -22,7 +22,7 @@ from core.config import settings
 
 class PhoenixPromptManager:
     def __init__(self) -> None:
-        self._base = settings.phoenix_client_url.rstrip("/")
+        self._base = settings.phoenix_api_url
         self._headers = {
             "Authorization": f"Bearer {settings.phoenix_api_key}",
             "Content-Type": "application/json",

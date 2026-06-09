@@ -69,13 +69,12 @@ class Settings(BaseSettings):
 
     @property
     def phoenix_api_url(self) -> str:
-        """Base URL for Phoenix REST API — host only, no UI path prefix.
-        phoenix_client_url may contain /s/<user-id> for browser navigation,
-        but REST endpoints (datasets, annotations) always live at the host root.
+        """Base URL for Phoenix REST API calls (no trailing slash).
+        For Arize cloud, all REST endpoints live under /s/{space_id},
+        so we preserve the full phoenix_client_url path.
+        e.g. https://app.phoenix.arize.com/s/shuklaaditya473
         """
-        from urllib.parse import urlparse
-        p = urlparse(self.phoenix_client_url)
-        return f"{p.scheme}://{p.netloc}"
+        return self.phoenix_client_url.rstrip("/")
 
     def mcp_server_args(self) -> list[str]:
         """npx args for the Arize Phoenix MCP server. One place, used by every agent."""
