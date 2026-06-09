@@ -70,7 +70,7 @@ async def log_failure_examples(
         from phoenix.client import Client  # arize-phoenix >= 6.0 or arize-phoenix-client
 
         df = _build_dataframe(inputs, outputs, metadata)
-        client = Client(base_url=settings.phoenix_client_url, api_key=settings.phoenix_api_key)
+        client = Client(base_url=settings.phoenix_api_url, api_key=settings.phoenix_api_key)
         # Each create_dataset call with the same name creates a new version in Phoenix —
         # timestamped record of failures across healing runs.
         ds = await _run_blocking(
