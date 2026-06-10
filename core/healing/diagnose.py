@@ -15,6 +15,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from core.config import settings
+from core.llm import generate_text
 from core.healing.dataset import log_failure_examples
 from core.healing.models import HealingDiagnosis
 from core.healing.prompt_identity import agent_prompt_name
@@ -173,19 +174,14 @@ async def _analyze(
         failure_rate=rate,
         examples=examples_text or "(no example text available)",
     )
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(temperature=0.2),
-        )
-        text = (response.text or "").strip()
-        if not text:
-            raise ValueError("empty analysis")
+    text = await generate_text(
+        prompt, model=settings.gemini_model, temperature=0.2, tag="Diagnose"
+    )
+    text = (text or "").strip()
+    if text:
         return text
-    except Exception as exc:
-        print(f"[Diagnose] analysis failed: {exc}")
-        return (
-            f"Cluster of {query_type} failures (rate {rate:.0%}). The current safety prompt "
-            f"lacks an explicit constraint for {query_type}; responses were scored unsafe."
-        )
+    print("[Diagnose] analysis failed — using fallback summary")
+    return (
+        f"Cluster of {query_type} failures (rate {rate:.0%}). The current safety prompt "
+        f"lacks an explicit constraint for {query_type}; responses were scored unsafe."
+    )

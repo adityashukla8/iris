@@ -15,26 +15,11 @@ from __future__ import annotations
 
 import json
 
-from google import genai
-from google.genai import types as genai_types
-
 from core.config import settings
 from core.healing.diagnose import _extract_template_text
 from core.healing.prompt_identity import agent_prompt_name, prompt_hash
 from core.healing.prompt_manager import prompt_manager
-
-_genai_client: genai.Client | None = None
-
-
-def _get_client() -> genai.Client:
-    global _genai_client
-    if _genai_client is None:
-        _genai_client = genai.Client(
-            vertexai=True,
-            project=settings.google_cloud_project,
-            location=settings.google_cloud_location,
-        )
-    return _genai_client
+from core.llm import generate_text
 
 
 async def get_effective_prompt(agent_name: str) -> tuple[str, str, str]:
@@ -66,18 +51,20 @@ async def generate_live_output(
     system_prompt: str, input_prompt: str, retrieved_context: dict
 ) -> str:
     """Generate the agent's answer under the given prompt."""
-    response = await _get_client().aio.models.generate_content(
-        model=settings.gemini_model,
-        contents=_LIVE_PROMPT.format(
+    # Deterministic: same prompt + scenario → same answer on every run,
+    # so comparison numbers are stable across demo takes.
+    text = await generate_text(
+        _LIVE_PROMPT.format(
             system_prompt=system_prompt[:1500],
             context=json.dumps(retrieved_context, default=str)[:1500],
             question=input_prompt[:600],
         ),
-        # Deterministic: same prompt + scenario → same answer on every run,
-        # so comparison numbers are stable across demo takes.
-        config=genai_types.GenerateContentConfig(temperature=0.0, seed=42),
+        model=settings.gemini_model,
+        temperature=0.0,
+        seed=42,
+        tag="LiveAgent",
     )
-    text = (response.text or "").strip()
+    text = (text or "").strip()
     if not text:
         raise ValueError("live agent returned empty output")
     return text

@@ -131,22 +131,16 @@ async def extract_drug_doses(text: str) -> list[dict]:
     LLM-powered drug name + dose extraction from clinical free text.
     Returns list of {drug, dose, unit} dicts. Falls back to [] on failure.
     """
-    from google.genai import types as genai_types
-    from core.config import settings
+    from core.llm import generate_json
 
     try:
-        client = _get_llm_client()
-        response = await client.aio.models.generate_content(
-            model=settings.eval_gemini_model,
-            contents=_EXTRACT_PROMPT.format(text=text.strip()),
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.0,
-            ),
+        mentions = await generate_json(
+            _EXTRACT_PROMPT.format(text=text.strip()),
+            temperature=0.0,
+            tag="DrugExtract",
         )
-        if not response.text:
+        if not isinstance(mentions, list):
             return []
-        mentions = json.loads(response.text.strip())
         # Normalise: ensure dose is float, filter malformed entries
         result = []
         for m in mentions:

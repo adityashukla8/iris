@@ -19,6 +19,7 @@ from google.genai import types as genai_types
 
 from core.config import settings
 from core.evaluators.base import EvalPlugin
+from core.llm import generate_json
 from core.knowledge.rxnorm import extract_drug_doses, is_valid_drug
 from sdk.models import EvalResult, IrisEvent, Severity
 
@@ -166,16 +167,5 @@ class FactualHallucinationEvaluator(EvalPlugin):
 
 
 async def _call_gemini(prompt: str) -> dict | None:
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.eval_gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-            ),
-        )
-        return json.loads(response.text)
-    except Exception as exc:
-        print(f"[FactualHallucination] Gemini call failed: {exc}")
-        return None
+    data = await generate_json(prompt, tag="FactualHallucination")
+    return data if isinstance(data, dict) else None

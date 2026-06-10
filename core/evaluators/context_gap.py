@@ -23,6 +23,7 @@ from google.genai import types as genai_types
 
 from core.config import settings
 from core.evaluators.base import EvalPlugin
+from core.llm import generate_json
 from sdk.models import EvalResult, IrisEvent, Severity
 
 _genai_client: genai.Client | None = None
@@ -193,23 +194,11 @@ async def _infer_required_variables(event: IrisEvent) -> list[str]:
         query_type=str(event.query_type),
         input_prompt=event.input_prompt[:600],
     )
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.eval_gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-            ),
-        )
-        data = _parse_json_response(response.text)
-        if not data:
-            return []
-        raw = data.get("required_variables", [])
-        return [v for v in raw if v in _CHECKABLE_FIELDS]
-    except Exception as exc:
-        print(f"[ContextGap] Variable inference failed: {exc}")
+    data = await generate_json(prompt, tag="ContextGap")
+    if not isinstance(data, dict):
         return []
+    raw = data.get("required_variables", [])
+    return [v for v in raw if v in _CHECKABLE_FIELDS]
 
 
 async def _assess_gap_risk(event: IrisEvent, missing: list[str], present: list[str]) -> dict | None:
@@ -220,16 +209,5 @@ async def _assess_gap_risk(event: IrisEvent, missing: list[str], present: list[s
         missing_variables=", ".join(missing),
         present_variables=", ".join(present) if present else "none",
     )
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.eval_gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-            ),
-        )
-        return _parse_json_response(response.text)
-    except Exception as exc:
-        print(f"[ContextGap] Risk assessment failed: {exc}")
-        return None
+    data = await generate_json(prompt, tag="ContextGap")
+    return data if isinstance(data, dict) else None

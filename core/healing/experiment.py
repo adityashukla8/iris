@@ -20,6 +20,7 @@ from google.genai import types as genai_types
 
 from core.config import settings
 from core.evaluators.service import evaluate_event
+from core.llm import generate_text
 from core.phoenix.tracing import get_tracer
 from opentelemetry.trace import StatusCode as OTelStatusCode
 from sdk.models import IrisEvent, QueryType, RetrievedContext, SurgicalPhase
@@ -142,19 +143,21 @@ async def _score_with_candidate(
         cspan.set_attribute("iris.example_index", example_index + 1)
         cspan.set_attribute("input.value", question[:300])
 
-        response = await _get_client().aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=_RESPONDER_PROMPT.format(
+        # temperature=0 + seed: deterministic validation — same prompt + example → same
+        # score every run. Without this the responder generates different answers each
+        # call, causing improvement to swing from +0.07 to +2.63 on identical inputs.
+        text = await generate_text(
+            _RESPONDER_PROMPT.format(
                 system_prompt=new_prompt[:1500],
                 context=str(context)[:1500],
                 question=question[:600],
             ),
-            # temperature=0 + seed: deterministic validation — same prompt + example → same
-            # score every run. Without this the responder generates different answers each
-            # call, causing improvement to swing from +0.07 to +2.63 on identical inputs.
-            config=genai_types.GenerateContentConfig(temperature=0.0, seed=42),
+            model=settings.gemini_model,
+            temperature=0.0,
+            seed=42,
+            tag="HealValidation",
         )
-        candidate_output = (response.text or "").strip()
+        candidate_output = (text or "").strip()
         if not candidate_output:
             raise ValueError("candidate responder returned empty output")
 

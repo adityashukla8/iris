@@ -27,6 +27,11 @@ class Settings(BaseSettings):
 
     gemini_model: str = "gemini-2.5-flash"
     eval_gemini_model: str = "gemini-2.5-flash"
+    # Shared LLM gateway (core/llm.py): cap concurrent Vertex calls and retry
+    # 429/503 with backoff — gemini-2.5-flash runs on dynamic shared quota and
+    # an unthrottled simulation + heal validation bursts to 40+ parallel calls.
+    gemini_max_concurrency: int = 4
+    gemini_retries: int = 3
     # MCP agents (pattern_detector, mcp_probe) use Pro: Flash frequently emits
     # MALFORMED_FUNCTION_CALL against the Phoenix MCP tool schemas.
     mcp_gemini_model: str = "gemini-2.5-pro"

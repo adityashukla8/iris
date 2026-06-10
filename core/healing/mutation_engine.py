@@ -22,6 +22,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from core.config import settings
+from core.llm import generate_json
 from core.phoenix.tracing import get_tracer
 from opentelemetry.trace import StatusCode as OTelStatusCode
 
@@ -193,22 +194,13 @@ async def _compute_example_gradient(
         violation_description=example.get("violation", "Safety evaluation failed")[:200],
         score=example.get("score", 0),
     )
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.0,
-                seed=42,
-            ),
-        )
-        if not response.text:
-            raise ValueError("empty gradient response")
-        return json.loads(response.text)
-    except Exception as exc:
-        print(f"[MutationEngine] Gradient computation failed for example {example_num}: {exc}")
+    data = await generate_json(
+        prompt, model=settings.gemini_model, temperature=0.0, seed=42, tag="MutationEngine"
+    )
+    if not isinstance(data, dict):
+        print(f"[MutationEngine] Gradient computation failed for example {example_num}")
         return None
+    return data
 
 
 async def _synthesize_gradients(
@@ -227,22 +219,13 @@ async def _synthesize_gradients(
         dominant_mode=dominant_mode,
         n_examples=n_examples,
     )
-    try:
-        response = await _get_client().aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.0,
-                seed=42,
-            ),
-        )
-        if not response.text:
-            raise ValueError("empty synthesis response")
-        return json.loads(response.text)
-    except Exception as exc:
-        print(f"[MutationEngine] Gradient synthesis failed: {exc}")
+    data = await generate_json(
+        prompt, model=settings.gemini_model, temperature=0.0, seed=42, tag="MutationEngine"
+    )
+    if not isinstance(data, dict):
+        print("[MutationEngine] Gradient synthesis failed")
         return None
+    return data
 
 
 async def _fallback_mutation(current_prompt: str, query_type: str, failure_rate: float) -> dict:
