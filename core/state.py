@@ -24,7 +24,7 @@ _activity_subscribers: list[asyncio.Queue] = []
 def push_activity(text: str, level: str = "info") -> None:
     """Broadcast an activity event to the live log and all SSE subscribers."""
     event = {
-        "ts": datetime.now(timezone.utc).strftime("%H:%M:%S"),
+        "ts": datetime.now(timezone.utc).isoformat(),
         "text": text,
         "level": level,
     }

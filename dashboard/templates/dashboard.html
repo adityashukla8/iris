@@ -1702,7 +1702,8 @@
     const cls = ACT_LEVEL_CLS[event.level] || 'act-info';
     const el = document.createElement('div');
     el.className = `act-line ${cls}`;
-    el.innerHTML = `<span class="act-ts">${esc(event.ts || '')}</span>${esc(event.text || '')}`;
+    const tsLabel = event.ts ? new Date(event.ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '';
+    el.innerHTML = `<span class="act-ts">${esc(tsLabel)}</span>${esc(event.text || '')}`;
     log.appendChild(el);
     // Keep at most 200 lines
     while (log.children.length > 200) log.removeChild(log.firstChild);
