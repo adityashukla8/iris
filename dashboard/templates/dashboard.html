@@ -175,7 +175,7 @@
     .mcp-msg.agent .mcp-bubble { background: var(--white); border: 1px solid var(--gray-200); color: var(--gray-800); border-radius: 8px 8px 8px 2px; }
     .mcp-tool-card { font-family: var(--mono); font-size: .6875rem; background: var(--gray-900); color: #e2e8f0; padding: 8px 12px; border-radius: 7px; margin-top: 2px; max-width: 100%; }
     .mcp-tool-name { color: #fbbf24; font-weight: 600; }
-    .mcp-tool-result { color: #86efac; margin-top: 4px; white-space: pre-wrap; word-break: break-all; opacity: .9; }
+    .mcp-tool-result { color: #d1fae5; margin-top: 6px; white-space: normal; word-break: break-word; opacity: .95; font-family: var(--font); font-size: .78rem; line-height: 1.6; }
     .mcp-chat-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--gray-200); }
     .mcp-input { flex: 1; padding: 7px 12px; border: 1px solid var(--gray-200); border-radius: 7px; font-size: .8125rem; color: var(--gray-800); outline: none; transition: border-color .15s; background: var(--white); }
     .mcp-input:focus { border-color: var(--gray-400); }
@@ -1032,46 +1032,51 @@
 
         </div>
 
-        <!-- Test & Debug MCP Servers -->
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-gray"></div>Test &amp; Debug MCP Servers</div>
-            <span class="panel-meta">Live Phoenix MCP · Gemini 2.5-flash</span>
-          </div>
-          <div class="mcp-probe-presets">
-            <button class="preset-btn" onclick="sendMcpQuery('List all Phoenix projects')">List projects</button>
-            <button class="preset-btn" onclick="sendMcpQuery('Get the last 5 spans from the iris-clinical project')">Recent spans</button>
-            <button class="preset-btn" onclick="sendMcpQuery('List all prompts and their latest versions')">Prompt versions</button>
-            <button class="preset-btn" onclick="sendMcpQuery('List all datasets and how many examples each has')">Datasets</button>
-            <button class="preset-btn" onclick="sendMcpQuery('How many spans are in the iris-clinical project? Break down by any metadata you can find.')">Span count</button>
-          </div>
-          <div class="mcp-chat-history" id="mcpHistory">
-            <div class="mcp-msg agent">
-              <div class="mcp-bubble">Ready. Ask anything about your Phoenix observability data — spans, prompts, datasets, experiments. I'll query the live MCP server to answer.</div>
-            </div>
-          </div>
-          <div class="mcp-chat-input-row">
-            <input class="mcp-input" id="mcpInput" type="text"
-              placeholder="e.g. What's the current production prompt?"
-              onkeydown="if(event.key==='Enter')sendMcpQuery()" />
-            <button class="btn-mcp-send" id="mcpSendBtn" onclick="sendMcpQuery()">Send</button>
-          </div>
-        </div>
+        <!-- Test & Debug MCP + Activity Log -->
+        <div class="grid-2" style="margin-bottom:14px;">
 
-        <!-- Activity Log -->
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-gray"></div>Activity Log</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <span class="panel-meta" id="activityStatus">Connecting…</span>
-              <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
+          <!-- Test & Debug MCP Servers -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-gray"></div>Test &amp; Debug MCP Servers</div>
+              <span class="panel-meta">Arize Phoenix MCP · Gemini 2.5-flash</span>
+            </div>
+            <div class="mcp-probe-presets">
+              <button class="preset-btn" onclick="sendMcpQuery('List all Phoenix projects')">List projects</button>
+              <button class="preset-btn" onclick="sendMcpQuery('Get the last 5 spans from the iris-clinical project')">Recent spans</button>
+              <button class="preset-btn" onclick="sendMcpQuery('List all prompts and their latest versions')">Prompt versions</button>
+              <button class="preset-btn" onclick="sendMcpQuery('List all datasets and how many examples each has')">Datasets</button>
+              <button class="preset-btn" onclick="sendMcpQuery('How many spans are in the iris-clinical project? Break down by any metadata you can find.')">Span count</button>
+            </div>
+            <div class="mcp-chat-history" id="mcpHistory">
+              <div class="mcp-msg agent">
+                <div class="mcp-bubble">Ready. Ask anything about your Phoenix observability data — spans, prompts, datasets, experiments. I'll query the live MCP server to answer.</div>
+              </div>
+            </div>
+            <div class="mcp-chat-input-row">
+              <input class="mcp-input" id="mcpInput" type="text"
+                placeholder="e.g. What's the current production prompt?"
+                onkeydown="if(event.key==='Enter')sendMcpQuery()" />
+              <button class="btn-mcp-send" id="mcpSendBtn" onclick="sendMcpQuery()">Send</button>
             </div>
           </div>
-          <div class="panel-pad" style="padding:10px 14px;">
-            <div class="activity-log" id="activityLog">
-              <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
+
+          <!-- Activity Log -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title"><div class="panel-dot dot-gray"></div>Activity Log</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-meta" id="activityStatus">Connecting…</span>
+                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
+              </div>
+            </div>
+            <div class="panel-pad" style="padding:10px 14px;">
+              <div class="activity-log" id="activityLog">
+                <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
+              </div>
             </div>
           </div>
+
         </div>
 
       </main>
@@ -1862,6 +1867,49 @@
   }
 
   // ── MCP Probe Chat ────────────────────────────────────────────────
+
+  function renderMarkdown(text) {
+    let s = text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    s = s.replace(/^######\s(.+)$/gm, '<strong style="color:#93c5fd;font-size:.78em;display:block;margin-top:6px;">$1</strong>');
+    s = s.replace(/^#####\s(.+)$/gm, '<strong style="color:#93c5fd;font-size:.8em;display:block;margin-top:6px;">$1</strong>');
+    s = s.replace(/^####\s(.+)$/gm,  '<strong style="color:#93c5fd;font-size:.82em;display:block;margin-top:6px;">$1</strong>');
+    s = s.replace(/^###\s(.+)$/gm,   '<strong style="color:#fbbf24;font-size:.84em;display:block;margin-top:8px;">$1</strong>');
+    s = s.replace(/^##\s(.+)$/gm,    '<strong style="color:#fbbf24;font-size:.88em;display:block;margin-top:8px;">$1</strong>');
+    s = s.replace(/^#\s(.+)$/gm,     '<strong style="color:#fbbf24;font-size:.92em;display:block;margin-top:8px;">$1</strong>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,.12);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:.9em;">$1</code>');
+    s = s.replace(/^[-*]\s(.+)$/gm, '<span style="color:#86efac;margin-right:4px;">•</span>$1');
+    s = s.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:6px 0;">');
+    s = s.replace(/\n/g, '<br>');
+    return s;
+  }
+
+  function parseMcpContent(raw) {
+    if (!raw) return '';
+    try {
+      const w = JSON.parse(raw);
+      if (w?.content) return w.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+      return raw;
+    } catch (_) { return raw; }
+  }
+
+  function mcpResultBrief(toolName, raw) {
+    const text = parseMcpContent(raw);
+    try {
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) {
+        const names = data.slice(0, 3).map(x => x.name || x.span_id || x.id || '?').join(', ');
+        return `${data.length} result${data.length !== 1 ? 's' : ''} — ${names}${data.length > 3 ? '…' : ''}`;
+      }
+      if (data.name) return `"${data.name}"${data.model_name ? ' · ' + data.model_name : ''}`;
+      if (data.description) return data.description.replace(/\n/g, ' ').slice(0, 80);
+      if (data.error) return 'error: ' + String(data.error).slice(0, 60);
+      if (data.total != null) return `${data.total} total`;
+    } catch (_) {}
+    return text.replace(/[#*`]/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').slice(0, 80).trim();
+  }
+
   async function sendMcpQuery(preset) {
     const input = document.getElementById('mcpInput');
     const message = preset || (input ? input.value.trim() : '');
@@ -1871,6 +1919,7 @@
     appendMcpMsg('user', message);
     const typingId = 'typing-' + Date.now();
     appendMcpTyping(typingId);
+    appendActivityLine({ level: 'mcp', text: `Phoenix MCP probe (Gemini 2.5-flash): "${message.length > 70 ? message.slice(0, 67) + '…' : message}"` });
 
     const btn = document.getElementById('mcpSendBtn');
     if (btn) btn.disabled = true;
@@ -1883,11 +1932,19 @@
       });
       const d = await r.json();
       document.getElementById(typingId)?.remove();
-      (d.tool_calls || []).forEach(tc => appendMcpToolCard(tc));
+      (d.tool_calls || []).forEach(tc => {
+        appendMcpToolCard(tc);
+        appendActivityLine({ level: 'mcp', text: `  ↳ ${tc.tool} — ${mcpResultBrief(tc.tool, tc.result)}` });
+      });
       appendMcpMsg('agent', d.response || '(no response)');
+      if (d.response) {
+        const brief = d.response.replace(/[#*]/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').slice(0, 120).trim();
+        appendActivityLine({ level: 'info', text: `  Gemini 2.5-flash: ${brief}${d.response.length > 120 ? '…' : ''}` });
+      }
     } catch (err) {
       document.getElementById(typingId)?.remove();
       appendMcpMsg('agent', 'Request failed: ' + err.message);
+      appendActivityLine({ level: 'err', text: 'MCP probe error: ' + err.message });
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -1899,7 +1956,7 @@
     const h = mcpHistory(); if (!h) return;
     const d = document.createElement('div');
     d.className = `mcp-msg ${role}`;
-    d.innerHTML = `<div class="mcp-bubble">${esc(text)}</div>`;
+    d.innerHTML = `<div class="mcp-bubble">${renderMarkdown(text)}</div>`;
     h.appendChild(d);
     h.scrollTop = h.scrollHeight;
   }
@@ -1908,8 +1965,9 @@
     const h = mcpHistory(); if (!h) return;
     const d = document.createElement('div');
     d.className = 'mcp-msg agent';
-    const res = tc.result ? `<div class="mcp-tool-result">${esc(tc.result)}</div>` : '';
-    d.innerHTML = `<div class="mcp-tool-card"><span class="mcp-tool-name">MCP → ${esc(tc.tool)}</span>${res}</div>`;
+    const text = parseMcpContent(tc.result);
+    const res = text ? `<div class="mcp-tool-result">${renderMarkdown(text)}</div>` : '';
+    d.innerHTML = `<div class="mcp-tool-card"><span class="mcp-tool-name">Phoenix MCP → ${esc(tc.tool)}</span>${res}</div>`;
     h.appendChild(d);
     h.scrollTop = h.scrollHeight;
   }
