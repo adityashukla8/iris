@@ -168,7 +168,12 @@ async def _deploy_candidate(candidate: HealingCandidate) -> HealingCandidate:
 
     now = datetime.utcnow()
     if version_data:
-        version_id = version_data.get("id") or version_data.get("version", {}).get("id")
+        # Phoenix cloud wraps the response: {"data": {"id": "...", ...}}
+        version_id = (
+            version_data.get("data", {}).get("id")
+            or version_data.get("id")
+            or version_data.get("version", {}).get("id")
+        )
         candidate.phoenix_prompt_version_id = version_id
         if version_id:
             # Tag with approval status AND new content hash so callers can verify identity

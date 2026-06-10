@@ -67,25 +67,27 @@ async def log_failure_examples(
 
     try:
         import pandas as pd  # noqa: F401
-        from phoenix.client import Client  # arize-phoenix >= 6.0 or arize-phoenix-client
+        from phoenix.client import AsyncClient  # arize-phoenix >= 6.0 or arize-phoenix-client
 
         df = _build_dataframe(inputs, outputs, metadata)
-        client = Client(base_url=settings.phoenix_api_url, api_key=settings.phoenix_api_key)
+        # AsyncClient is the correct client for async contexts — no run_in_executor needed.
+        # timeout=30 gives Arize cloud enough time for multipart upload over the internet.
+        client = AsyncClient(base_url=settings.phoenix_api_url, api_key=settings.phoenix_api_key)
         # Each create_dataset call with the same name creates a new version in Phoenix —
         # timestamped record of failures across healing runs.
-        ds = await _run_blocking(
-            client.datasets.create_dataset,
+        ds = await client.datasets.create_dataset(
             name=dataset_name,
             dataframe=df,
             input_keys=["input_prompt", "system_prompt", "query_type", "retrieved_context", "surgical_phase"],
             output_keys=["unsafe_output", "original_violation", "original_score"],
             metadata_keys=["agent_name", "prompt_hash", "agent_version"],
+            timeout=30,
         )
         ds_id = getattr(ds, "id", None) or dataset_name
         push_activity(f"Healing: logged {len(examples)} example(s) to dataset '{dataset_name}'", "heal")
         return str(ds_id), len(examples)
     except Exception as exc:
-        push_activity(f"Healing: dataset logging skipped ({str(exc)[:80]})", "warn")
+        push_activity(f"Healing: dataset logging skipped ({str(exc)[:120]})", "warn")
         print(f"[HealingDataset] dataset logging unavailable: {exc}")
         return None, 0
 
@@ -97,10 +99,3 @@ def _build_dataframe(inputs: list[dict], outputs: list[dict], metadata: list[dic
     for i, o, m in zip(inputs, outputs, metadata):
         rows.append({**i, **o, **m})
     return pd.DataFrame(rows)
-
-
-async def _run_blocking(fn, **kwargs):
-    import asyncio
-
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: fn(**kwargs))

@@ -106,10 +106,13 @@ class PhoenixPromptManager:
                     print(f"[PromptManager] create_prompt_version non-JSON body ({resp.status_code}): {resp.text[:100]!r} — {je}")
                     return None
         except httpx.HTTPStatusError as exc:
-            print(f"[PromptManager] create_prompt_version {exc.response.status_code}: {exc.response.text[:200]}")
+            msg = f"[PromptManager] {exc.response.status_code} on POST /v1/prompts: {exc.response.text[:200]}"
+            print(msg)
+            from core.state import push_activity
+            push_activity(f"Healing: prompt write failed HTTP {exc.response.status_code} — {exc.response.text[:80]}", "warn")
             return None
         except httpx.HTTPError as exc:
-            print(f"[PromptManager] create_prompt_version failed: {exc}")
+            print(f"[PromptManager] create_prompt_version transport error: {exc}")
             return None
 
     async def tag_prompt_version(self, version_id: str, tag: str) -> bool:
