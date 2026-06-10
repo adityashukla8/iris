@@ -67,7 +67,7 @@ class IrisClient:
 
         Example:
             result = await iris.submit_raw(
-                agent_name="ORION",
+                agent_name="care-advisor-v2",
                 input_prompt="...",
                 output_text="...",
                 query_type="drug_dosage",

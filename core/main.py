@@ -298,12 +298,12 @@ async def get_analytics() -> dict:
 
 @app.post("/simulate")
 async def simulate_scenarios(request: Request) -> dict:
-    """Run selected ORION demo scenarios through the live evaluation pipeline."""
+    """Run selected demo scenarios through the live evaluation pipeline."""
     body = await request.json()
     scenario_nums: list[int] = body.get("scenarios", list(range(1, 10)))
     delay_ms: float = float(body.get("delay_ms", 1500))
 
-    from demo.mock_agents.bad_orion import SCENARIOS as _DEMO_SCENARIOS  # type: ignore[import]
+    from demo.mock_agents.simulator import SCENARIOS as _DEMO_SCENARIOS  # type: ignore[import]
     import copy
 
     selected = []

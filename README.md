@@ -11,7 +11,7 @@ IRIS watches every output from clinical AI agents in real time, runs five specia
 ## What IRIS Does
 
 ```
-Clinical AI Agent (ORION)
+Clinical AI Agent
         │ IrisEvent (POST /event)
         ▼
 ┌─────────────────────────────────────────────────────────┐
@@ -61,7 +61,7 @@ uvicorn core.main:app --port 8080 --reload
 open http://localhost:8080/
 
 # 5. Run demo scenarios (5 clinical failure scenarios)
-python demo/mock_agents/bad_orion.py --url http://localhost:8080
+python demo/mock_agents/simulator.py --url http://localhost:8080
 ```
 
 ---
@@ -76,7 +76,7 @@ from sdk.models import IrisEvent, QueryType
 
 async with IrisClient("http://iris.internal:8080") as iris:
     result = await iris.submit(IrisEvent(
-        agent_name="ORION",
+        agent_name="care-advisor-v2",
         query_type=QueryType.DRUG_DOSAGE,
         input_prompt=user_query,
         output_text=agent_response,
@@ -93,7 +93,7 @@ Or for agents that don't import the SDK:
 curl -X POST http://iris.internal:8080/event \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_name": "ORION",
+    "agent_name": "care-advisor-v2",
     "query_type": "drug_dosage",
     "input_prompt": "What dose of vancomycin?",
     "output_text": "Vancomycin 8000mg IV...",
@@ -206,7 +206,7 @@ iris/
 ├── dashboard/
 │   └── templates/         # Jinja2 + HTMX, dark OR-ambient theme
 ├── demo/
-│   ├── mock_agents/bad_orion.py  # 5 clinical failure scenarios
+│   ├── mock_agents/simulator.py  # 9 clinical failure scenarios
 │   └── patients/                 # 3 synthetic FHIR patients
 ├── tests/
 │   ├── test_evaluators.py

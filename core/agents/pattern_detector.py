@@ -54,7 +54,7 @@ Step 2 — Extract evaluation scores:
     - "iris.eval.<evaluator>.score" (float 0-10, e.g. "iris.eval.dosage_boundary.score": 2.1)
     - "iris.eval.<evaluator>.severity" (e.g. "critical", "warning", "info")
     - "iris.query_type" (e.g. "drug_dosage", "drug_interaction", "allergy_check")
-    - "iris.agent_name" (e.g. "orion")
+    - "iris.agent_name" (e.g. "care-advisor-v2")
 
   If iris.* attributes are not present on a span, use `get-span-annotations` as fallback.
   CRITICAL for get-span-annotations: pass the "context"."span_id" value (OTel hex ID, e.g. "ab3a609db2ec20f7"),

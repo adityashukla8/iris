@@ -87,7 +87,7 @@ class Settings(BaseSettings):
 
     def healing_dataset_name(self, agent_name: str, query_type: str) -> str:
         """Dataset name includes agent so each agent gets its own dataset in Phoenix.
-        e.g. 'iris-failures-orion-drug_dosage', 'iris-failures-scribe-drug_dosage'.
+        e.g. 'iris-failures-care-advisor-v2-drug_dosage', 'iris-failures-scribe-drug_dosage'.
         Prompt hash is kept in row metadata (not the name) to keep names readable.
         """
         from core.healing.prompt_identity import _slug

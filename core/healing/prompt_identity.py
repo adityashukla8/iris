@@ -5,7 +5,7 @@ IRIS may monitor thousands of interactions across many agents, each running its 
 system prompt. To know WHICH prompt produced a failure (and therefore which one to heal),
 we give every system prompt a deterministic content-hash identity and namespace prompt
 versions per agent in Phoenix. This replaces the former single hardcoded
-`settings.healing_prompt_name = "orion-clinical-safety"`.
+`settings.healing_prompt_name = "agent-clinical-safety"`.
 
   prompt_hash(system_prompt)      → stable 12-char id of the exact prompt text
   agent_prompt_name(agent_name)   → Phoenix prompt name namespaced to the agent
@@ -43,7 +43,7 @@ def _slug(agent_name: str | None) -> str:
 def agent_prompt_name(agent_name: str | None) -> str:
     """Phoenix prompt name for an agent's system prompt, namespaced per agent.
 
-    e.g. "ORION" -> "orion-system". Each heal adds a new version under this name,
+    e.g. "care-advisor-v2" -> "care-advisor-v2-system". Each heal adds a new version under this name,
     tagged with the new content hash (+ 'production' once approved).
     """
     return f"{_slug(agent_name)}-system"

@@ -9,7 +9,7 @@ from sdk.models import EvalResult, IrisEvent
 class EvalPlugin(ABC):
     name: ClassVar[str]
     description: ClassVar[str]
-    tier: ClassVar[int] = 1  # 1=core, 2=orion-specific, 3=roadmap
+    tier: ClassVar[int] = 1  # 1=core, 2=agent-specific, 3=roadmap
 
     @abstractmethod
     async def evaluate(self, event: IrisEvent) -> EvalResult | None:
