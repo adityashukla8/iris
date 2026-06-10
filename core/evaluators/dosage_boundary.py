@@ -91,8 +91,10 @@ class DosageBoundaryEvaluator(EvalPlugin):
             unit = mention["unit"]
 
             # Step 1: Validate drug exists in RxNorm
+            # valid is None means RxNorm was unreachable — fall through to the
+            # FDA label check rather than mislabeling an outage as hallucination.
             valid, rxcui = await is_valid_drug(drug_name)
-            if not valid:
+            if valid is False:
                 all_flags.append(f"'{drug_name}' not found in RxNorm — possible hallucination or misspelling")
                 worst_severity = Severity.CRITICAL
                 lowest_score = min(lowest_score, 2.0)

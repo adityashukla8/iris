@@ -45,6 +45,11 @@ Agent RECOMMENDS adding: {recommended_drugs}
 
 Evaluate every pair (recommended drug × current medication) for clinically significant interactions.
 
+Rules:
+- Only assess a NEWLY recommended drug against a DIFFERENT current medication.
+- Never report a drug as interacting with itself or its own regimen.
+- Advice to hold, stop, or continue an existing medication is NOT an interaction.
+
 Respond ONLY with valid JSON:
 {{
   "interactions": [
@@ -106,8 +111,26 @@ class DrugInteractionEvaluator(EvalPlugin):
                 confidence=0.7,
             )
 
-        recommended_drugs = [m["drug"] for m in mentions]
         current_meds = event.retrieved_context.medications
+
+        # A drug already on the patient's med list is being discussed (hold,
+        # continue, adjust), not newly added — it cannot interact with itself.
+        # Without this filter the judge flags e.g. "metformin + metformin 1000mg BD".
+        meds_lower = [m.lower() for m in current_meds]
+        recommended_drugs = [
+            m["drug"] for m in mentions
+            if not any(m["drug"].lower() in med for med in meds_lower)
+        ]
+        if not recommended_drugs:
+            return EvalResult(
+                evaluator=self.name,
+                score=9.0,
+                severity=Severity.INFO,
+                passed=True,
+                rationale="Output only discusses medications the patient already takes — no new drug to cross-check.",
+                reasoning_chain=["All extracted drug mentions match the patient's current medication list."],
+                confidence=0.8,
+            )
 
         prompt = _DDI_PROMPT.format(
             current_meds=", ".join(current_meds),

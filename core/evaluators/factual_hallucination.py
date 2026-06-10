@@ -81,14 +81,18 @@ class FactualHallucinationEvaluator(EvalPlugin):
 
         # Stage A: RxNorm drug name grounding
         mentions = await extract_drug_doses(event.output_text)
+        rxnorm_unverified: list[str] = []
         for mention in mentions:
             drug_name = mention["drug"].strip()
             valid, _ = await is_valid_drug(drug_name)
-            if not valid:
+            if valid is False:
                 flag = f"'{drug_name}' not found in RxNorm — hallucinated or misspelled drug name"
                 all_flags.append(flag)
                 worst_severity = Severity.CRITICAL
                 lowest_score = min(lowest_score, 1.5)
+            elif valid is None:
+                # RxNorm unreachable — unknown, not a hallucination verdict
+                rxnorm_unverified.append(drug_name)
 
         # Stage B: Broad LLM hallucination judge
         ctx = event.retrieved_context
@@ -151,7 +155,11 @@ class FactualHallucinationEvaluator(EvalPlugin):
             passed=worst_severity == Severity.INFO,
             rationale=rationale[:500],
             flagged_claims=all_flags[:10],
-            metadata={"llm_judged": True, "rxnorm_checked": len(mentions)},
+            metadata={
+                "llm_judged": True,
+                "rxnorm_checked": len(mentions),
+                "rxnorm_unverified": rxnorm_unverified,
+            },
             reasoning_chain=reasoning_steps,
             confidence=min(1.0, max(0.0, confidence)),
         )

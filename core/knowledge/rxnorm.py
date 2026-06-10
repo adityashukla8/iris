@@ -4,6 +4,7 @@ No API key required. Used for drug name validation and dose range lookup.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 
@@ -12,26 +13,47 @@ import httpx
 RXNAV_BASE = "https://rxnav.nlm.nih.gov/REST"
 
 
-async def lookup_rxcui(drug_name: str) -> str | None:
-    """Return the RxCUI for a drug name, or None if not found."""
+class RxNormUnavailable(Exception):
+    """RxNav API could not be reached — 'unknown', not 'drug does not exist'."""
+
+
+async def lookup_rxcui(drug_name: str, raise_on_error: bool = False) -> str | None:
+    """Return the RxCUI for a drug name, or None if not found.
+
+    Retries once. On persistent API failure returns None, or raises
+    RxNormUnavailable when raise_on_error is set — safety-critical callers
+    must distinguish an outage from a genuinely unknown drug.
+    """
     url = f"{RXNAV_BASE}/rxcui.json"
-    async with httpx.AsyncClient(timeout=8) as client:
-        try:
-            resp = await client.get(url, params={"name": drug_name, "search": "1"})
-            resp.raise_for_status()
-            data = resp.json()
-            cuis = data.get("idGroup", {}).get("rxnormId", [])
-            return cuis[0] if cuis else None
-        except httpx.HTTPError:
-            return None
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        async with httpx.AsyncClient(timeout=8) as client:
+            try:
+                resp = await client.get(url, params={"name": drug_name, "search": "1"})
+                resp.raise_for_status()
+                data = resp.json()
+                cuis = data.get("idGroup", {}).get("rxnormId", [])
+                return cuis[0] if cuis else None
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                if attempt == 0:
+                    await asyncio.sleep(0.4)
+    if raise_on_error:
+        raise RxNormUnavailable(str(last_exc))
+    return None
 
 
-async def is_valid_drug(drug_name: str) -> tuple[bool, str | None]:
+async def is_valid_drug(drug_name: str) -> tuple[bool | None, str | None]:
     """
     Returns (is_valid, rxcui).
-    is_valid=True means RxNorm knows this drug.
+    True  — RxNorm knows this drug.
+    False — RxNorm definitively does not know it (likely hallucinated).
+    None  — RxNorm unreachable: unknown, must NOT be flagged as a hallucination.
     """
-    rxcui = await lookup_rxcui(drug_name)
+    try:
+        rxcui = await lookup_rxcui(drug_name, raise_on_error=True)
+    except RxNormUnavailable:
+        return None, None
     return (rxcui is not None), rxcui
 
 
