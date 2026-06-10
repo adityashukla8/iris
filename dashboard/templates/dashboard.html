@@ -755,6 +755,71 @@
       color: var(--green-700);
     }
     .sim-done-actions { display: flex; gap: 8px; }
+
+    /* ── Trace Detail Drawer ────────────────────────────────────────── */
+    .td-backdrop {
+      position: fixed; inset: 0; z-index: 800;
+      background: rgba(15,23,42,.38);
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s ease;
+    }
+    .td-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    .td-drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 801;
+      width: 580px; max-width: calc(100vw - 48px);
+      background: var(--white);
+      border-left: 1px solid var(--gray-200);
+      box-shadow: -6px 0 32px rgba(0,0,0,.10), -1px 0 4px rgba(0,0,0,.05);
+      display: flex; flex-direction: column; overflow: hidden;
+      transform: translateX(100%);
+      transition: transform .24s cubic-bezier(.22,.61,.36,1);
+    }
+    .td-drawer.open { transform: translateX(0); }
+    .td-drawer.expanded { width: min(860px, calc(100vw - 48px)); }
+
+    .td-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid var(--gray-200);
+      background: var(--white); flex-shrink: 0; gap: 10px;
+      min-height: 46px;
+    }
+    .td-header-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+    .td-header-icon {
+      width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+      background: var(--gray-100); border: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center; color: var(--gray-500);
+    }
+    .td-header-info { flex: 1; min-width: 0; overflow: hidden; }
+    .td-header-label { font-size: .5625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); line-height: 1; margin-bottom: 2px; }
+    .td-header-title { font-size: .8125rem; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .td-header-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+    .td-icon-btn {
+      width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+      background: none; border: 1px solid var(--gray-200);
+      color: var(--gray-500); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .td-icon-btn:hover { background: var(--gray-50); border-color: var(--gray-300); color: var(--gray-700); }
+    .td-icon-btn.td-close:hover { background: var(--red-50); border-color: var(--red-100); color: var(--red-600); }
+
+    .td-body { flex: 1; overflow-y: auto; background: var(--gray-50); }
+    .td-loading {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      color: var(--gray-400);
+    }
+    .td-loading p { font-size: .8125rem; }
+
+    /* Alert item — clickable when it has a trace */
+    .alert-item.has-trace { cursor: pointer; }
+    .alert-item.has-trace:hover { background: var(--blue-50); }
+    .alert-inspect-hint {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: .5625rem; color: var(--gray-400); margin-top: 3px;
+    }
   </style>
 </head>
 <body>
@@ -799,7 +864,6 @@
   <!-- Tab Nav -->
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
-    <button class="tab-btn" data-tab="traces" onclick="showTab('traces')">Trace Inspector</button>
     <button class="tab-btn" data-tab="healing" onclick="showTab('healing')">Healing</button>
     <button class="tab-btn" data-tab="pipeline" onclick="showTab('pipeline')">Pipeline</button>
   </nav>
@@ -978,37 +1042,6 @@
       </main>
     </div>
 
-    <!-- ══ TRACES TAB ════════════════════════════════════════════ -->
-    <div class="tab-pane" data-tab="traces" hidden>
-      <div class="trace-inspector">
-
-        <!-- Left: Trace List -->
-        <div class="trace-list-panel">
-          <div class="trace-list-header">
-            <select class="trace-filter-select" id="sevFilter" onchange="filterTraces()">
-              <option value="">All severities</option>
-              <option value="critical">Critical only</option>
-              <option value="warning">Warning only</option>
-              <option value="info">Info only</option>
-            </select>
-            <span class="trace-list-count" id="traceListCount">0</span>
-          </div>
-          <div class="trace-list-items" id="traceListItems">
-            <div class="empty"><div class="empty-text">No traces yet — submit an event</div></div>
-          </div>
-        </div>
-
-        <!-- Right: Trace Detail -->
-        <div class="trace-detail-panel" id="traceDetail">
-          <div class="trace-detail-empty">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <p>Select a trace to inspect the full clinical case</p>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
     <!-- ══ HEALING TAB ═══════════════════════════════════════════ -->
     <div class="tab-pane" data-tab="healing" hidden>
       <main class="main">
@@ -1181,9 +1214,6 @@
     document.querySelectorAll('.tab-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.tab === name);
     });
-    if (name === 'traces' && currentTraces.length && !selectedTraceId) {
-      selectTrace(currentTraces[0].trace_id);
-    }
   }
 
   // ── SSE ──────────────────────────────────────────────────────────
@@ -1206,7 +1236,9 @@
       const feed = document.getElementById('alertFeed');
       if (feed.querySelector('.empty')) feed.innerHTML = '';
       const el = document.createElement('div');
-      el.className = 'alert-item';
+      const hasTrace = !!d.trace_id;
+      el.className = 'alert-item' + (hasTrace ? ' has-trace' : '');
+      if (hasTrace) el.onclick = () => openTraceDrawer(d.trace_id);
       el.innerHTML = `
         <div class="sev-icon sev-${sev}">${SEV_ICON[sev] || SEV_ICON.info}</div>
         <div class="alert-body">
@@ -1220,6 +1252,7 @@
             ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
             ${d.failure_type ? `<span class="badge badge-neutral">${esc(d.failure_type)}</span>` : ''}
             ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
+            ${hasTrace ? `<span class="alert-inspect-hint"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Inspect trace</span>` : ''}
           </div>
         </div>`;
       feed.insertBefore(el, feed.firstChild);
@@ -1279,17 +1312,13 @@
 
   async function selectTrace(traceId) {
     selectedTraceId = traceId;
-    // Update selection highlight
-    document.querySelectorAll('.trace-list-item').forEach(el => {
-      el.classList.toggle('selected', el.dataset.traceId === traceId);
-    });
     try {
       const r = await fetch(`/traces/${traceId}`);
       if (!r.ok) throw new Error('not found');
       const { trace } = await r.json();
       renderTraceDetail(trace);
     } catch (_) {
-      document.getElementById('traceDetail').innerHTML =
+      document.getElementById('traceDrawerContent').innerHTML =
         `<div class="trace-detail-empty"><p>Could not load trace details.</p></div>`;
     }
   }
@@ -1362,7 +1391,11 @@
     const qt = (t.query_type || '').replace(/_/g, ' ');
     const outputCls = sev !== 'info' ? ` output-${sev}` : '';
 
-    document.getElementById('traceDetail').innerHTML = `
+    const _tdTitle = document.getElementById('tdHeaderTitle');
+    const _tdBadge = document.getElementById('tdHeaderBadge');
+    if (_tdTitle) _tdTitle.textContent = qt || 'Trace';
+    if (_tdBadge) _tdBadge.innerHTML = `<span class="badge badge-${sev} badge-sm">${sev.toUpperCase()}</span>`;
+    document.getElementById('traceDrawerContent').innerHTML = `
       <div class="case-header">
         <div class="case-header-left">
           <span class="badge badge-${sev} badge-lg">${sev.toUpperCase()}</span>
@@ -2063,7 +2096,7 @@
     document.getElementById('simProgressFill').style.width = '100%';
     document.getElementById('simProgressCurrent').textContent = total;
     document.getElementById('simOverlayTitle').textContent = 'Simulation Complete';
-    document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview and Trace Inspector tabs for results.`;
+    document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview tab and Live Alert Feed for results — click any alert to inspect its trace.`;
     document.getElementById('simSpinSection').hidden = true;
     document.getElementById('simSuccessIcon').hidden = false;
     document.getElementById('simDoneActions').hidden = false;
@@ -2074,7 +2107,76 @@
   document.getElementById('simOverlay').addEventListener('click', function(e) {
     if (e.target === this && !_simRunning) closeSimModal();
   });
+
+  /* ─── Trace Detail Drawer ──────────────────────────────────── */
+  let _drawerExpanded = false;
+
+  function openTraceDrawer(traceId) {
+    const content = document.getElementById('traceDrawerContent');
+    const title   = document.getElementById('tdHeaderTitle');
+    const badge   = document.getElementById('tdHeaderBadge');
+    if (content) content.innerHTML = `<div class="td-loading"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Loading trace…</p></div>`;
+    if (title) title.textContent = 'Loading…';
+    if (badge) badge.innerHTML = '';
+    document.getElementById('traceDrawer').classList.add('open');
+    document.getElementById('traceDrawerBackdrop').classList.add('open');
+    selectTrace(traceId);
+  }
+
+  function closeTraceDrawer() {
+    document.getElementById('traceDrawer').classList.remove('open');
+    document.getElementById('traceDrawerBackdrop').classList.remove('open');
+  }
+
+  function toggleDrawerExpand() {
+    _drawerExpanded = !_drawerExpanded;
+    const drawer = document.getElementById('traceDrawer');
+    drawer.classList.toggle('expanded', _drawerExpanded);
+    const btn = document.getElementById('tdExpandBtn');
+    if (btn) btn.title = _drawerExpanded ? 'Collapse' : 'Expand';
+  }
+
+  document.getElementById('traceDrawerBackdrop').addEventListener('click', closeTraceDrawer);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeTraceDrawer();
+  });
 </script>
+
+<!-- ── Trace Detail Drawer ─────────────────────────────────────────── -->
+<div class="td-backdrop" id="traceDrawerBackdrop"></div>
+<div class="td-drawer" id="traceDrawer" role="dialog" aria-modal="true" aria-label="Trace Inspector">
+
+  <div class="td-header">
+    <div class="td-header-left">
+      <div class="td-header-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="td-header-info">
+        <div class="td-header-label">Trace Inspector</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="tdHeaderBadge"></span>
+          <span class="td-header-title" id="tdHeaderTitle">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="td-header-right">
+      <button class="td-icon-btn" id="tdExpandBtn" title="Expand" onclick="toggleDrawerExpand()" aria-label="Expand drawer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+      <button class="td-icon-btn td-close" title="Close" onclick="closeTraceDrawer()" aria-label="Close trace inspector">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="td-body" id="traceDrawerContent">
+    <div class="trace-detail-empty">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <p>Click an alert to inspect its trace</p>
+    </div>
+  </div>
+
+</div>
 
 <!-- ── Simulate Modal ──────────────────────────────────────────────── -->
 <div class="sim-overlay" id="simOverlay" hidden>
@@ -2105,7 +2207,7 @@
       </div>
       <div class="sim-done-actions" id="simDoneActions" hidden>
         <button class="btn-sm btn-ghost" onclick="openSimModal()">Run Again</button>
-        <button class="btn-sm btn-primary" onclick="closeSimModal(); showTab('traces')">View Traces</button>
+        <button class="btn-sm btn-primary" onclick="closeSimModal()">View Alerts</button>
       </div>
     </div>
 
