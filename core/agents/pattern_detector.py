@@ -11,7 +11,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from core.config import settings
-from core.mcp_filter import phoenix_mcp_after_tool_callback
+from core.mcp_filter import phoenix_mcp_after_tool_callback, phoenix_mcp_before_tool_callback
 
 _phoenix_mcp_read = McpToolset(
     connection_params=StdioConnectionParams(
@@ -97,6 +97,7 @@ Output ONLY valid JSON:
 }}
 """,
     tools=[_phoenix_mcp_read],
+    before_tool_callback=phoenix_mcp_before_tool_callback,
     after_tool_callback=phoenix_mcp_after_tool_callback,
     generate_content_config=types.GenerateContentConfig(
         temperature=0.0,

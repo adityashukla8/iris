@@ -88,10 +88,15 @@ def dispatch_alert(event: IrisEvent, outcome: EvaluationOutcome) -> AlertEvent |
 
 
 def _maybe_trigger_scan(event: IrisEvent) -> None:
-    """Check whether this CRITICAL event pushes a cluster past the autonomous scan threshold.
+    """Check whether this CRITICAL event pushes the agent past the autonomous scan threshold.
 
     Conditions required (all must hold):
-    1. Failure count for (agent, prompt_hash, query_type) >= pattern_min_samples × event_trigger_multiplier
+    1. Total critical/warning count for (agent, prompt_hash) >= pattern_min_samples × event_trigger_multiplier
+       Counted across all query_types: mixed-type failure bursts (drug_dosage + drug_interaction
+       both critical) should trigger the scan just as reliably as same-type bursts. The pattern
+       detector itself clusters by query_type once it runs.
+       +1 accounts for the current event which is not yet in recent_traces (dispatch_alert is
+       called before recent_traces.appendleft in submit_event).
     2. No scan is currently running (scan_lock.locked() is False)
     3. Cluster is not in cooldown (recently healed)
     4. A scan did not just run (scan_debounce_seconds has elapsed since last_scan_time)
@@ -99,15 +104,14 @@ def _maybe_trigger_scan(event: IrisEvent) -> None:
     from core.healing.prompt_identity import prompt_hash as compute_hash
     phash = compute_hash(event.system_prompt)
     agent = event.agent_name
-    qt = str(event.query_type)
+    qt = str(event.query_type)  # used in cooldown check below
 
-    # Count critical/warning failures for this specific (agent, prompt, query_type) cluster
     threshold = settings.pattern_min_samples * settings.event_trigger_multiplier
-    cluster_failures = sum(
+    # +1: current event is not yet in recent_traces when dispatch_alert is called
+    cluster_failures = 1 + sum(
         1 for t in recent_traces
         if (t.get("agent_name") == agent
             and t.get("prompt_hash") == phash
-            and t.get("query_type") == qt
             and t.get("severity") in ("critical", "warning"))
     )
     if cluster_failures < threshold:
@@ -127,11 +131,11 @@ def _maybe_trigger_scan(event: IrisEvent) -> None:
         return
 
     push_activity(
-        f"Scanner: {agent} {qt} has {cluster_failures} critical failures "
+        f"Scanner: {agent} has {cluster_failures} critical failures "
         f"(threshold={threshold}) — triggering autonomous scan",
         "critical",
     )
-    print(f"[Scanner] event-driven trigger: {agent}|{phash[:6]}|{qt} ({cluster_failures} failures)")
+    print(f"[Scanner] event-driven trigger: {agent}|{phash[:6]} ({cluster_failures} failures across all query types)")
 
     # Import here to avoid circular import at module load time
     from core.healing.scan import run_self_healing_scan

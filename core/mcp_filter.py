@@ -86,6 +86,27 @@ def _filter_annotation(ann: dict) -> dict:
     return {k: v for k, v in ann.items() if k in _KEEP_ANNOTATION_FIELDS}
 
 
+def phoenix_mcp_before_tool_callback(
+    tool: Any,
+    args: dict[str, Any],
+    tool_context: Any,
+) -> Optional[dict[str, Any]]:
+    """
+    ADK before_tool_callback: clamp arguments the LLM sometimes inflates past
+    the Phoenix MCP schema bounds. get-spans rejects limit > 1000 with
+    'MCP error -32602 ... too_big', which wastes a whole tool round-trip.
+    Mutates args in place; returning None proceeds with the clamped call.
+    """
+    try:
+        limit = args.get("limit")
+        if isinstance(limit, (int, float)) and limit > 100:
+            print(f"[MCP FILTER] clamping {getattr(tool, 'name', '?')} limit {limit} → 100")
+            args["limit"] = 100
+    except Exception:
+        pass
+    return None
+
+
 def phoenix_mcp_after_tool_callback(
     tool: Any,
     args: dict[str, Any],
@@ -101,12 +122,16 @@ def phoenix_mcp_after_tool_callback(
         return None
 
     # MCP wraps all responses as: {"content": [{"type": "text", "text": "<json>"}]}
+    raw_text = ""
     try:
         content = tool_response.get("content", [])
         if not content or content[0].get("type") != "text":
             return None
 
-        raw_text: str = content[0]["text"]
+        raw_text = content[0].get("text") or ""
+        if not raw_text.strip():
+            print(f"[MCP FILTER] {tool_name}: empty response text — passing through")
+            return None
         data = json.loads(raw_text)
 
         if tool_name == "get-spans" and "spans" in data:
@@ -141,6 +166,10 @@ def phoenix_mcp_after_tool_callback(
             return {"content": [{"type": "text", "text": filtered}]}
 
     except Exception as exc:
-        print(f"[MCP FILTER] parse error for {tool_name}: {exc}")
+        # Non-JSON text is usually the MCP server relaying an upstream error
+        # (Arize cloud hiccup). Pass it through untouched — the pattern
+        # detector's deterministic fallback covers a failed read — but log
+        # what Phoenix actually said so this is diagnosable.
+        print(f"[MCP FILTER] parse error for {tool_name}: {exc} — payload head: {raw_text[:200]!r}")
 
     return None

@@ -12,6 +12,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from core.config import settings
+from core.mcp_filter import phoenix_mcp_after_tool_callback, phoenix_mcp_before_tool_callback
 
 _mcp_toolset = McpToolset(
     connection_params=StdioConnectionParams(
@@ -59,6 +60,10 @@ Always call at least one MCP tool before responding. Be concise and factual.
 Format numbers and counts clearly. If a tool returns an error, report it honestly.
 """,
     tools=[_mcp_toolset],
+    # Clamp oversized tool args (schema rejects limit > 1000) and strip span
+    # bloat from responses before they enter the LLM context.
+    before_tool_callback=phoenix_mcp_before_tool_callback,
+    after_tool_callback=phoenix_mcp_after_tool_callback,
     generate_content_config=types.GenerateContentConfig(temperature=0.1),
     output_key="probe_response",
     disallow_transfer_to_parent=True,
