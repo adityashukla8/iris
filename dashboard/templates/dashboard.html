@@ -542,7 +542,7 @@
     .log-err     { color: #fca5a5; }
 
     /* ── Activity Log ───────────────────────────────────────────── */
-    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 258px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column; }
+    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 320px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column; }
     .act-line { white-space: pre-wrap; word-break: break-word; }
     .act-ts   { color: var(--gray-500); margin-right: 6px; font-size: .72rem; }
     .act-info     { color: #e2e8f0; }
@@ -1020,39 +1020,20 @@
 
         </div>
 
-        <!-- MCP Activity Log + Activity Log -->
-        <div class="grid-2" style="margin-bottom:14px;">
-
-          <!-- MCP Activity Log -->
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-amber"></div>MCP Activity Log</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <span class="panel-meta" id="scanMeta">Ready</span>
-                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearScanLog()">Clear</button>
-              </div>
-            </div>
-            <div class="panel-pad" style="padding:12px 14px;max-height:none;">
-              <div class="scan-log-panel" id="scanLog"><div class="log-line">Ready. Click "Trigger Scan" to query Arize Phoenix spans via MCP and detect failure clusters.</div></div>
+        <!-- Activity Log -->
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot dot-gray"></div>Activity Log</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="panel-meta" id="activityStatus">Connecting…</span>
+              <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
             </div>
           </div>
-
-          <!-- Activity Log -->
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-gray"></div>Activity Log</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <span class="panel-meta" id="activityStatus">Connecting…</span>
-                <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:.7rem;" onclick="clearActivityLog()">Clear</button>
-              </div>
-            </div>
-            <div class="panel-pad" style="padding:10px 14px;">
-              <div class="activity-log" id="activityLog">
-                <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
-              </div>
+          <div class="panel-pad" style="padding:10px 14px;">
+            <div class="activity-log" id="activityLog">
+              <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
             </div>
           </div>
-
         </div>
 
       </main>
@@ -1693,42 +1674,30 @@
 
   async function triggerScan() {
     const btn = document.getElementById('scanBtn');
-    const log = document.getElementById('scanLog');
-    const meta = document.getElementById('scanMeta');
     btn.disabled = true;
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Scanning…`;
-    if (meta) meta.textContent = 'Running…';
-    log.innerHTML = `<div class="log-line">[${new Date().toLocaleTimeString()}] Initiating MCP scan — querying Phoenix spans…</div>`;
+    appendActivityLine({ level: 'mcp', text: 'Initiating scan — querying Phoenix spans via MCP…' });
     try {
       const r = await fetch('/scan', { method: 'POST' });
       const text = await r.text();
       let d;
       try { d = JSON.parse(text); } catch (_) { d = { status: 'error', error: text }; }
       if (d.status === 'error') {
-        log.innerHTML += `<div class="log-line log-err">[${new Date().toLocaleTimeString()}] Scan error: ${esc(d.error || 'unknown')}</div>`;
-        if (meta) meta.textContent = 'Error';
+        appendActivityLine({ level: 'err', text: 'Scan error: ' + (d.error || 'unknown') });
       } else {
         const lines = parseScanOutput(d.result || '');
-        log.innerHTML = lines.map(l => `<div class="log-line${l.cls ? ' log-'+l.cls : ''}">${esc(l.text)}</div>`).join('');
-        if (meta) meta.textContent = 'Last run: ' + new Date().toLocaleTimeString();
+        lines.forEach(l => appendActivityLine({ level: l.cls || 'info', text: l.text }));
         await fetchHealingCandidates();
         await fetchHealingHistory();
         await fetchStatus();
         await fetchAnalytics();
       }
     } catch (err) {
-      log.innerHTML += `<div class="log-line log-err">[error] ${esc(err.message)}</div>`;
-      if (meta) meta.textContent = 'Error';
+      appendActivityLine({ level: 'err', text: '[error] ' + err.message });
     } finally {
       btn.disabled = false;
       btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Trigger Scan`;
     }
-  }
-
-  function clearScanLog() {
-    document.getElementById('scanLog').innerHTML = '<div class="log-line">Ready.</div>';
-    const meta = document.getElementById('scanMeta');
-    if (meta) meta.textContent = 'Ready';
   }
 
   async function approveCandidate(id) {
@@ -1745,7 +1714,8 @@
 
   // ── Activity Log ─────────────────────────────────────────────────
   const ACT_LEVEL_CLS = { info: 'act-info', warn: 'act-warn', warning: 'act-warn',
-    critical: 'act-critical', mcp: 'act-mcp', adk: 'act-adk', heal: 'act-heal' };
+    critical: 'act-critical', mcp: 'act-mcp', adk: 'act-adk', heal: 'act-heal',
+    cluster: 'act-warn', err: 'act-warn' };
 
   function appendActivityLine(event) {
     const log = document.getElementById('activityLog');
