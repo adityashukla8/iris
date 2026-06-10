@@ -136,6 +136,7 @@ async def submit_event(event: IrisEvent) -> dict:
         recent_traces.appendleft({
             "trace_id": event.trace_id,
             "span_id": sid,
+            "session_id": event.session_id,
             "timestamp": event.timestamp.isoformat(),
             "agent_name": event.agent_name,
             "agent_version": event.agent_version,
@@ -298,10 +299,19 @@ async def get_analytics() -> dict:
 
 @app.post("/simulate")
 async def simulate_scenarios(request: Request) -> dict:
-    """Run selected demo scenarios through the live evaluation pipeline."""
+    """Run selected demo scenarios through the live evaluation pipeline.
+
+    mode="recorded" (default) replays the captured unsafe outputs.
+    mode="live" regenerates each answer with Gemini under the agent's current
+    production prompt from Phoenix — the closed-loop demo of self-healing.
+    """
     body = await request.json()
     scenario_nums: list[int] = body.get("scenarios", list(range(1, 10)))
     delay_ms: float = float(body.get("delay_ms", 1500))
+    mode: str = body.get("mode", "recorded")
+    if mode not in ("recorded", "live"):
+        raise HTTPException(status_code=400, detail="mode must be 'recorded' or 'live'")
+    run_id = uuid.uuid4().hex[:8]
 
     from demo.mock_agents.simulator import SCENARIOS as _DEMO_SCENARIOS  # type: ignore[import]
     import copy
@@ -315,16 +325,52 @@ async def simulate_scenarios(request: Request) -> dict:
     if not selected:
         raise HTTPException(status_code=400, detail="No valid scenario numbers provided")
 
-    asyncio.create_task(_run_simulations(selected, delay_ms))
-    return {"status": "started", "scenario_count": len(selected)}
+    asyncio.create_task(_run_simulations(selected, delay_ms, mode, run_id))
+    return {"status": "started", "scenario_count": len(selected), "mode": mode, "run_id": run_id}
 
 
-async def _run_simulations(selected: list[tuple], delay_ms: float) -> None:
+async def _run_simulations(
+    selected: list[tuple], delay_ms: float, mode: str = "recorded", run_id: str = ""
+) -> None:
     total = len(selected)
-    push_activity(f"Simulator: starting {total} scenario(s)", "info")
+    session_id = f"sim-{mode}-{run_id or uuid.uuid4().hex[:8]}"
+    push_activity(f"Simulator: starting {total} scenario(s) [{mode} mode]", "info")
+
+    live_prompt = ""
+    if mode == "live":
+        from demo.mock_agents.live_agent import get_effective_prompt
+        try:
+            live_prompt, live_source, live_phash = await get_effective_prompt("care-advisor-v2")
+            push_activity(
+                f"Live agent: generating under {live_source} prompt ({live_phash[:6]})", "heal"
+            )
+        except Exception as exc:
+            push_activity(f"Live agent: prompt resolution failed — {str(exc)[:80]}", "critical")
+            return
+
     for i, (num, name, payload) in enumerate(selected, 1):
         payload["trace_id"] = str(uuid.uuid4())
+        payload["session_id"] = session_id
         push_activity(f"Simulator [{i}/{total}]: {name}", "info")
+        if mode == "live":
+            from demo.mock_agents.live_agent import generate_live_output
+            t0 = time.monotonic()
+            try:
+                payload["output_text"] = await generate_live_output(
+                    live_prompt, payload["input_prompt"], payload.get("retrieved_context") or {}
+                )
+            except Exception as exc:
+                push_activity(
+                    f"Live agent: scenario {num} generation failed — {str(exc)[:80]}", "critical"
+                )
+                continue
+            payload["system_prompt"] = live_prompt
+            payload["latency_ms"] = int((time.monotonic() - t0) * 1000)
+            payload["tool_calls"] = []
+            payload["token_count"] = None
+            push_activity(
+                f"Live agent [{i}/{total}]: response generated ({payload['latency_ms']}ms)", "info"
+            )
         try:
             event = IrisEvent.model_validate(payload)
             await submit_event(event)
@@ -333,6 +379,64 @@ async def _run_simulations(selected: list[tuple], delay_ms: float) -> None:
         if delay_ms > 0 and i < total:
             await asyncio.sleep(delay_ms / 1000)
     push_activity(f"Simulator: complete — {total} scenario(s) processed", "heal")
+
+
+@app.get("/simulate/comparison")
+async def simulate_comparison() -> dict:
+    """Per-run summaries of simulation sessions plus a before/after comparison
+    of the two most recent runs — the measurable proof of the healing loop."""
+    runs: dict[str, dict] = {}
+    for t in reversed(list(recent_traces)):  # oldest → newest
+        sid = t.get("session_id") or ""
+        if not sid.startswith("sim-"):
+            continue
+        parts = sid.split("-", 2)
+        run = runs.setdefault(sid, {
+            "session_id": sid,
+            "mode": parts[1] if len(parts) >= 3 else "recorded",
+            "run_id": parts[2] if len(parts) >= 3 else sid,
+            "prompt_hash": t.get("prompt_hash"),
+            "started_at": t.get("timestamp"),
+            "total": 0, "passed": 0, "warning": 0, "critical": 0,
+            "scenarios": [],
+        })
+        sev = t.get("severity", "info")
+        run["total"] += 1
+        if sev == "critical":
+            run["critical"] += 1
+        elif sev == "warning":
+            run["warning"] += 1
+        else:
+            run["passed"] += 1
+        scores = [
+            e.get("score") for e in t.get("evaluations", [])
+            if not e.get("skipped") and e.get("score") is not None
+        ]
+        run["scenarios"].append({
+            "trace_id": t.get("trace_id"),
+            "query_type": t.get("query_type"),
+            "input_prompt": (t.get("input_prompt") or "")[:80],
+            "severity": sev,
+            "worst_score": round(min(scores), 1) if scores else None,
+        })
+
+    ordered = sorted(runs.values(), key=lambda r: r["started_at"] or "")
+    for r in ordered:
+        r["pass_rate"] = round(r["passed"] / r["total"], 2) if r["total"] else 0.0
+
+    comparison = None
+    if len(ordered) >= 2:
+        base, cur = ordered[-2], ordered[-1]
+        comparison = {
+            "baseline": base,
+            "current": cur,
+            "pass_rate_delta": round(cur["pass_rate"] - base["pass_rate"], 2),
+            "critical_delta": cur["critical"] - base["critical"],
+            "prompt_changed": base.get("prompt_hash") != cur.get("prompt_hash"),
+            "baseline_prompt_hash": base.get("prompt_hash"),
+            "current_prompt_hash": cur.get("prompt_hash"),
+        }
+    return {"runs": ordered, "comparison": comparison}
 
 
 @app.post("/mcp/chat")
