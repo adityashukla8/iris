@@ -546,15 +546,25 @@
     .log-err     { color: #fca5a5; }
 
     /* ── Activity Log ───────────────────────────────────────────── */
-    .activity-log { font-family: var(--mono); font-size: .78rem; background: var(--gray-900); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; height: 320px; overflow-y: auto; line-height: 1.85; display: flex; flex-direction: column; }
-    .act-line { white-space: pre-wrap; word-break: break-word; }
-    .act-ts   { color: var(--gray-500); margin-right: 6px; font-size: .72rem; }
-    .act-info     { color: #e2e8f0; }
-    .act-warn     { color: #fbbf24; }
-    .act-critical { color: #fca5a5; font-weight: 600; }
-    .act-mcp      { color: #93c5fd; }
-    .act-adk      { color: #93c5fd; }
-    .act-heal     { color: #86efac; }
+    .activity-log { background: var(--white); border-radius: 8px; height: 320px; overflow-y: auto; display: flex; flex-direction: column; }
+    .act-row { display: grid; grid-template-columns: 72px 72px 1fr; gap: 0; border-bottom: 1px solid var(--gray-100); padding: 5px 12px; align-items: baseline; }
+    .act-row:hover { background: var(--gray-50); }
+    .act-col-ts  { font-size: .65rem; color: var(--gray-400); font-variant-numeric: tabular-nums; white-space: nowrap; font-family: var(--mono); padding-top: 1px; }
+    .act-col-cat { }
+    .act-col-msg { font-size: .775rem; color: var(--gray-700); word-break: break-word; padding-left: 8px; line-height: 1.55; font-family: var(--font); }
+    .act-badge { display: inline-block; font-size: .58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+    .act-badge-mcp      { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .act-badge-tool     { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .act-badge-heal     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .act-badge-eval     { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+    .act-badge-scan     { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .act-badge-cluster  { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .act-badge-warn     { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .act-badge-critical { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .act-badge-agent    { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .act-badge-deploy   { background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; }
+    .act-badge-info     { background: var(--gray-100); color: var(--gray-500); border: 1px solid var(--gray-200); }
+    .act-badge-window   { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
     /* ── Responsive ─────────────────────────────────────────────── */
     @media (max-width: 1280px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
@@ -1073,7 +1083,11 @@
             </div>
             <div class="panel-pad" style="padding:10px 14px;">
               <div class="activity-log" id="activityLog">
-                <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
+                <div class="act-row act-placeholder">
+                  <span class="act-col-ts"></span>
+                  <span class="act-col-cat"></span>
+                  <span class="act-col-msg" style="color:var(--gray-400);">Ready — waiting for ADK / MCP events</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1730,30 +1744,80 @@
   }
 
   // ── Activity Log ─────────────────────────────────────────────────
-  const ACT_LEVEL_CLS = { info: 'act-info', warn: 'act-warn', warning: 'act-warn',
-    critical: 'act-critical', mcp: 'act-mcp', adk: 'act-adk', heal: 'act-heal',
-    cluster: 'act-warn', err: 'act-warn' };
+  function _actCategory(level, text) {
+    const t = (text || '').replace(/^\s+/, '');
+    if (level === 'heal') {
+      if (t.startsWith('✓') || t.startsWith('✗') || t.startsWith('  ✓') || t.startsWith('  ✗'))
+        return { label: 'EVAL',    cls: 'act-badge-eval' };
+      if (t.includes('deployed') || t.includes('Prompt deployed'))
+        return { label: 'DEPLOY',  cls: 'act-badge-deploy' };
+      return   { label: 'HEALING', cls: 'act-badge-heal' };
+    }
+    if (level === 'mcp' || level === 'adk') {
+      if (t.startsWith('↳') || t.startsWith('  ↳'))
+        return { label: 'TOOL', cls: 'act-badge-tool' };
+      if (t.startsWith('  Gemini') || /^\s*[A-Za-z-]+ 2\.\d/.test(t))
+        return { label: 'AGENT', cls: 'act-badge-agent' };
+      return   { label: 'MCP',  cls: 'act-badge-mcp' };
+    }
+    if (level === 'critical' || level === 'err')
+      return { label: 'ERROR',   cls: 'act-badge-critical' };
+    if (level === 'warn' || level === 'warning' || level === 'cluster') {
+      if (t.includes('CLUSTER') || t.includes('cluster'))
+        return { label: 'CLUSTER', cls: 'act-badge-cluster' };
+      return   { label: 'WARN',   cls: 'act-badge-warn' };
+    }
+    // info — infer from text
+    if (t.startsWith('✓') || t.startsWith('✗'))
+      return { label: 'EVAL',    cls: 'act-badge-eval' };
+    if (t.startsWith('↳'))
+      return { label: 'TOOL',    cls: 'act-badge-tool' };
+    if (/^\s*(Gemini|gemini)/.test(t) || /^\s*[A-Za-z-]+ 2\.\d/.test(t))
+      return { label: 'AGENT',   cls: 'act-badge-agent' };
+    if (t.startsWith('Pattern Detector') || t.toLowerCase().startsWith('scan'))
+      return { label: 'SCAN',    cls: 'act-badge-scan' };
+    if (t.toLowerCase().startsWith('window'))
+      return { label: 'WINDOW',  cls: 'act-badge-window' };
+    if (t.startsWith('Prompt deployed') || t.startsWith('HealingPipeline') && t.includes('deployed'))
+      return { label: 'DEPLOY',  cls: 'act-badge-deploy' };
+    if (t.startsWith('HealingPipeline'))
+      return { label: 'HEALING', cls: 'act-badge-heal' };
+    if (t.startsWith('MCP:') || t.startsWith('Phoenix MCP'))
+      return { label: 'MCP',     cls: 'act-badge-mcp' };
+    if (t.includes('CLUSTER') || t.includes('FAILURE CLUSTER'))
+      return { label: 'CLUSTER', cls: 'act-badge-cluster' };
+    return   { label: 'INFO',    cls: 'act-badge-info' };
+  }
 
   function appendActivityLine(event) {
     const log = document.getElementById('activityLog');
     if (!log) return;
-    // Remove placeholder
-    const placeholder = log.querySelector('.act-info');
-    if (placeholder && placeholder.textContent.startsWith('Ready')) placeholder.remove();
-    const cls = ACT_LEVEL_CLS[event.level] || 'act-info';
-    const el = document.createElement('div');
-    el.className = `act-line ${cls}`;
-    const tsLabel = event.ts ? new Date(event.ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '';
-    el.innerHTML = `<span class="act-ts">${esc(tsLabel)}</span>${esc(event.text || '')}`;
-    log.appendChild(el);
-    // Keep at most 200 lines
+    const placeholder = log.querySelector('.act-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const tsDate = event.ts ? new Date(event.ts) : new Date();
+    const tsLabel = tsDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    // Strip embedded [HH:MM:SS] / [H:MM:SS AM] prefix that parseScanOutput adds
+    const msgText = (event.text || '').replace(/^\s*\[\d{1,2}:\d{2}:\d{2}(?:\s*[AP]M)?\]\s*/, '').replace(/^\s+/, '');
+    const cat = _actCategory(event.level || 'info', msgText);
+
+    const row = document.createElement('div');
+    row.className = 'act-row';
+    row.innerHTML =
+      `<span class="act-col-ts">${esc(tsLabel)}</span>` +
+      `<span class="act-col-cat"><span class="act-badge ${cat.cls}">${cat.label}</span></span>` +
+      `<span class="act-col-msg">${esc(msgText)}</span>`;
+    log.appendChild(row);
     while (log.children.length > 200) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
   }
 
   function clearActivityLog() {
     const log = document.getElementById('activityLog');
-    if (log) log.innerHTML = '<div class="act-line act-info">Log cleared.</div>';
+    if (log) log.innerHTML =
+      '<div class="act-row act-placeholder"><span class="act-col-ts"></span>' +
+      '<span class="act-col-cat"></span>' +
+      '<span class="act-col-msg" style="color:var(--gray-400);">Log cleared.</span></div>';
   }
 
   async function loadActivityHistory() {
@@ -2088,8 +2152,11 @@
 
   function openSimModal() {
     _simDone = false;
+    _simRunning = false;
     _activeScenario = 1;
     document.getElementById('simRunningOverlay').hidden = true;
+    document.getElementById('simDismissHint').hidden = false;
+    document.getElementById('simDoneActions').hidden = true;
     document.getElementById('simMainContent').hidden = false;
     _renderSimGrid();
     _renderScenarioDetail(SIM_SCENARIOS[0]);
@@ -2098,7 +2165,6 @@
   }
 
   function closeSimModal() {
-    if (_simRunning) return;
     document.getElementById('simOverlay').hidden = true;
   }
 
@@ -2229,7 +2295,7 @@
     document.getElementById('simMainContent').hidden = true;
     document.getElementById('simRunningOverlay').hidden = false;
     document.getElementById('simOverlayTitle').textContent = 'Running Scenarios…';
-    document.getElementById('simOverlaySub').textContent = `Injecting ${_simTotal} clinical event(s) into the live IRIS pipeline. Watch the activity log for real-time updates.`;
+    document.getElementById('simOverlaySub').innerHTML = `Injecting <strong>${_simTotal}</strong> ${_simTotal === 1 ? 'scenario' : 'scenarios'} into the live IRIS pipeline.<br><span style="font-size:.75rem;color:var(--gray-400);">Watch the Activity Log for real-time updates.</span>`;
     document.getElementById('simProgressFill').style.width = '0%';
     document.getElementById('simProgressCurrent').textContent = '0';
     document.getElementById('simProgressTotal').textContent = _simTotal;
@@ -2299,13 +2365,14 @@
     document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview tab and Live Traces for results — click any trace to inspect it.`;
     document.getElementById('simSpinSection').hidden = true;
     document.getElementById('simSuccessIcon').hidden = false;
+    document.getElementById('simDismissHint').hidden = true;
     document.getElementById('simDoneActions').hidden = false;
     refreshAll();
   }
 
   // Close on backdrop click
   document.getElementById('simOverlay').addEventListener('click', function(e) {
-    if (e.target === this && !_simRunning) closeSimModal();
+    if (e.target === this) closeSimModal();
   });
 
   /* ─── Trace Detail Drawer ──────────────────────────────────── */
@@ -2385,6 +2452,9 @@
 
     <!-- Running overlay (shown after submit) -->
     <div class="sim-running-overlay" id="simRunningOverlay" hidden>
+      <button onclick="closeSimModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:6px;line-height:0;" title="Dismiss">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
       <div id="simSpinSection">
         <svg class="sim-running-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       </div>
@@ -2405,9 +2475,12 @@
           <span>Scenario <span id="simProgressCurrent">0</span> of <span id="simProgressTotal">0</span></span>
         </div>
       </div>
+      <div id="simDismissHint" style="margin-top:-8px;">
+        <button onclick="closeSimModal()" style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--gray-400);font-family:var(--font);padding:0;text-decoration:underline;text-underline-offset:2px;">Watch in Activity Log</button>
+      </div>
       <div class="sim-done-actions" id="simDoneActions" hidden>
         <button class="btn-sm btn-ghost" onclick="openSimModal()">Run Again</button>
-        <button class="btn-sm btn-primary" onclick="closeSimModal()">View Alerts</button>
+        <button class="btn-sm btn-primary" onclick="closeSimModal()">View Traces</button>
       </div>
     </div>
 
