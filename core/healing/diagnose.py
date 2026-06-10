@@ -129,7 +129,8 @@ async def _load_current_prompt(
     if data:
         text = _extract_template_text(data)
         if text:
-            version = data.get("id") or (data.get("version") or {}).get("id")
+            body = data.get("data", data)
+            version = body.get("id") or (body.get("version") or {}).get("id")
             return text, (str(version) if version else None)
 
     # 3. Seed prompt
@@ -138,6 +139,7 @@ async def _load_current_prompt(
 
 def _extract_template_text(data: dict) -> str:
     """Best-effort extraction of the prompt body across Phoenix response shapes."""
+    data = data.get("data", data)  # Phoenix cloud wraps responses: {"data": {...}}
     version = data.get("version", data)
     template = version.get("template", {})
     if isinstance(template, dict):

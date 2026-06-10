@@ -27,11 +27,21 @@ steps:
       - '--port=8080'
       - '--memory=2Gi'
       - '--cpu=2'
-      - '--timeout=300'
-      - '--min-instances=0'
-      - '--max-instances=3'
+      # SSE streams (/stream/alerts, /stream/activity) need a long request timeout.
+      - '--timeout=3600'
+      # State (core/state.py) is in-memory: a single warm instance is required.
+      # min=1 also avoids cold-start + npx MCP spawn latency during judging.
+      - '--min-instances=1'
+      - '--max-instances=1'
+      # Vertex AI clients (genai.Client(vertexai=True, project=...)) read
+      # GOOGLE_CLOUD_PROJECT; Cloud Run does not inject it automatically.
       - >-
-        --set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,PHOENIX_API_KEY=PHOENIX_API_KEY:latest,PHOENIX_CLIENT_URL=PHOENIX_CLIENT_URL:latest
+        --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1,IRIS_ENV=production
+      # No GOOGLE_API_KEY: tracing.py sets GOOGLE_GENAI_USE_VERTEXAI=TRUE and an
+      # API key would override the service-account path (Vertex express mode),
+      # which breaks ADK function calling against the Phoenix MCP tool schemas.
+      - >-
+        --set-secrets=PHOENIX_API_KEY=PHOENIX_API_KEY:latest,PHOENIX_CLIENT_URL=PHOENIX_CLIENT_URL:latest
 
 images:
   - 'gcr.io/$PROJECT_ID/iris-clinical'

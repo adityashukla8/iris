@@ -5,6 +5,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs npm curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Pre-install the Phoenix MCP server so npx resolves locally instead of
+# downloading on the first /scan (30-60s penalty on a cold instance).
+# Version must match settings.phoenix_mcp_package in core/config.py.
+RUN npm install -g @arizeai/phoenix-mcp@4.0.8 && npm cache clean --force
+
 WORKDIR /app
 
 # Install Python dependencies first (cache layer)

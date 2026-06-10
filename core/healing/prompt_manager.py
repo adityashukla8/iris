@@ -35,8 +35,10 @@ class PhoenixPromptManager:
         """
         try:
             async with httpx.AsyncClient(timeout=15) as client:
+                # /v1/prompts/{name} (no suffix) is not an API route on Arize
+                # cloud — it returns the Phoenix SPA HTML with HTTP 200.
                 resp = await client.get(
-                    f"{self._base}/v1/prompts/{prompt_name}",
+                    f"{self._base}/v1/prompts/{prompt_name}/latest",
                     headers=self._headers,
                 )
                 if resp.status_code == 404:
