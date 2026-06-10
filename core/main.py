@@ -470,10 +470,10 @@ def _bucket_traces_by_minute(traces: list[dict]) -> list[dict]:
     buckets: dict[str, dict] = {}
     for t in reversed(traces):  # oldest → newest
         ts = t.get("timestamp", "")
-        key = ts[:16] if len(ts) >= 16 else ts       # "2026-05-27T12:34"
-        label = ts[11:16] if len(ts) > 15 else ts    # "12:34"
+        key = ts[:16] if len(ts) >= 16 else ts          # "2026-05-27T12:34"
+        iso_min = (key + ":00Z") if len(key) == 16 else ts  # full UTC ISO for frontend
         if key not in buckets:
-            buckets[key] = {"ts": label, "info": 0, "warning": 0, "critical": 0}
+            buckets[key] = {"ts": iso_min, "info": 0, "warning": 0, "critical": 0}
         sev = t.get("severity", "info")
         buckets[key][sev] = buckets[key].get(sev, 0) + 1
     sorted_buckets = sorted(buckets.items())         # sort by ISO key → chronological

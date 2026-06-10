@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IRIS — Shift Commander</title>
+  <title>IRIS — Clinical AI Observability</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -148,16 +148,21 @@
     .heatmap-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
     .heatmap-table thead th { text-align: left; padding: 8px 12px; font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); border-bottom: 1px solid var(--gray-200); background: var(--gray-50); }
     .heatmap-table thead th:not(:first-child) { text-align: right; }
-    .heatmap-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); }
+    .heatmap-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); background: var(--white); }
     .heatmap-table tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; font-size: .75rem; }
     .heatmap-table tbody tr:last-child td { border-bottom: none; }
+    .heatmap-table tbody tr:hover td { background: var(--gray-50); }
     .eval-name-cell { font-weight: 500; color: var(--gray-800); font-size: .75rem; }
     .heatmap-bar { display: inline-block; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
     .score-cell { display: flex; align-items: center; justify-content: flex-end; }
+    .eval-tip-wrap { position: relative; display: inline-flex; align-items: center; gap: 5px; }
+    .eval-tip-icon { width: 14px; height: 14px; border-radius: 50%; background: var(--gray-100); color: var(--gray-400); font-size: .6rem; font-weight: 700; font-style: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; flex-shrink: 0; border: 1px solid var(--gray-200); }
+    .eval-tip-icon::before { content: attr(data-tip); position: absolute; left: 0; bottom: calc(100% + 6px); top: auto; width: 230px; background: var(--gray-900); color: #f1f5f9; font-size: .7rem; font-family: var(--font); font-weight: 400; padding: 8px 11px; border-radius: 7px; line-height: 1.5; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 9999; white-space: normal; box-shadow: 0 4px 16px rgba(0,0,0,.22); }
+    .eval-tip-icon:hover::before { opacity: 1; }
 
     /* ── Severity Timeline ──────────────────────────────────────── */
     .timeline-wrap { padding: 12px 16px 8px; height: 100%; display: flex; flex-direction: column; }
-    .timeline-chart { flex: 1; min-height: 120px; max-height: 200px; }
+    .timeline-chart { flex: 1; min-height: 140px; max-height: 210px; }
     .timeline-legend { display: flex; gap: 12px; margin-top: 8px; }
     .legend-item { display: flex; align-items: center; gap: 4px; font-size: .6875rem; color: var(--gray-600); }
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -867,15 +872,10 @@
         IRIS
       </a>
       <div class="tb-sep"></div>
-      <span class="tb-page">Shift Commander</span>
+      <span class="tb-page">Clinical AI Observability</span>
     </div>
     <div class="tb-right">
       <div class="tb-status"><div class="status-dot"></div><span id="sseStatus">Connecting</span></div>
-      <span class="last-refreshed" id="lastRefreshed"></span>
-      <button class="btn-sm btn-refresh" onclick="refreshAll()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-        Refresh
-      </button>
       <button class="btn-sm btn-primary" onclick="openSimModal()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Sample Scenarios
@@ -884,9 +884,8 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Trigger Scan
       </button>
-      <a href="/" class="btn-sm btn-ghost">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        Home
+      <a href="/" class="btn-sm btn-ghost" style="padding:6px 10px;" title="Home">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg>
       </a>
     </div>
   </header>
@@ -945,7 +944,7 @@
               <div class="panel-title"><div class="panel-dot dot-blue"></div>Evaluator Heatmap</div>
               <span class="panel-meta">7 evaluators</span>
             </div>
-            <div class="panel-body">
+            <div class="panel-body" style="max-height:none;overflow-y:visible;">
               <table class="heatmap-table">
                 <thead><tr><th>Evaluator</th><th>Runs</th><th>Fails</th><th>Avg Score</th><th>Crits</th></tr></thead>
                 <tbody id="evalHeatmapBody">
@@ -1494,6 +1493,15 @@
       if (a.critical_rate != null) document.getElementById('statCritRate').textContent = fmtPct(a.critical_rate);
 
       // Evaluator Heatmap
+      const EVAL_TIPS = {
+        dosage_boundary:        "Verifies doses are within safe clinical ranges for the patient's weight, age, and renal function (CrCl). Flags doses that exceed maximum safe thresholds.",
+        factual_hallucination:  "Detects fabricated drug names and non-existent medications. Cross-validates drug names against RxNorm and flags confident claims unsupported by evidence.",
+        drug_interaction:       "Detects clinically significant drug–drug interactions between the recommended drug and the patient's current medication list, including CYP450-mediated interactions.",
+        allergy_contraindication: "Checks whether a recommended drug belongs to a class the patient is allergic to — including same-class substitutions (e.g. amoxicillin for a penicillin allergy).",
+        context_gap:            "Flags responses where the agent answered without critical patient data in the record (missing CrCl, weight, labs). Penalises confident recommendations when required context is absent.",
+        attribution:            "Verifies that every clinical recommendation cites specific patient values (labs, weight, allergies) from the retrieved context. Penalises responses that infer or invent patient data.",
+        surgical_phase:         "Checks that recommendations are appropriate for the current surgical phase (induction, maintenance, closure, emergence). Flags protocol violations tied to surgical timing.",
+      };
       const tbody = document.getElementById('evalHeatmapBody');
       const stats = a.evaluator_stats || {};
       const evalNames = Object.keys(stats);
@@ -1504,12 +1512,13 @@
           const s = stats[name];
           const failRate = s.runs ? s.failures / s.runs : 0;
           const hue = Math.round(120 * Math.max(0, 1 - failRate * 2));
-          const bg = `hsl(${hue},60%,96%)`;
           const scoreBar = s.avg_score != null
-            ? `<span class="heatmap-bar" style="width:${Math.round(s.avg_score*8)}px;background:hsl(${hue},60%,55%);"></span>${s.avg_score}`
+            ? `<span class="heatmap-bar" style="width:${Math.round(s.avg_score*8)}px;background:hsl(${hue},60%,52%);"></span>${s.avg_score}`
             : '—';
-          return `<tr style="background:${bg};">
-            <td class="eval-name-cell">${esc(name.replace(/_/g,' '))}</td>
+          const tip = EVAL_TIPS[name] || '';
+          const tipHtml = tip ? ` <i class="eval-tip-icon" data-tip="${esc(tip)}">i</i>` : '';
+          return `<tr>
+            <td class="eval-name-cell"><span class="eval-tip-wrap">${esc(name.replace(/_/g,' '))}${tipHtml}</span></td>
             <td>${s.runs}</td>
             <td>${s.failures > 0 ? `<span style="color:var(--red-600);font-weight:600;">${s.failures}</span>` : '0'}</td>
             <td><div class="score-cell">${scoreBar}</div></td>
@@ -1871,59 +1880,89 @@
 
   // ── Severity Timeline SVG ────────────────────────────────────────
   function renderTimelineSVG(buckets) {
-    const W = 420, H = 130, PL = 10, PR = 10, PT = 12, PB = 26;
+    const W = 420, H = 148, PL = 26, PR = 10, PT = 14, PB = 26;
     const cW = W - PL - PR, cH = H - PT - PB;
     const n = buckets.length;
     const maxVal = Math.max(...buckets.map(b => Math.max(b.info||0, b.warning||0, b.critical||0)), 1);
     const xOf = i => PL + (n <= 1 ? cW / 2 : i * cW / (n - 1));
     const yOf = v => PT + cH - Math.max(0, (v / maxVal)) * cH;
+    const baseline = PT + cH;
 
-    function smoothPath(pts) {
+    function smoothLine(pts) {
       if (!pts.length) return '';
-      if (pts.length === 1) return `M${pts[0].x},${pts[0].y}`;
-      let d = `M${pts[0].x},${pts[0].y}`;
+      if (pts.length === 1) return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+      let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
       for (let i = 0; i < pts.length - 1; i++) {
-        const dx = (pts[i+1].x - pts[i].x) * 0.42;
-        d += ` C${pts[i].x+dx},${pts[i].y} ${pts[i+1].x-dx},${pts[i+1].y} ${pts[i+1].x},${pts[i+1].y}`;
+        const dx = (pts[i+1].x - pts[i].x) * 0.4;
+        d += ` C${(pts[i].x+dx).toFixed(1)},${pts[i].y.toFixed(1)} ${(pts[i+1].x-dx).toFixed(1)},${pts[i+1].y.toFixed(1)} ${pts[i+1].x.toFixed(1)},${pts[i+1].y.toFixed(1)}`;
       }
       return d;
     }
 
+    function areaPath(pts) {
+      return smoothLine(pts) + ` L${pts[pts.length-1].x.toFixed(1)},${baseline.toFixed(1)} L${pts[0].x.toFixed(1)},${baseline.toFixed(1)} Z`;
+    }
+
     const series = [
-      { key:'info',     color:'#1A9652', label:'info' },
-      { key:'warning',  color:'#C07818', label:'warning' },
-      { key:'critical', color:'#E05555', label:'critical' },
+      { key:'critical', color:'#E05555', gradId:'tl_crit' },
+      { key:'warning',  color:'#D97706', gradId:'tl_warn' },
+      { key:'info',     color:'#059669', gradId:'tl_info' },
     ];
 
     let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">`;
 
-    // Grid lines
-    for (let i = 0; i <= 3; i++) {
-      const y = PT + (i / 3) * cH;
-      svg += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width="0.5"/>`;
+    // Gradient defs
+    svg += `<defs>`;
+    for (const s of series) {
+      svg += `<linearGradient id="${s.gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${s.color}" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="${s.color}" stop-opacity="0.01"/>
+      </linearGradient>`;
+    }
+    svg += `</defs>`;
+
+    // Horizontal grid lines + y-axis count labels (integer ticks only, no duplicates)
+    const maxTicks = 4;
+    const tickInterval = maxVal <= maxTicks ? 1 : Math.ceil(maxVal / maxTicks);
+    const yTicks = [];
+    for (let v = 0; v <= maxVal; v += tickInterval) yTicks.push(v);
+    if (yTicks[yTicks.length - 1] < maxVal) yTicks.push(maxVal);
+    yTicks.forEach(val => {
+      const y = yOf(val);
+      svg += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#F1F5F9" stroke-width="${val===0?'0.75':'0.5'}"/>`;
+      svg += `<text x="${(PL-4).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="7" fill="#94A3B8" font-family="Poppins,system-ui,sans-serif">${val}</text>`;
+    });
+
+    // Filled areas (draw under lines)
+    for (const s of series) {
+      const pts = buckets.map((b, i) => ({ x: xOf(i), y: yOf(b[s.key]||0) }));
+      if (!buckets.some(b => (b[s.key]||0) > 0)) continue;
+      svg += `<path d="${areaPath(pts)}" fill="url(#${s.gradId})" stroke="none"/>`;
     }
 
-    // Lines + dots + count labels per series
+    // Lines + dots
     for (const s of series) {
-      const hasData = buckets.some(b => (b[s.key]||0) > 0);
-      if (!hasData) continue;
       const pts = buckets.map((b, i) => ({ x: xOf(i), y: yOf(b[s.key]||0) }));
-      const d = smoothPath(pts);
-      svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.75" stroke-linecap="round" opacity="0.85"/>`;
+      if (!buckets.some(b => (b[s.key]||0) > 0)) continue;
+      svg += `<path d="${smoothLine(pts)}" fill="none" stroke="${s.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
       pts.forEach((p, i) => {
         const v = buckets[i][s.key] || 0;
-        svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${v>0?3.5:1.5}" fill="${v>0?s.color:'#CBD5E1'}" stroke="${v>0?'white':'none'}" stroke-width="1.5" opacity="${v>0?1:.5}"><title>${s.label}: ${v} at ${esc(buckets[i].ts)}</title></circle>`;
         if (v > 0) {
-          svg += `<text x="${p.x.toFixed(1)}" y="${(p.y-6).toFixed(1)}" text-anchor="middle" font-size="6.5" font-weight="600" fill="${s.color}" font-family="Poppins,system-ui,sans-serif">${v}</text>`;
+          svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${s.color}" stroke="white" stroke-width="1.5"><title>${s.key}: ${v} at ${esc(buckets[i].ts)}</title></circle>`;
         }
       });
     }
 
-    // X-axis labels (show every 2nd if many)
-    const step = n > 8 ? 2 : 1;
+    // X-axis time labels — parse UTC ISO → local HH:MM
+    const step = n > 10 ? Math.ceil(n / 6) : n > 6 ? 2 : 1;
     buckets.forEach((b, i) => {
       if (i % step === 0 || i === n - 1) {
-        svg += `<text x="${xOf(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="7" fill="#94A3B8" font-family="Poppins,system-ui,sans-serif">${esc(b.ts)}</text>`;
+        let label = b.ts;
+        try {
+          const d = new Date(b.ts);
+          if (!isNaN(d)) label = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } catch(_) {}
+        svg += `<text x="${xOf(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="7" fill="#94A3B8" font-family="Poppins,system-ui,sans-serif">${esc(label)}</text>`;
       }
     });
 
