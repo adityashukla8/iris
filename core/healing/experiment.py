@@ -63,6 +63,7 @@ async def validate_heal(
     after_vals: list[float] = []
     prevented = 0
     per_example: list[dict] = []
+    evaluator_after: dict[str, list[float]] = {}
 
     for ex, after in zip(failing_examples, after_scores):
         before = float(ex.get("score", 3.0))
@@ -70,7 +71,9 @@ async def validate_heal(
             after_score = before  # no credit when we couldn't evaluate
             per_example.append({"input": ex.get("input_prompt", "")[:120], "error": str(after)})
         else:
-            after_score, candidate_output = after
+            after_score, candidate_output, eval_results = after
+            for r in eval_results:
+                evaluator_after.setdefault(r.evaluator, []).append(r.score)
             if after_score >= settings.score_pass_threshold:
                 prevented += 1
             per_example.append({
@@ -92,6 +95,14 @@ async def validate_heal(
     # rarely cross the 7.0 pass threshold even after a genuine prompt improvement.
     passed = improvement >= settings.healing_improvement_threshold
 
+    per_evaluator = {
+        ev: {
+            "score_after": round(sum(scores) / len(scores), 2),
+            "passed": (sum(scores) / len(scores)) >= settings.score_pass_threshold,
+        }
+        for ev, scores in evaluator_after.items()
+    }
+
     return {
         "passed": passed,
         "score_before": round(score_before, 2),
@@ -99,6 +110,7 @@ async def validate_heal(
         "improvement": round(improvement, 2),
         "prevention_rate": round(prevention_rate, 2),
         "per_example": per_example,
+        "per_evaluator": per_evaluator,
         "threshold": settings.healing_improvement_threshold,
         "experiment_id": None,
     }
@@ -151,7 +163,7 @@ async def _score_with_candidate(
         worst = min((r.score for r in outcome.results), default=10.0)
         cspan.set_attribute("iris.score", worst)
         cspan.set_status(OTelStatusCode.OK)
-        return worst, candidate_output
+        return worst, candidate_output, outcome.results
 
 
 def _rebuild_event(example: dict, query_type: str, output_text: str) -> IrisEvent:

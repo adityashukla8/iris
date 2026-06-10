@@ -77,6 +77,13 @@ async def run_healing_pipeline(diagnosis: HealingDiagnosis) -> HealingCandidate 
         f"after={validation['score_after']:.2f} improvement={validation['improvement']:+.2f} "
         f"passed={validation['passed']}"
     )
+    for ev_name, ev_data in validation.get("per_evaluator", {}).items():
+        icon = "✓" if ev_data["passed"] else "✗"
+        status = "PASS" if ev_data["passed"] else "FAIL"
+        push_activity(
+            f"  {icon} {ev_name}: {ev_data['score_after']:.1f}/10  [{status}]",
+            "heal" if ev_data["passed"] else "warn",
+        )
 
     new_phash = compute_prompt_hash(new_prompt)
     candidate = HealingCandidate(
