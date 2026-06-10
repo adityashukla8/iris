@@ -83,7 +83,6 @@
     .tab-pane { height: 100%; }
     .tab-pane[hidden] { display: none !important; }
     .tab-pane[data-tab="overview"]  { overflow-y: auto; }
-    .tab-pane[data-tab="healing"]   { overflow-y: auto; }
     .tab-pane[data-tab="pipeline"]  { overflow-y: auto; }
     .tab-pane[data-tab="traces"]    { overflow: hidden; display: flex; flex-direction: column; }
 
@@ -198,6 +197,11 @@
     .qt-table tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
     .qt-table tbody tr:last-child td { border-bottom: none; }
     .fail-rate-bar { display: inline-block; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; background: var(--red-600); opacity: .6; }
+
+    /* ── Panel sub-tabs ────────────────────────────────────────── */
+    .panel-subtab { padding: 3px 10px; border-radius: 5px; font-size: .7rem; font-weight: 600; border: none; background: transparent; color: var(--gray-500); cursor: pointer; font-family: var(--font); transition: background .12s, color .12s; }
+    .panel-subtab.active { background: var(--gray-100); color: var(--gray-800); }
+    .panel-subtab:hover:not(.active) { background: var(--gray-50); color: var(--gray-700); }
 
     /* ── Healing ────────────────────────────────────────────────── */
     .healing-item { padding: 13px 16px; border-bottom: 1px solid var(--gray-100); }
@@ -880,7 +884,6 @@
   <!-- Tab Nav -->
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
-    <button class="tab-btn" data-tab="healing" onclick="showTab('healing')">Healing</button>
     <button class="tab-btn" data-tab="pipeline" onclick="showTab('pipeline')">Pipeline</button>
   </nav>
 
@@ -981,8 +984,8 @@
           <!-- Live Alert Feed -->
           <div class="panel">
             <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-green"></div>Live Alert Feed</div>
-              <span class="panel-meta" id="alertCount">0 alerts</span>
+              <div class="panel-title"><div class="panel-dot dot-green"></div>Live Traces</div>
+              <span class="panel-meta" id="alertCount">0 traces</span>
             </div>
             <div class="panel-body" id="alertFeed" style="max-height:340px;">
               <div class="empty">
@@ -992,32 +995,67 @@
             </div>
           </div>
 
-          <!-- Test & Debug MCP Servers -->
+          <!-- Self Healing -->
           <div class="panel">
             <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-gray"></div>Test &amp; Debug MCP Servers</div>
-              <span class="panel-meta">Live Phoenix MCP · Gemini 2.5-flash</span>
-            </div>
-            <div class="mcp-probe-presets">
-              <button class="preset-btn" onclick="sendMcpQuery('List all Phoenix projects')">List projects</button>
-              <button class="preset-btn" onclick="sendMcpQuery('Get the last 5 spans from the iris-clinical project')">Recent spans</button>
-              <button class="preset-btn" onclick="sendMcpQuery('List all prompts and their latest versions')">Prompt versions</button>
-              <button class="preset-btn" onclick="sendMcpQuery('List all datasets and how many examples each has')">Datasets</button>
-              <button class="preset-btn" onclick="sendMcpQuery('How many spans are in the iris-clinical project? Break down by any metadata you can find.')">Span count</button>
-            </div>
-            <div class="mcp-chat-history" id="mcpHistory">
-              <div class="mcp-msg agent">
-                <div class="mcp-bubble">Ready. Ask anything about your Phoenix observability data — spans, prompts, datasets, experiments. I'll query the live MCP server to answer.</div>
+              <div class="panel-title"><div class="panel-dot dot-amber"></div>Self Healing</div>
+              <div style="display:flex;gap:3px;">
+                <button class="panel-subtab" id="healSubCandidates" onclick="switchHealingTab('candidates')">Candidates</button>
+                <button class="panel-subtab active" id="healSubHistory" onclick="switchHealingTab('history')">History</button>
               </div>
             </div>
-            <div class="mcp-chat-input-row">
-              <input class="mcp-input" id="mcpInput" type="text"
-                placeholder="e.g. What's the current production prompt?"
-                onkeydown="if(event.key==='Enter')sendMcpQuery()" />
-              <button class="btn-mcp-send" id="mcpSendBtn" onclick="sendMcpQuery()">Send</button>
+            <!-- Candidates pane -->
+            <div id="healPaneCandidates" hidden>
+              <div style="display:flex;align-items:center;padding:5px 16px;border-bottom:1px solid var(--gray-100);">
+                <span class="panel-meta" id="healingCount">0 pending</span>
+              </div>
+              <div class="panel-body" id="healingFeed">
+                <div class="empty">
+                  <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+                  <div class="empty-text">No candidates — trigger a scan to detect failure clusters</div>
+                </div>
+              </div>
+            </div>
+            <!-- History pane -->
+            <div id="healPaneHistory">
+              <div style="display:flex;align-items:center;padding:5px 16px;border-bottom:1px solid var(--gray-100);">
+                <span class="panel-meta" id="historyCount">—</span>
+              </div>
+              <div class="panel-body" id="healingHistory">
+                <div class="empty">
+                  <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="empty-text">No healing history yet</div>
+                </div>
+              </div>
             </div>
           </div>
 
+        </div>
+
+        <!-- Test & Debug MCP Servers -->
+        <div class="panel" style="margin-bottom:14px;">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot dot-gray"></div>Test &amp; Debug MCP Servers</div>
+            <span class="panel-meta">Live Phoenix MCP · Gemini 2.5-flash</span>
+          </div>
+          <div class="mcp-probe-presets">
+            <button class="preset-btn" onclick="sendMcpQuery('List all Phoenix projects')">List projects</button>
+            <button class="preset-btn" onclick="sendMcpQuery('Get the last 5 spans from the iris-clinical project')">Recent spans</button>
+            <button class="preset-btn" onclick="sendMcpQuery('List all prompts and their latest versions')">Prompt versions</button>
+            <button class="preset-btn" onclick="sendMcpQuery('List all datasets and how many examples each has')">Datasets</button>
+            <button class="preset-btn" onclick="sendMcpQuery('How many spans are in the iris-clinical project? Break down by any metadata you can find.')">Span count</button>
+          </div>
+          <div class="mcp-chat-history" id="mcpHistory">
+            <div class="mcp-msg agent">
+              <div class="mcp-bubble">Ready. Ask anything about your Phoenix observability data — spans, prompts, datasets, experiments. I'll query the live MCP server to answer.</div>
+            </div>
+          </div>
+          <div class="mcp-chat-input-row">
+            <input class="mcp-input" id="mcpInput" type="text"
+              placeholder="e.g. What's the current production prompt?"
+              onkeydown="if(event.key==='Enter')sendMcpQuery()" />
+            <button class="btn-mcp-send" id="mcpSendBtn" onclick="sendMcpQuery()">Send</button>
+          </div>
         </div>
 
         <!-- Activity Log -->
@@ -1032,41 +1070,6 @@
           <div class="panel-pad" style="padding:10px 14px;">
             <div class="activity-log" id="activityLog">
               <div class="act-line act-info">Ready — waiting for ADK / MCP events</div>
-            </div>
-          </div>
-        </div>
-
-      </main>
-    </div>
-
-    <!-- ══ HEALING TAB ═══════════════════════════════════════════ -->
-    <div class="tab-pane" data-tab="healing" hidden>
-      <main class="main">
-
-        <div class="grid-healing">
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-amber"></div>Healing Candidates</div>
-              <span class="panel-meta" id="healingCount">0 pending</span>
-            </div>
-            <div class="panel-body" id="healingFeed">
-              <div class="empty">
-                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
-                <div class="empty-text">No candidates — trigger a scan to detect failure clusters</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title"><div class="panel-dot dot-gray"></div>Healing History</div>
-              <span class="panel-meta" id="historyCount">—</span>
-            </div>
-            <div class="panel-body" id="healingHistory">
-              <div class="empty">
-                <div class="empty-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-                <div class="empty-text">No healing history yet</div>
-              </div>
             </div>
           </div>
         </div>
@@ -1128,7 +1131,7 @@
                   write_phoenix_span_annotation → Arize Phoenix OTel
                 </div>
                 <span class="pipe-arrow" style="color:var(--gray-300);">+</span>
-                <div class="pipe-node node-iris">SSE push → Live Alert Feed → Dashboard</div>
+                <div class="pipe-node node-iris">SSE push → Live Traces → Dashboard</div>
               </div>
             </div>
 
@@ -1227,7 +1230,7 @@
       const d = JSON.parse(e.data);
       if (d.type === 'heartbeat') return;
       alertCount++;
-      document.getElementById('alertCount').textContent = alertCount + (alertCount === 1 ? ' alert' : ' alerts');
+      document.getElementById('alertCount').textContent = alertCount + (alertCount === 1 ? ' trace' : ' traces');
       const sev = d.severity || 'info';
       const ts  = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
       const feed = document.getElementById('alertFeed');
@@ -1525,6 +1528,14 @@
     } catch (_) {}
   }
 
+  // ── Self Healing panel tab switcher ─────────────────────────────
+  function switchHealingTab(tab) {
+    document.getElementById('healPaneCandidates').hidden = (tab !== 'candidates');
+    document.getElementById('healPaneHistory').hidden    = (tab !== 'history');
+    document.getElementById('healSubCandidates').classList.toggle('active', tab === 'candidates');
+    document.getElementById('healSubHistory').classList.toggle('active',    tab === 'history');
+  }
+
   // ── Healing Candidates ───────────────────────────────────────────
   async function fetchHealingCandidates() {
     try {
@@ -1595,13 +1606,13 @@
         const old_ = c.old_prompt_text || '';
         const new_ = c.new_prompt_text || '';
         return `
-          <div class="history-item" id="hist-${idx}">
+          <div class="history-item open" id="hist-${idx}">
             <div class="history-header" onclick="toggleHistDiff(${idx})">
               <span class="delta-badge ${deltaClass}">${esc(deltaText)}</span>
               <span class="history-info">${esc(qt.replace(/_/g,' '))} · ${esc(c.status||'')} · ${esc(tsShort)}</span>
               <span class="history-expand"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
             </div>
-            <div class="prompt-diff" id="diff-${idx}">
+            <div class="prompt-diff" id="diff-${idx}" style="display:block;">
               <div class="prompt-diff-grid">
                 <div class="diff-col"><h4>Before</h4><pre>${esc(old_)||'<em>—</em>'}</pre></div>
                 <div class="diff-col"><h4>After</h4><pre>${esc(new_)||'<em>—</em>'}</pre></div>
@@ -2226,7 +2237,7 @@
     document.getElementById('simProgressFill').style.width = '100%';
     document.getElementById('simProgressCurrent').textContent = total;
     document.getElementById('simOverlayTitle').textContent = 'Simulation Complete';
-    document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview tab and Live Alert Feed for results — click any alert to inspect its trace.`;
+    document.getElementById('simOverlaySub').textContent = `${total} scenario(s) processed. Check the Overview tab and Live Traces for results — click any trace to inspect it.`;
     document.getElementById('simSpinSection').hidden = true;
     document.getElementById('simSuccessIcon').hidden = false;
     document.getElementById('simDoneActions').hidden = false;
