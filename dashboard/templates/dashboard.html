@@ -2408,6 +2408,16 @@
     _updateSimFooter();
   }
 
+  function simSelectQtype(qtype) {
+    _simSelected.clear();
+    SIM_SCENARIOS.forEach(s => {
+      const sel = s.qtype === qtype;
+      if (sel) _simSelected.add(s.num);
+      document.getElementById(`simCard${s.num}`)?.classList.toggle('selected', sel);
+    });
+    _updateSimFooter();
+  }
+
   function _updateSimFooter() {
     const n = _simSelected.size;
     document.getElementById('simSelCount').textContent = n;
@@ -2658,6 +2668,7 @@
               <div class="sim-toolbar-left">
                 <button class="sim-quick-btn" onclick="simSelectAll()">All</button>
                 <button class="sim-quick-btn" onclick="simClearAll()">None</button>
+                <button class="sim-quick-btn" onclick="simSelectQtype('drug_dosage')" title="Scenarios in the drug_dosage cluster — the cluster self-healing targets first">Dosage cluster</button>
               </div>
               <span class="sim-count-label" id="simCountLabel">9 of 9</span>
             </div>

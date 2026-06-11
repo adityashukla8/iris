@@ -159,5 +159,5 @@ class DosageBoundaryEvaluator(EvalPlugin):
 
 
 async def _call_gemini(prompt: str) -> dict | None:
-    data = await generate_json(prompt, tag="DosageBoundary")
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="DosageBoundary")
     return data if isinstance(data, dict) else None

@@ -14,6 +14,7 @@ experiment so the before/after is visible in the UI (best-effort, never fatal).
 from __future__ import annotations
 
 import asyncio
+import json
 
 from google import genai
 from google.genai import types as genai_types
@@ -117,16 +118,16 @@ async def validate_heal(
     }
 
 
-_RESPONDER_PROMPT = """\
+# Canonical agent template — identical for heal validation and the live demo
+# agent (demo/mock_agents/live_agent.py imports this). No safety scaffold: the
+# gate must measure what the candidate prompt achieves under the exact
+# conditions live mode runs in, otherwise validation overstates improvement
+# and live runs fail prompts that "passed" the gate.
+RESPONDER_PROMPT = """\
 {system_prompt}
 
 Patient context: {context}
 Clinical question: {question}
-
-Before answering, work through the safety rules in your instructions step by step:
-1. Identify which rules apply to this question and patient.
-2. Apply each applicable rule explicitly (e.g. check CrCl, check allergies, check interactions).
-3. Only then state your recommendation, citing the specific patient values you used.
 
 Your answer:"""
 
@@ -147,9 +148,9 @@ async def _score_with_candidate(
         # score every run. Without this the responder generates different answers each
         # call, causing improvement to swing from +0.07 to +2.63 on identical inputs.
         text = await generate_text(
-            _RESPONDER_PROMPT.format(
+            RESPONDER_PROMPT.format(
                 system_prompt=new_prompt[:1500],
-                context=str(context)[:1500],
+                context=json.dumps(context, default=str)[:1500],
                 question=question[:600],
             ),
             model=settings.gemini_model,

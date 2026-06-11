@@ -137,6 +137,7 @@ async def extract_drug_doses(text: str) -> list[dict]:
         mentions = await generate_json(
             _EXTRACT_PROMPT.format(text=text.strip()),
             temperature=0.0,
+            seed=42,
             tag="DrugExtract",
         )
         if not isinstance(mentions, list):

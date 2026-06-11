@@ -137,6 +137,16 @@ def _maybe_trigger_scan(event: IrisEvent) -> None:
     )
     print(f"[Scanner] event-driven trigger: {agent}|{phash[:6]} ({cluster_failures} failures across all query types)")
 
+    asyncio.create_task(_run_triggered_scan())
+
+
+async def _run_triggered_scan() -> None:
+    """Background scan with error reporting — a bare create_task would swallow
+    exceptions silently, unlike the manual /scan path which logs 'Scan error'."""
     # Import here to avoid circular import at module load time
     from core.healing.scan import run_self_healing_scan
-    asyncio.create_task(run_self_healing_scan())
+    try:
+        await run_self_healing_scan()
+    except Exception as exc:
+        print(f"[Scanner] event-driven scan failed: {exc}")
+        push_activity(f"Scan error: {str(exc)[:120]}", "critical")

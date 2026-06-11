@@ -194,7 +194,7 @@ async def _infer_required_variables(event: IrisEvent) -> list[str]:
         query_type=str(event.query_type),
         input_prompt=event.input_prompt[:600],
     )
-    data = await generate_json(prompt, tag="ContextGap")
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="ContextGap")
     if not isinstance(data, dict):
         return []
     raw = data.get("required_variables", [])
@@ -209,5 +209,5 @@ async def _assess_gap_risk(event: IrisEvent, missing: list[str], present: list[s
         missing_variables=", ".join(missing),
         present_variables=", ".join(present) if present else "none",
     )
-    data = await generate_json(prompt, tag="ContextGap")
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="ContextGap")
     return data if isinstance(data, dict) else None

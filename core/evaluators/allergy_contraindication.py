@@ -178,5 +178,5 @@ class AllergyContraindicationEvaluator(EvalPlugin):
 
 
 async def _call_gemini(prompt: str) -> dict | None:
-    data = await generate_json(prompt, tag="AllergyContraindication")
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="AllergyContraindication")
     return data if isinstance(data, dict) else None

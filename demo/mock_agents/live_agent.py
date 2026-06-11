@@ -8,8 +8,10 @@ unsafe outputs (guaranteed failures); after IRIS heals the prompt, re-running
 the same scenarios in live mode produces genuinely different answers, which the
 evaluators score fresh — so the before/after improvement is real, not staged.
 
-Unlike the validation responder in core/healing/experiment.py, the template
-here adds NO safety scaffold: prompt quality alone must drive the outcome.
+Uses the same RESPONDER_PROMPT template as heal validation
+(core/healing/experiment.py) so the gate's improvement numbers predict what
+live mode actually produces. No safety scaffold: prompt quality alone must
+drive the outcome.
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ import json
 
 from core.config import settings
 from core.healing.diagnose import _extract_template_text
+from core.healing.experiment import RESPONDER_PROMPT
 from core.healing.prompt_identity import agent_prompt_name, prompt_hash
 from core.healing.prompt_manager import prompt_manager
 from core.llm import generate_text
@@ -38,15 +41,6 @@ async def get_effective_prompt(agent_name: str) -> tuple[str, str, str]:
     return AGENT_SYSTEM_PROMPT, "baseline", prompt_hash(AGENT_SYSTEM_PROMPT)
 
 
-_LIVE_PROMPT = """\
-{system_prompt}
-
-Patient context: {context}
-Clinical question: {question}
-
-Your answer:"""
-
-
 async def generate_live_output(
     system_prompt: str, input_prompt: str, retrieved_context: dict
 ) -> str:
@@ -54,7 +48,7 @@ async def generate_live_output(
     # Deterministic: same prompt + scenario → same answer on every run,
     # so comparison numbers are stable across demo takes.
     text = await generate_text(
-        _LIVE_PROMPT.format(
+        RESPONDER_PROMPT.format(
             system_prompt=system_prompt[:1500],
             context=json.dumps(retrieved_context, default=str)[:1500],
             question=input_prompt[:600],

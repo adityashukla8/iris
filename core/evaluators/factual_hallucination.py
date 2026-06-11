@@ -167,5 +167,6 @@ class FactualHallucinationEvaluator(EvalPlugin):
 
 
 async def _call_gemini(prompt: str) -> dict | None:
-    data = await generate_json(prompt, tag="FactualHallucination")
+    # temperature=0 + seed: judge verdicts near the 7.0 threshold must not flip between runs
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="FactualHallucination")
     return data if isinstance(data, dict) else None

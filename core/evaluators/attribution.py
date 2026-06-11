@@ -153,5 +153,5 @@ class AttributionEvaluator(EvalPlugin):
 
 
 async def _call_gemini(prompt: str) -> dict | None:
-    data = await generate_json(prompt, tag="Attribution")
+    data = await generate_json(prompt, temperature=0.0, seed=42, tag="Attribution")
     return data if isinstance(data, dict) else None
