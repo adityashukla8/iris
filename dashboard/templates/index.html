@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IRIS — Clinical AI Safety Supervisor</title>
-  <meta name="description" content="IRIS is a real-time multi-agent safety supervisor for clinical AI in the operating room. Detects hallucinations, catches drug interactions, and autonomously self-heals failure patterns.">
+  <title>IRIS — Self-Healing Observability Layer for Clinical AI</title>
+  <meta name="description" content="IRIS evaluates every clinical AI output in real time with seven safety evaluators grounded in RxNorm and openFDA, traces everything to Arize Phoenix, and autonomously heals recurring failure patterns.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -225,40 +225,45 @@
     .stat-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 48px; }
     .stat-card {
       background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: var(--r-lg); padding: 28px 24px 28px 32px;
-      box-shadow: var(--shadow-sm); position: relative;
+      border-radius: var(--r-lg); padding: 26px 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, border-color .2s;
     }
-    .stat-card::before {
-      content: ''; position: absolute;
-      left: 0; top: 16px; bottom: 16px;
-      width: 3px; border-radius: 0 2px 2px 0;
-      background: var(--gray-400);
+    .stat-card:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
+    .stat-icon-wrap {
+      width: 40px; height: 40px; border-radius: var(--r-sm);
+      background: var(--gray-100); border: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-700); margin-bottom: 16px;
     }
-    .stat-card.c-red::before   { background: var(--red-600); }
-    .stat-card.c-amber::before { background: var(--amber-700); }
-    .stat-card.c-blue::before  { background: var(--gray-900); }
     .stat-val {
       font-size: 2.625rem; font-weight: 800;
       letter-spacing: -.04em; line-height: 1;
       margin-bottom: 10px; font-variant-numeric: tabular-nums;
+      color: var(--gray-900);
     }
-    .stat-val.c-red    { color: var(--red-600); }
-    .stat-val.c-amber  { color: var(--amber-700); }
-    .stat-val.c-blue   { color: var(--gray-900); }
     .stat-desc { font-size: .875rem; color: var(--gray-600); line-height: 1.6; margin-bottom: 12px; }
-    .stat-src { font-size: .6875rem; color: var(--gray-400); }
+    .stat-src {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .6875rem; color: var(--gray-400);
+      border-bottom: 1px dotted var(--gray-300); padding-bottom: 1px;
+      transition: color .15s, border-color .15s;
+    }
+    a.stat-src:hover { color: var(--gray-700); border-color: var(--gray-500); }
 
     .problem-list { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .problem-item {
       display: flex; gap: 14px; padding: 22px;
       background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: var(--r); box-shadow: var(--shadow-sm);
+      border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, border-color .2s;
     }
+    .problem-item:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
     .problem-icon-wrap {
-      width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--r-sm);
-      background: var(--red-50); border: 1px solid #fecaca;
+      width: 40px; height: 40px; flex-shrink: 0; border-radius: var(--r-sm);
+      background: var(--gray-100); border: 1px solid var(--gray-200);
       display: flex; align-items: center; justify-content: center;
-      color: var(--red-600);
+      color: var(--gray-700);
     }
     .problem-item-title { font-size: .9375rem; font-weight: 600; color: var(--gray-900); margin-bottom: 5px; }
     .problem-item-text  { font-size: .8125rem; color: var(--gray-600); line-height: 1.6; }
@@ -305,14 +310,11 @@
     .agent-card-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
     .agent-icon-wrap {
       width: 40px; height: 40px; border-radius: var(--r-sm);
+      background: var(--gray-100); color: var(--gray-700);
+      border: 1px solid var(--gray-200);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .ai-orch  { background: var(--gray-900); color: var(--white); }
-    .ai-eval  { background: var(--gray-100); color: var(--gray-700);  border: 1px solid var(--gray-200); }
-    .ai-det   { background: var(--gray-100); color: var(--gray-700);  border: 1px solid var(--gray-200); }
-    .ai-heal  { background: var(--gray-100); color: var(--gray-700);  border: 1px solid var(--gray-200); }
-    .ai-disp  { background: var(--red-50);   color: var(--red-600);   border: 1px solid #fecaca; }
 
     .agent-role { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 2px; }
     .agent-name { font-size: .9375rem; font-weight: 700; color: var(--gray-900); }
@@ -320,12 +322,34 @@
     .agent-tools { display: flex; flex-wrap: wrap; gap: 5px; }
 
     /* ───────────────────────────────────────────────────────────
+       EVALUATORS
+    ─────────────────────────────────────────────────────────── */
+    .section-evals { padding: 96px 0; background: var(--white); }
+    .evals-head { margin-bottom: 48px; }
+    .evals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .eval-tile {
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+      padding: 24px; transition: box-shadow .2s, border-color .2s;
+    }
+    .eval-tile:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
+    .eval-tile-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .eval-tile-icon {
+      width: 40px; height: 40px; border-radius: var(--r-sm); flex-shrink: 0;
+      background: var(--gray-100); border: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center; color: var(--gray-700);
+    }
+    .eval-tile-name { font-size: .9375rem; font-weight: 700; color: var(--gray-900); }
+    .eval-tile-desc { font-size: .8125rem; color: var(--gray-600); line-height: 1.65; margin-bottom: 14px; }
+
+    /* ───────────────────────────────────────────────────────────
        TECH STACK
     ─────────────────────────────────────────────────────────── */
-    .section-tech { padding: 96px 0; background: var(--white); }
+    .section-tech { padding: 96px 0; background: var(--gray-50); border-top: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); }
     .tech-head { margin-bottom: 48px; }
 
-    .tech-table { width: 100%; border-collapse: collapse; }
+    .tech-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tech-table { width: 100%; min-width: 640px; border-collapse: collapse; }
     .tech-table tr { border-bottom: 1px solid var(--gray-200); }
     .tech-table tr:last-child { border-bottom: none; }
     .tech-table td { padding: 14px 16px; font-size: .875rem; }
@@ -365,6 +389,181 @@
     .footer-links a:hover { color: var(--white); }
 
     /* ───────────────────────────────────────────────────────────
+       INTRODUCING IRIS — cinematic overview
+    ─────────────────────────────────────────────────────────── */
+    .section-intro {
+      padding: 110px 0 96px;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 38%, rgba(37,99,235,.16), transparent 70%),
+        var(--gray-900);
+      overflow: hidden;
+    }
+    .intro-head { text-align: center; max-width: 680px; margin: 0 auto 24px; }
+    .intro-eyebrow {
+      font-size: .8125rem; font-weight: 600; letter-spacing: .12em;
+      text-transform: uppercase; color: #60A5FA; margin-bottom: 18px;
+    }
+    .intro-title {
+      font-size: clamp(2rem, 4.5vw, 3.25rem);
+      font-weight: 800; line-height: 1.12; letter-spacing: -.03em;
+      color: var(--white); margin-bottom: 18px;
+    }
+    .intro-sub {
+      font-size: 1.0625rem; color: var(--gray-400); line-height: 1.7;
+      max-width: 540px; margin: 0 auto;
+    }
+
+    /* Stage */
+    .intro-stage {
+      position: relative;
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 48px;
+      padding: 120px 12px 8px;
+      max-width: 1040px; margin: 0 auto;
+    }
+
+    /* Heal loop arc */
+    .intro-arc {
+      position: absolute; top: 14px; left: 4%; width: 92%; height: 130px;
+      overflow: visible; pointer-events: none;
+    }
+    .intro-arc-path {
+      fill: none; stroke: rgba(148,163,184,.45); stroke-width: 1.5;
+      stroke-dasharray: 5 9; stroke-linecap: round;
+      animation: introDash 1.3s linear infinite;
+    }
+    @keyframes introDash { to { stroke-dashoffset: -14; } }
+    .intro-arc-label {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      font-size: .75rem; font-weight: 500; color: var(--gray-400);
+      background: var(--gray-900); padding: 3px 14px; border: 1px solid rgba(148,163,184,.25);
+      border-radius: 20px; white-space: nowrap;
+    }
+
+    /* Side columns */
+    .intro-col { display: flex; flex-direction: column; gap: 12px; }
+    .intro-col-label {
+      font-size: .6875rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--gray-400); margin-bottom: 4px;
+    }
+    .intro-col-right .intro-col-label { text-align: right; }
+    .intro-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 16px; border-radius: 12px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      font-size: .875rem; font-weight: 500; color: #E2E8F0;
+      backdrop-filter: blur(4px);
+    }
+    .intro-col-right .intro-chip { justify-content: flex-end; }
+    .intro-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-risk-1 { background: #F87171; box-shadow: 0 0 8px rgba(248,113,113,.6); }
+    .dot-risk-2 { background: #FBBF24; box-shadow: 0 0 8px rgba(251,191,36,.6); }
+    .intro-chip-check { color: #4ADE80; flex-shrink: 0; }
+
+    /* The lens */
+    .intro-lens { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .intro-ring-outer {
+      width: 208px; height: 208px; border-radius: 50%;
+      border: 1px solid rgba(148,163,184,.35);
+      background: radial-gradient(closest-side, rgba(37,99,235,.28), transparent 72%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      animation: introPulse 3.4s ease-out infinite;
+    }
+    .intro-ring-outer::before {
+      content: ''; position: absolute; inset: 18px; border-radius: 50%;
+      border: 1px dashed rgba(255,255,255,.16);
+      animation: introSpin 50s linear infinite;
+    }
+    @keyframes introPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(59,130,246,.3); }
+      70%  { box-shadow: 0 0 0 30px rgba(59,130,246,0); }
+      100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+    }
+    @keyframes introSpin { to { transform: rotate(360deg); } }
+    .intro-ring-inner {
+      width: 134px; height: 134px; border-radius: 50%;
+      background: rgba(15,23,42,.78); border: 1px solid rgba(255,255,255,.18);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+      color: var(--white); z-index: 1;
+    }
+    .intro-ring-name { font-size: 1.125rem; font-weight: 800; letter-spacing: .08em; }
+    .intro-lens-caption {
+      margin-top: 18px; font-size: .8125rem; color: var(--gray-400);
+      text-align: center; max-width: 220px; line-height: 1.5;
+    }
+
+    /* Ground truth sources */
+    .intro-beams { display: flex; justify-content: center; gap: 58px; margin-top: 18px; }
+    .intro-beam {
+      width: 1px; height: 32px;
+      background: linear-gradient(to top, rgba(148,163,184,.05), rgba(148,163,184,.55));
+      animation: introBeam 2.6s ease-in-out infinite;
+    }
+    .intro-beam:nth-child(2) { animation-delay: .5s; }
+    .intro-beam:nth-child(3) { animation-delay: 1s; }
+    @keyframes introBeam { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+    .intro-sources { display: flex; justify-content: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .intro-source-pill {
+      padding: 6px 14px; border-radius: 20px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+      font-size: .75rem; font-weight: 500; color: #CBD5E1; white-space: nowrap;
+    }
+    .intro-sources-label {
+      text-align: center; font-size: .6875rem; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--gray-600);
+      margin-top: 12px;
+    }
+
+    /* Flowing answer particles */
+    .intro-dot {
+      position: absolute; width: 9px; height: 9px; border-radius: 50%;
+      top: var(--y, 55%); left: 4%;
+      background: #F87171;
+      animation: introFlow var(--dur, 7s) linear infinite;
+      animation-delay: var(--d, 0s);
+      opacity: 0; pointer-events: none;
+    }
+    @keyframes introFlow {
+      0%   { left: 5%;  opacity: 0; background: #F87171; box-shadow: 0 0 10px rgba(248,113,113,.7); }
+      10%  { opacity: .95; }
+      46%  { background: #F87171; box-shadow: 0 0 10px rgba(248,113,113,.7); }
+      54%  { background: #4ADE80; box-shadow: 0 0 10px rgba(74,222,128,.7); }
+      90%  { opacity: .95; }
+      100% { left: 95%; opacity: 0; background: #4ADE80; box-shadow: 0 0 10px rgba(74,222,128,.7); }
+    }
+
+    /* Triad */
+    .intro-triad {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      max-width: 920px; margin: 72px auto 0;
+      padding-top: 40px; border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .intro-triad-item { text-align: center; }
+    .intro-triad-icon {
+      width: 42px; height: 42px; border-radius: 11px; margin: 0 auto 14px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+      display: flex; align-items: center; justify-content: center; color: #93C5FD;
+    }
+    .intro-triad-title { font-size: .9375rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+    .intro-triad-text  { font-size: .8125rem; color: var(--gray-400); line-height: 1.6; }
+
+    @media (max-width: 900px) {
+      .intro-stage { grid-template-columns: 1fr; gap: 36px; padding-top: 24px; text-align: center; }
+      .intro-arc, .intro-arc-label, .intro-dot { display: none; }
+      .intro-col { align-items: center; }
+      .intro-col-right .intro-col-label { text-align: center; }
+      .intro-chip, .intro-col-right .intro-chip { justify-content: center; min-width: 240px; }
+      .intro-col-left { order: 1; } .intro-lens { order: 2; } .intro-col-right { order: 3; }
+      .intro-triad { grid-template-columns: 1fr; gap: 28px; margin-top: 48px; }
+      .section-intro { padding: 72px 0 64px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .intro-dot, .intro-arc-path, .intro-ring-outer, .intro-ring-outer::before, .intro-beam { animation: none; }
+      .intro-dot { display: none; }
+    }
+
+    /* ───────────────────────────────────────────────────────────
        RESPONSIVE
     ─────────────────────────────────────────────────────────── */
     @media (max-width: 1024px) {
@@ -373,14 +572,26 @@
       .stat-cards   { grid-template-columns: 1fr; }
       .steps-grid   { grid-template-columns: 1fr 1fr; }
       .agents-grid  { grid-template-columns: 1fr; }
+      .evals-grid   { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 768px) {
       .nav-links    { display: none; }
+      .nav-status   { display: none; }
+      .hero         { padding: 56px 0 48px; }
+      .section-problem, .section-how, .section-agents, .section-evals,
+      .section-tech, .section-cta { padding: 64px 0; }
       .problem-list { grid-template-columns: 1fr; }
       .steps-grid   { grid-template-columns: 1fr; }
-      .hero-metrics { flex-direction: column; width: 100%; }
-      .hero-metric  { border-right: none; border-bottom: 1px solid var(--gray-200); }
-      .hero-metric:last-child { border-bottom: none; }
+      .evals-grid   { grid-template-columns: 1fr; }
+      .hero-cta .btn { width: 100%; justify-content: center; }
+      .hero-metrics { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      .hero-metric  { border-right: none; border-bottom: 1px solid var(--gray-200); text-align: left; }
+      .hero-metric:nth-child(odd)  { border-right: 1px solid var(--gray-200); }
+      .hero-metric:nth-child(n+3)  { border-bottom: none; }
+    }
+    @media (max-width: 420px) {
+      .container { padding: 0 16px; }
+      .agents-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -404,6 +615,7 @@
         <li><a href="#problem">Problem</a></li>
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#agents">Agents &amp; MCPs</a></li>
+        <li><a href="#evaluators">Evaluators</a></li>
         <li><a href="#tech-stack">Tech Stack</a></li>
       </ul>
       <div class="nav-right">
@@ -424,18 +636,18 @@
 
       <div class="hero-left">
         <div class="hero-badge">
-          <!-- Shield icon -->
+          <!-- Zap icon -->
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
-          Multi-Agent Clinical AI Supervisor
+          Google Rapid Agent &times; Arize Hackathon
         </div>
         <h1 class="hero-title">
-          Clinical AI Shouldn't Operate<br>
-          <span>Without a Supervisor.</span>
+          Self-Healing Observability<br>
+          <span>Layer for Clinical AI.</span>
         </h1>
         <p class="hero-sub">
-          IRIS is a real-time multi-agent safety layer for operating room AI — detecting hallucinations, catching dangerous drug interactions, and autonomously healing failure patterns before they reach your patient.
+          IRIS connects with AI Agents deployed in healthcare and scores every output in real time — <b>7 safety evaluators</b> grounded in <b>RxNorm</b> and <b>openFDA</b>, full tracing to Arize Phoenix — then closes the loop: it detects recurring failure patterns from its own observability data, rewrites the failing prompt, validates the fix against real failures, and redeploys it autonomously.
         </p>
         <div class="hero-cta">
           <a href="/dashboard" class="btn btn-primary">
@@ -445,13 +657,7 @@
               <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
             </svg>
           </a>
-          <a href="https://github.com/adityashukla8/iris" target="_blank" class="btn btn-outline">
-            <!-- GitHub icon -->
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.933.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
-            </svg>
-            GitHub
-          </a>
+          <a href="#how-it-works" class="btn btn-outline">How It Works</a>
         </div>
         <div class="hero-metrics">
           <div class="hero-metric">
@@ -459,8 +665,8 @@
             <span class="hero-metric-lbl">Evaluators</span>
           </div>
           <div class="hero-metric">
-            <span class="hero-metric-val">5</span>
-            <span class="hero-metric-lbl">AI Agents</span>
+            <span class="hero-metric-val">2</span>
+            <span class="hero-metric-lbl">ADK Agents</span>
           </div>
           <div class="hero-metric">
             <span class="hero-metric-val">10</span>
@@ -491,24 +697,44 @@
     <div class="problem-head reveal">
       <div class="eyebrow"><div class="eyebrow-line"></div>The Problem</div>
       <h2 class="section-title">The Stakes in the OR<br>Have Never Been Higher</h2>
-      <p class="section-body">Clinical AI agents are entering operating rooms and ICUs without any runtime safety layer. When they hallucinate, they do so silently — and the consequences fall on patients.</p>
+      <p class="section-body">Clinical AI agents are entering operating rooms and ICUs without limited runtime safety layer. When they hallucinate, they do so silently — and the consequences fall on patients & healthcare departments.</p>
     </div>
 
     <div class="stat-cards">
-      <div class="stat-card c-blue reveal d1">
-        <div class="stat-val c-blue">91.8%</div>
-        <div class="stat-desc">of clinicians across 15 specialties reported encountering medical AI hallucinations — and 84.7% said those hallucinations were capable of causing direct patient harm</div>
-        <div class="stat-src">MIT Media Lab, medRxiv 2025 · n=70 clinicians, 15 specialties</div>
+      <div class="stat-card reveal d1">
+        <div class="stat-icon-wrap">
+          <!-- Alert triangle icon -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="stat-val">91.8%</div>
+        <div class="stat-desc">of clinicians surveyed reported encountering medical AI hallucinations — and 84.7% said those hallucinations were capable of causing direct patient harm</div>
+        <a class="stat-src" href="https://www.medrxiv.org/content/10.1101/2025.02.28.25323115v2.full" target="_blank" rel="noopener">MIT Media Lab et al., medRxiv 2025 · n=70 clinicians ↗</a>
       </div>
-      <div class="stat-card c-red reveal d2">
-        <div class="stat-val c-red">83%</div>
-        <div class="stat-desc">of cases where LLMs amplified or repeated planted clinical errors — including dosage mistakes and contraindicated drug recommendations cascading through agent chains</div>
-        <div class="stat-src">Nature Communications Medicine, 2025 · n=300 clinical vignettes</div>
+      <div class="stat-card reveal d2">
+        <div class="stat-icon-wrap">
+          <!-- Trending up icon -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <div class="stat-val">83%</div>
+        <div class="stat-desc">of cases where leading LLMs repeated or elaborated on a single planted clinical error — fabricated lab values and conditions propagating into unsafe recommendations</div>
+        <a class="stat-src" href="https://www.nature.com/articles/s43856-025-01021-3" target="_blank" rel="noopener">Communications Medicine (Nature), 2025 · n=300 vignettes ↗</a>
       </div>
-      <div class="stat-card c-amber reveal d3">
-        <div class="stat-val c-amber">$42B</div>
-        <div class="stat-desc">annual global cost of medication errors — operating theatre error rates reach 7.3–12%, with AI agents now operating in these same environments without a dedicated safety layer</div>
-        <div class="stat-src">WHO Medication Without Harm · Medicina/PMC 2025 · Nat. Academies</div>
+      <div class="stat-card reveal d3">
+        <div class="stat-icon-wrap">
+          <!-- Dollar icon -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+          </svg>
+        </div>
+        <div class="stat-val">$42B</div>
+        <div class="stat-desc">annual global cost of medication errors — with AI agents now recommending drugs and doses in these same clinical environments without a dedicated runtime safety layer</div>
+        <a class="stat-src" href="https://www.who.int/initiatives/medication-without-harm" target="_blank" rel="noopener">WHO — Medication Without Harm ↗</a>
       </div>
     </div>
 
@@ -572,6 +798,127 @@
   </div>
 </section>
 
+<!-- ── Introducing IRIS ─────────────────────────────────────────── -->
+<section class="section-intro" id="introducing">
+  <div class="container">
+
+    <div class="intro-head reveal">
+      <div class="intro-eyebrow">Introducing IRIS</div>
+      <h2 class="intro-title">The layer between your AI<br>and your patients.</h2>
+      <p class="intro-sub">Every answer your clinical AI gives passes through IRIS — checked against trusted medical sources, watched end to end, and made safer over time. Automatically.</p>
+    </div>
+
+    <div class="intro-stage reveal d1">
+
+      <!-- Self-healing loop arc -->
+      <svg class="intro-arc" viewBox="0 0 1000 130" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <marker id="arcArrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="rgba(148,163,184,.6)"/>
+          </marker>
+        </defs>
+        <path class="intro-arc-path" d="M 880 118 C 720 4, 280 4, 120 110" marker-end="url(#arcArrow)"/>
+      </svg>
+      <div class="intro-arc-label">IRIS sends improved instructions back — your agents get safer over time</div>
+
+      <!-- Flowing answers -->
+      <div class="intro-dot" style="--y:52%; --d:0s;   --dur:7s;"></div>
+      <div class="intro-dot" style="--y:58%; --d:2.3s; --dur:7.4s;"></div>
+      <div class="intro-dot" style="--y:55%; --d:4.6s; --dur:6.8s;"></div>
+
+      <!-- Left: source agents -->
+      <div class="intro-col intro-col-left">
+        <div class="intro-col-label">Your clinical AI</div>
+        <div class="intro-chip">
+          <span class="intro-chip-dot dot-risk-1"></span>
+          Care recommendations
+        </div>
+        <div class="intro-chip">
+          <span class="intro-chip-dot dot-risk-2"></span>
+          Medication &amp; dosing
+        </div>
+        <div class="intro-chip">
+          <span class="intro-chip-dot dot-risk-1"></span>
+          Clinical documentation
+        </div>
+      </div>
+
+      <!-- Center: the IRIS lens -->
+      <div class="intro-lens">
+        <div class="intro-ring-outer">
+          <div class="intro-ring-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <div class="intro-ring-name">IRIS</div>
+          </div>
+        </div>
+        <div class="intro-lens-caption">Seven clinical safety checks. Every answer. In real time.</div>
+        <div class="intro-beams" aria-hidden="true">
+          <div class="intro-beam"></div>
+          <div class="intro-beam"></div>
+          <div class="intro-beam"></div>
+        </div>
+        <div class="intro-sources">
+          <div class="intro-source-pill">RxNorm</div>
+          <div class="intro-source-pill">openFDA</div>
+          <div class="intro-source-pill">Arize Phoenix</div>
+        </div>
+        <div class="intro-sources-label">Trusted ground truth</div>
+      </div>
+
+      <!-- Right: what comes out -->
+      <div class="intro-col intro-col-right">
+        <div class="intro-col-label">What reaches care teams</div>
+        <div class="intro-chip">
+          Safe dosing, confirmed
+          <svg class="intro-chip-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="intro-chip">
+          Interactions cleared
+          <svg class="intro-chip-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="intro-chip">
+          Every answer traceable
+          <svg class="intro-chip-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="intro-triad reveal d2">
+      <div class="intro-triad-item">
+        <div class="intro-triad-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="intro-triad-title">Catches unsafe answers instantly</div>
+        <div class="intro-triad-text">Hallucinated drugs, dangerous doses, missed allergies — flagged the moment they happen, before they reach a patient.</div>
+      </div>
+      <div class="intro-triad-item">
+        <div class="intro-triad-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+        </div>
+        <div class="intro-triad-title">Grounded in medical truth</div>
+        <div class="intro-triad-text">Every verdict is checked against the same drug databases clinicians trust — not just one AI grading another.</div>
+      </div>
+      <div class="intro-triad-item">
+        <div class="intro-triad-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <div class="intro-triad-title">Improves your AI — by itself</div>
+        <div class="intro-triad-text">When IRIS sees the same mistake twice, it rewrites the agent's instructions, proves the fix works, and ships it. No engineers required.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ── How It Works ─────────────────────────────────────────────── -->
 <section class="section-how" id="how-it-works">
   <div class="container">
@@ -606,8 +953,8 @@
           </svg>
         </div>
         <div class="step-title">7-Evaluator Safety Check</div>
-        <div class="step-body">Safety Evaluator runs 7 parallel clinical checks: dosage boundaries, hallucinations, drug-drug interactions, allergy contraindications, attribution, context gaps, and surgical phase alignment.</div>
-        <div class="step-tags"><span class="tag tag-blue">Gemini</span><span class="tag tag-gray">ADK Tools</span><span class="tag tag-gray">LLM-as-Judge</span></div>
+        <div class="step-body">Seven concurrent clinical safety checks on every output: dosage boundaries, hallucinations, drug–drug interactions, allergy contraindications, attribution, context gaps, and surgical phase alignment — grounded in RxNorm and openFDA.</div>
+        <div class="step-tags"><span class="tag tag-blue">Gemini</span><span class="tag tag-gray">RxNorm</span><span class="tag tag-gray">openFDA</span><span class="tag tag-gray">LLM-as-Judge</span></div>
       </div>
 
       <div class="step-cell reveal d3">
@@ -645,9 +992,9 @@
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
         </div>
-        <div class="step-title">Diagnose &amp; Log via MCP</div>
-        <div class="step-body">Self-Healer reads worst-performing spans, retrieves the current prompt version history, logs failure examples to a Phoenix dataset, and produces a structured HealingDiagnosis.</div>
-        <div class="step-tags"><span class="tag tag-blue">get-latest-prompt</span><span class="tag tag-gray">add-dataset-examples</span></div>
+        <div class="step-title">Diagnose from Real Failures</div>
+        <div class="step-body">Gemini root-causes each failure cluster from the actual failing traces, fetches the current prompt version from Phoenix, and logs the failure examples to a per-agent Phoenix dataset for validation.</div>
+        <div class="step-tags"><span class="tag tag-blue">Phoenix Datasets</span><span class="tag tag-gray">Prompt Registry</span></div>
       </div>
 
       <div class="step-cell reveal d3">
@@ -659,8 +1006,8 @@
           </svg>
         </div>
         <div class="step-title">Mutate, Validate &amp; Deploy</div>
-        <div class="step-body">TextGrad generates a candidate prompt mutation from the failure analysis. Counterfactual validation gates improvement. The winning version is deployed to Phoenix with an optional human approval gate.</div>
-        <div class="step-tags"><span class="tag tag-blue">TextGrad</span><span class="tag tag-gray">Approval Gate</span><span class="tag tag-gray">Phoenix Deploy</span></div>
+        <div class="step-body">A TextGrad-style mutation engine computes textual gradients from the failures and rewrites the prompt. Validation regenerates answers under the candidate and re-scores them with the same 7 evaluators — only measurable improvement deploys, versioned and tagged <code class="mono">production</code> in Phoenix.</div>
+        <div class="step-tags"><span class="tag tag-blue">Textual Gradients</span><span class="tag tag-gray">Improvement Gate</span><span class="tag tag-gray">Phoenix Deploy</span></div>
       </div>
 
     </div>
@@ -671,54 +1018,16 @@
 <section class="section-agents" id="agents">
   <div class="container">
     <div class="agents-head reveal">
-      <div class="eyebrow"><div class="eyebrow-line"></div>Multi-Agent System</div>
-      <h2 class="section-title">Five Specialized Agents.<br>One Safety Guarantee.</h2>
-      <p class="section-body">Each agent is an ADK <code class="mono">LlmAgent</code> with purpose-built tools and MCP integrations. The orchestrator delegates to sub-agents via LLM-driven routing — no hardcoded pipelines.</p>
+      <div class="eyebrow"><div class="eyebrow-line"></div>Agents &amp; MCPs</div>
+      <h2 class="section-title">Agents That Read Their Own Traces —<br>and Fix Their Own Prompts.</h2>
+      <p class="section-body">Built on Google ADK and the Arize Phoenix MCP server: IRIS's agents introspect the system's own observability data, hunt for failure clusters, diagnose root causes, and drive the self-healing loop end to end — with hard validation gates where safety counts.</p>
     </div>
 
     <div class="agents-grid">
 
       <div class="card agent-card reveal d1">
         <div class="agent-card-head">
-          <div class="agent-icon-wrap ai-orch">
-            <!-- CPU icon -->
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
-              <line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/>
-              <line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/>
-              <line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/>
-              <line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/>
-            </svg>
-          </div>
-          <div>
-            <div class="agent-role">Root Orchestrator</div>
-            <div class="agent-name">iris_orchestrator</div>
-          </div>
-        </div>
-        <div class="agent-desc">Receives all IrisEvents and SCAN_PATTERNS requests. Routes to sub-agents via LLM-driven delegation. Bridges MCP-diagnosed failures to the Python healing pipeline via a dedicated ADK tool.</div>
-        <div class="agent-tools"><span class="tag tag-blue">run_healing_pipeline_tool</span><span class="tag tag-gray">4 sub-agents</span></div>
-      </div>
-
-      <div class="card agent-card reveal d2">
-        <div class="agent-card-head">
-          <div class="agent-icon-wrap ai-eval">
-            <!-- Shield icon -->
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-          </div>
-          <div>
-            <div class="agent-role">Clinical Auditor</div>
-            <div class="agent-name">safety_evaluator</div>
-          </div>
-        </div>
-        <div class="agent-desc">Runs 7 parallel clinical safety tools per event. Writes results with reasoning chain and confidence to Arize Phoenix as span annotations. Flags low-confidence results for human escalation.</div>
-        <div class="agent-tools"><span class="tag tag-blue">dosage_boundary</span><span class="tag tag-blue">drug_interaction</span><span class="tag tag-blue">allergy_check</span><span class="tag tag-gray">+4 more</span></div>
-      </div>
-
-      <div class="card agent-card reveal d3">
-        <div class="agent-card-head">
-          <div class="agent-icon-wrap ai-det">
+          <div class="agent-icon-wrap">
             <!-- Bar chart icon -->
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
@@ -726,34 +1035,87 @@
             </svg>
           </div>
           <div>
-            <div class="agent-role">Failure Cluster Analyst</div>
+            <div class="agent-role">ADK Agent · Phoenix MCP</div>
             <div class="agent-name">pattern_detector</div>
           </div>
         </div>
-        <div class="agent-desc">Queries Arize Phoenix via MCP to detect recurring failure clusters across recent spans. Triggers the self-healing loop when the hallucination rate exceeds the configured threshold.</div>
-        <div class="agent-tools"><span class="tag tag-blue">get-spans</span><span class="tag tag-blue">get-span-annotations</span><span class="tag tag-blue">list-traces</span><span class="tag tag-gray">Phoenix MCP</span></div>
+        <div class="agent-desc">Queries Arize Phoenix via MCP to find recurring failure clusters across recent spans — grouping by agent, prompt version, and query type. Sets healing in motion when a cluster crosses the failure-rate threshold, with a built-in fallback so detection never goes dark.</div>
+        <div class="agent-tools"><span class="tag tag-blue">get-spans</span><span class="tag tag-blue">get-span-annotations</span><span class="tag tag-gray">Gemini 2.5 Pro</span></div>
+      </div>
+
+      <div class="card agent-card reveal d2">
+        <div class="agent-card-head">
+          <div class="agent-icon-wrap">
+            <!-- Message icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="agent-role">ADK Agent · Phoenix MCP</div>
+            <div class="agent-name">mcp_probe</div>
+          </div>
+        </div>
+        <div class="agent-desc">Powers the dashboard's MCP chat — free-form natural-language exploration of Phoenix observability data with the full 10-tool surface: traces, spans, annotations, datasets, experiments, and prompt versions.</div>
+        <div class="agent-tools"><span class="tag tag-blue">10 MCP tools</span><span class="tag tag-blue">list-prompts</span><span class="tag tag-blue">get-dataset-experiments</span><span class="tag tag-gray">Gemini 2.5 Pro</span></div>
+      </div>
+
+      <div class="card agent-card reveal d3">
+        <div class="agent-card-head">
+          <div class="agent-icon-wrap">
+            <!-- Shield icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="agent-role">Safety Engine</div>
+            <div class="agent-name">evaluation_service</div>
+          </div>
+        </div>
+        <div class="agent-desc">Runs all 7 evaluators concurrently on every event, on every output, with zero sampling. Each verdict carries a 0–10 score, severity, reasoning chain, and confidence; results land on the OTel span and as Phoenix annotations.</div>
+        <div class="agent-tools"><span class="tag tag-blue">7 evaluators</span><span class="tag tag-gray">RxNorm</span><span class="tag tag-gray">openFDA</span><span class="tag tag-gray">Gemini judges</span></div>
       </div>
 
       <div class="card agent-card reveal d1">
         <div class="agent-card-head">
-          <div class="agent-icon-wrap ai-heal">
+          <div class="agent-icon-wrap">
             <!-- Tool icon -->
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
             </svg>
           </div>
           <div>
-            <div class="agent-role">DIAGNOSE Phase</div>
-            <div class="agent-name">self_healer</div>
+            <div class="agent-role">Autonomous Heal Loop</div>
+            <div class="agent-name">healing_pipeline</div>
           </div>
         </div>
-        <div class="agent-desc">Reads worst-performing spans from Phoenix, retrieves the current prompt version history, logs failure examples to a Phoenix dataset, and produces a HealingDiagnosis JSON for the mutation engine.</div>
-        <div class="agent-tools"><span class="tag tag-blue">get-latest-prompt</span><span class="tag tag-blue">list-prompt-versions</span><span class="tag tag-blue">add-dataset-examples</span><span class="tag tag-gray">10 MCP tools</span></div>
+        <div class="agent-desc">Python-orchestrated heal loop: diagnose the cluster from real failing traces, mutate the prompt via textual gradients, validate by re-scoring regenerated answers with the same 7 evaluators, then version and tag the winner in Phoenix.</div>
+        <div class="agent-tools"><span class="tag tag-blue">diagnose → mutate → validate → deploy</span><span class="tag tag-gray">Improvement gate</span></div>
       </div>
 
       <div class="card agent-card reveal d2">
         <div class="agent-card-head">
-          <div class="agent-icon-wrap ai-disp">
+          <div class="agent-icon-wrap">
+            <!-- Refresh icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </div>
+          <div>
+            <div class="agent-role">Closed-Loop Demo</div>
+            <div class="agent-name">live_agent</div>
+          </div>
+        </div>
+        <div class="agent-desc">Proves the loop is closed: pulls the production-tagged healed prompt from Phoenix at run time and regenerates answers with Gemini. Re-running the same scenarios shows a measured before/after improvement — real outputs, not staged.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Phoenix prompt registry</span><span class="tag tag-gray">Reproducible generation</span></div>
+      </div>
+
+      <div class="card agent-card reveal d3">
+        <div class="agent-card-head">
+          <div class="agent-icon-wrap">
             <!-- Bell icon -->
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -761,12 +1123,133 @@
             </svg>
           </div>
           <div>
-            <div class="agent-role">Notification Router</div>
-            <div class="agent-name">alert_dispatcher</div>
+            <div class="agent-role">Real-Time Alerting</div>
+            <div class="agent-name">alert_dispatch</div>
           </div>
         </div>
-        <div class="agent-desc">Routes safety alerts by severity to the real-time dashboard SSE stream. INFO feeds the trace log. WARNING raises a badge. CRITICAL triggers an alert and adds to the human escalation queue.</div>
-        <div class="agent-tools"><span class="tag tag-blue">push_dashboard_alert</span><span class="tag tag-gray">SSE stream</span></div>
+        <div class="agent-desc">Severity-routed alerting with zero added latency. INFO feeds the live trace feed, WARNING raises a badge, CRITICAL streams an instant SSE alert — and can fire an autonomous healing scan the moment a failure cluster crosses the threshold.</div>
+        <div class="agent-tools"><span class="tag tag-blue">SSE stream</span><span class="tag tag-gray">Event-driven scan trigger</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Evaluators ───────────────────────────────────────────────── -->
+<section class="section-evals" id="evaluators">
+  <div class="container">
+    <div class="evals-head reveal">
+      <div class="eyebrow"><div class="eyebrow-line"></div>Evaluation Layer - the Heart of the System</div>
+      <h2 class="section-title">Seven Clinical Safety Evaluators</h2>
+      <p class="section-body">Every AI output is scored 0–10 by seven concurrent evaluators — LLM-as-judge verdicts grounded in authoritative drug databases. The worst severity wins, and criticals stream to the dashboard instantly.</p>
+    </div>
+
+    <div class="evals-grid">
+
+      <div class="eval-tile reveal d1">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Eye-off icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">factual_hallucination</div>
+        </div>
+        <div class="eval-tile-desc">Detects fabricated drug names and non-existent medications. Cross-validates every drug mention against RxNorm — an unrecognized name is provably wrong, not a probability. A broad LLM judge then checks for impossible values and context contradictions.</div>
+        <div class="agent-tools"><span class="tag tag-blue">RxNorm</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d2">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Sliders icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">dosage_boundary</div>
+        </div>
+        <div class="eval-tile-desc">Verifies doses are within safe clinical ranges for the patient's weight, age, and renal function (CrCl) — checked against openFDA label data. Catches gross magnitude errors and missing renal adjustments.</div>
+        <div class="agent-tools"><span class="tag tag-blue">openFDA</span><span class="tag tag-gray">RxNorm</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d3">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Git-merge icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+              <path d="M6 21V9a9 9 0 009 9"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">drug_interaction</div>
+        </div>
+        <div class="eval-tile-desc">Detects clinically significant drug–drug interactions between recommended drugs and the patient's current medication list — including CYP450-mediated interactions like warfarin–metronidazole.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Current meds context</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d1">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Slash / ban icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">allergy_contraindication</div>
+        </div>
+        <div class="eval-tile-desc">Checks whether a recommended drug belongs to a class the patient is allergic to — including same-class substitutions, like prescribing amoxicillin to a patient with a documented penicillin allergy.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Allergy context</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d2">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Anchor / link icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">attribution</div>
+        </div>
+        <div class="eval-tile-desc">Verifies that every clinical recommendation cites specific patient values — labs, weight, allergies — from the retrieved context. Penalises responses that infer or invent patient data not in the record.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Grounding check</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d3">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Help-circle icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">context_gap</div>
+        </div>
+        <div class="eval-tile-desc">Flags responses where the agent answered without critical patient data in the record — missing CrCl, weight, or labs. Penalises confident recommendations when required context is simply absent.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Required-field inference</span><span class="tag tag-gray">LLM judge</span></div>
+      </div>
+
+      <div class="eval-tile reveal d1">
+        <div class="eval-tile-head">
+          <div class="eval-tile-icon">
+            <!-- Clock icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="eval-tile-name">surgical_phase</div>
+        </div>
+        <div class="eval-tile-desc">Checks that recommendations are appropriate for the current surgical phase — pre-op, induction, maintenance, closure, emergence. Flags protocol violations tied to surgical timing.</div>
+        <div class="agent-tools"><span class="tag tag-blue">Phase context</span><span class="tag tag-gray">LLM judge</span></div>
       </div>
 
     </div>
@@ -781,6 +1264,7 @@
       <h2 class="section-title">Built on Production-Grade AI Infrastructure</h2>
       <p class="section-body">Every layer of IRIS is purpose-selected — from the agent runtime to the observability backend to the mutation engine.</p>
     </div>
+    <div class="tech-scroll">
     <table class="tech-table reveal">
       <thead>
         <tr>
@@ -791,47 +1275,58 @@
       </thead>
       <tbody>
         <tr>
-          <td class="tech-name">Google ADK 2.1</td>
-          <td class="tech-role">Multi-agent runtime — LlmAgent, Runner, InMemorySessionService, McpToolset</td>
+          <td class="tech-name">Google ADK 2.x</td>
+          <td class="tech-role">Agent runtime — LlmAgent, Runner, McpToolset with before/after tool callbacks for arg clamping and span filtering</td>
           <td class="tech-label"><span class="tag tag-blue">Agent Runtime</span></td>
         </tr>
         <tr>
-          <td class="tech-name">Gemini 2.5 Flash</td>
-          <td class="tech-role">LLM backbone for all five agents and seven evaluator judges</td>
+          <td class="tech-name">Gemini 2.5 Flash + Pro</td>
+          <td class="tech-role">Flash drives the evaluator judges and healing pipeline; Pro drives the MCP tool-calling agents — all routed through a shared throttled gateway with retry</td>
           <td class="tech-label"><span class="tag tag-blue">LLM</span></td>
         </tr>
         <tr>
+          <td class="tech-name">Vertex AI</td>
+          <td class="tech-role">Model serving platform for every Gemini call — service-account auth, regional endpoints, production quota management</td>
+          <td class="tech-label"><span class="tag tag-blue">AI Platform</span></td>
+        </tr>
+        <tr>
+          <td class="tech-name">Google Cloud Run</td>
+          <td class="tech-role">Deployment target — containerized FastAPI service with Vertex AI service-account auth</td>
+          <td class="tech-label"><span class="tag tag-gray">Infrastructure</span></td>
+        </tr>
+        <tr>
           <td class="tech-name">Arize Phoenix Cloud</td>
-          <td class="tech-role">Observability backend — span storage, prompt versioning, dataset management, eval annotations</td>
+          <td class="tech-role">Observability backend — span storage, prompt versioning &amp; tagging, dataset management, experiments, eval annotations</td>
           <td class="tech-label"><span class="tag tag-blue">Observability</span></td>
         </tr>
         <tr>
           <td class="tech-name">@arizeai/phoenix-mcp</td>
-          <td class="tech-role">MCP server exposing 10 Phoenix tools consumed by pattern_detector and self_healer at runtime</td>
+          <td class="tech-role">MCP server exposing 10 Phoenix tools consumed by pattern_detector and mcp_probe at runtime</td>
           <td class="tech-label"><span class="tag tag-blue">MCP</span></td>
         </tr>
         <tr>
-          <td class="tech-name">TextGrad</td>
-          <td class="tech-role">Automatic differentiation for prompts — generates candidate mutations from failure analysis</td>
+          <td class="tech-name">RxNorm + openFDA</td>
+          <td class="tech-role">Ground truth for drug validation — NIH RxNorm verifies drug names exist; openFDA labels bound safe dose ranges</td>
+          <td class="tech-label"><span class="tag tag-blue">Clinical Knowledge</span></td>
+        </tr>
+        <tr>
+          <td class="tech-name">Mutation Engine</td>
+          <td class="tech-role">TextGrad-style textual gradients computed by Gemini from real failure examples — candidate prompts gated by evaluator-scored validation</td>
           <td class="tech-label"><span class="tag tag-gray">Prompt Optimization</span></td>
         </tr>
         <tr>
           <td class="tech-name">FastAPI</td>
-          <td class="tech-role">Async event ingestion API, SSE alert stream, healing approval endpoints</td>
+          <td class="tech-role">Async event ingestion, SSE alert stream, simulation &amp; comparison endpoints, healing approval API</td>
           <td class="tech-label"><span class="tag tag-gray">API</span></td>
         </tr>
         <tr>
-          <td class="tech-name">OpenInference</td>
-          <td class="tech-role">Semantic conventions for ADK instrumentation — maps agent spans to Phoenix trace format</td>
-          <td class="tech-label"><span class="tag tag-gray">Instrumentation</span></td>
-        </tr>
-        <tr>
-          <td class="tech-name">OpenTelemetry</td>
-          <td class="tech-role">Trace and span export pipeline to Phoenix Cloud via OTLP batch exporter</td>
+          <td class="tech-name">OpenTelemetry + OpenInference</td>
+          <td class="tech-role">Span pipeline to Phoenix Cloud via OTLP — evaluation results recorded as span attributes and REST annotations</td>
           <td class="tech-label"><span class="tag tag-gray">Telemetry</span></td>
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </section>
 
@@ -839,21 +1334,15 @@
 <section class="section-cta">
   <div class="container">
     <div class="cta-inner reveal">
-      <div class="cta-eyebrow">Arize x Google Cloud ADK Hackathon 2026</div>
+      <div class="cta-eyebrow">Google Rapid Agent &times; Arize Hackathon</div>
       <h2 class="cta-title">See IRIS in Action</h2>
-      <p class="cta-text">Open the live dashboard to watch clinical AI events being evaluated in real time, or explore the source to understand how the full multi-agent safety loop is constructed.</p>
+      <p class="cta-text">Open the live dashboard: run failure scenarios, watch all seven evaluators score them in real time, trigger an autonomous heal, then re-run the same scenarios under the healed prompt and see the measured improvement.</p>
       <div class="cta-btns">
         <a href="/dashboard" class="btn btn-white">
           Live Dashboard
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
           </svg>
-        </a>
-        <a href="https://github.com/adityashukla8/iris" target="_blank" class="btn btn-ghost">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.933.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
-          </svg>
-          View on GitHub
         </a>
       </div>
     </div>
@@ -864,7 +1353,7 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-inner">
-      <div class="footer-text">IRIS &copy; 2026 &mdash; Built for the Arize &times; Google Cloud ADK Hackathon</div>
+      <div class="footer-text">IRIS &copy; 2026 &mdash; Built for the Google Rapid Agent &times; Arize Hackathon</div>
       <div class="footer-links">
         <a href="https://github.com/adityashukla8/iris" target="_blank">GitHub</a>
         <a href="/dashboard">Dashboard</a>
