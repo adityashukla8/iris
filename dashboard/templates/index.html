@@ -608,6 +608,30 @@
     .eval-tile-desc { font-size: .8125rem; color: var(--text-2); line-height: 1.66; margin-bottom: 15px; }
 
     /* ───────────────────────────────────────────────────────────
+       WORKFLOW
+    ─────────────────────────────────────────────────────────── */
+    .workflow-frame {
+      display: block;
+      border-radius: var(--r-lg); overflow: hidden;
+      border: 1px solid var(--lt-line);
+      background: var(--lt-bg-2);
+      box-shadow: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+      transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+      cursor: zoom-in;
+    }
+    .workflow-frame:hover {
+      border-color: #3B82F6;
+      box-shadow: 0 0 0 1px rgba(59,130,246,.18), 0 4px 24px rgba(59,130,246,.08), 0 1px 4px rgba(15,23,42,.05);
+      transform: translateY(-2px);
+    }
+    .workflow-frame img { width: 100%; height: auto; display: block; }
+    .workflow-hint {
+      text-align: center; margin-top: 14px;
+      font-family: var(--mono); font-size: .6875rem; font-weight: 500;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--lt-muted);
+    }
+
+    /* ───────────────────────────────────────────────────────────
        TECH STACK
     ─────────────────────────────────────────────────────────── */
     .tech-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -758,6 +782,7 @@
         <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#agents">Agents &amp; MCPs</a></li>
         <li><a href="#evaluators">Evaluators</a></li>
+        <li><a href="#workflow">Workflow</a></li>
         <li><a href="#tech-stack">Tech Stack</a></li>
       </ul>
       <div class="nav-right">
@@ -1397,8 +1422,23 @@
   </div>
 </section>
 
+<!-- ── Workflow ─────────────────────────────────────────────────── -->
+<section class="section section-light" id="workflow">
+  <div class="container">
+    <div class="section-head centered reveal">
+      <div class="eyebrow"><div class="eyebrow-line"></div>Workflow</div>
+      <h2 class="section-title">From Failure to Fix, End to End</h2>
+      <p class="section-body">The complete closed loop — source agents, real-time evaluation, Phoenix tracing, MCP-driven pattern detection, prompt mutation, experiment-gated validation, and measurable improvement.</p>
+    </div>
+    <a href="/static/images/workflow.png" target="_blank" rel="noopener" class="workflow-frame reveal d1" title="Open full-size diagram">
+      <img src="/static/images/workflow.png" alt="IRIS end-to-end workflow diagram — from source agent event through evaluation, Phoenix tracing, MCP pattern detection, mutation, validation, and prompt deployment" loading="lazy">
+    </a>
+    <div class="workflow-hint reveal d2">Click to view full size</div>
+  </div>
+</section>
+
 <!-- ── Tech Stack ───────────────────────────────────────────────── -->
-<section class="section section-light" id="tech-stack">
+<section class="section section-light lw" id="tech-stack">
   <div class="container">
     <div class="section-head reveal">
       <div class="eyebrow"><div class="eyebrow-line"></div>Infrastructure</div>

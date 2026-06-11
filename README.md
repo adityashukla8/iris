@@ -6,6 +6,8 @@ A self-healing observability layer for clinical AI. IRIS evaluates every output 
 
 Built for the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/) - Arize Phoenix Track.
 
+Demo Video: [Iris Demo](https://youtu.be/vlp-cjAwNNU)
+
 ---
 
 ![IRIS Workflow Diagram](diagrams/rapid_agents_workflow_aditya_shukla.png)
