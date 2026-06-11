@@ -47,6 +47,7 @@ from core.state import (
     healing_history,
     push_activity,
     recent_traces,
+    reset_session,
     self_heal_bus,
     shift_stats,
 )
@@ -170,6 +171,17 @@ async def submit_event(event: IrisEvent) -> dict:
 async def trigger_pattern_scan() -> dict:
     """Manually trigger a detect → diagnose → heal scan."""
     return await _run_scan()
+
+
+@app.post("/reset")
+async def reset_session_state() -> dict:
+    """Zero out all in-memory session state (traces, stats, activity, healing
+    queue/history, cooldowns). Lets a deployed instance start a clean demo run
+    without a redeploy. Does NOT touch Phoenix - spans, datasets, and prompt
+    versions (including the production tag) are preserved."""
+    reset_session()
+    push_activity("Session reset — all counters and feeds cleared", "info")
+    return {"status": "reset", "shift_stats": shift_stats}
 
 
 @app.get("/prompts/{agent_name}/production")

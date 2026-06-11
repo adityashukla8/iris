@@ -75,3 +75,24 @@ from core.healing.models import HealingCandidate  # noqa: E402
 
 healing_candidates: deque[HealingCandidate] = deque(maxlen=50)   # pending human review
 healing_history: deque[HealingCandidate] = deque(maxlen=200)     # all past candidates
+
+
+def reset_session() -> None:
+    """Zero out all in-process demo/session state. Used by POST /reset so a
+    deployed instance can start a clean demo run without a redeploy (which is
+    the only other way to clear in-memory state on Cloud Run)."""
+    global last_scan_time
+    recent_traces.clear()
+    activity_log.clear()
+    healing_candidates.clear()
+    healing_history.clear()
+    heal_cooldowns.clear()
+    last_scan_time = 0.0
+    for key in shift_stats:
+        shift_stats[key] = 0
+    for bus in (alert_bus, self_heal_bus):
+        while not bus.empty():
+            try:
+                bus.get_nowait()
+            except Exception:
+                break
