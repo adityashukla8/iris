@@ -8,6 +8,10 @@ Built for the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.c
 
 ---
 
+![IRIS Workflow Diagram](diagrams/rapid_agents_workflow_aditya_shukla.png)
+
+---
+
 ## How it works
 
 ```
