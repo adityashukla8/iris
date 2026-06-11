@@ -40,6 +40,8 @@ def _worst_result(outcome: EvaluationOutcome):
 
 def dispatch_alert(event: IrisEvent, outcome: EvaluationOutcome) -> AlertEvent | None:
     """Push a dashboard alert reflecting the worst evaluator finding."""
+    from core.healing.prompt_identity import prompt_hash as compute_hash
+    phash = compute_hash(event.system_prompt)
     worst = _worst_result(outcome)
     if worst is None:
         # All clear — info-level visibility only.
@@ -51,6 +53,7 @@ def dispatch_alert(event: IrisEvent, outcome: EvaluationOutcome) -> AlertEvent |
             failure_type="none",
             description=f"{event.agent_name} {event.query_type}: all safety checks passed.",
             eval_score=max((r.score for r in outcome.results), default=10.0),
+            prompt_hash=phash,
         )
     else:
         sev = worst.severity
@@ -69,6 +72,7 @@ def dispatch_alert(event: IrisEvent, outcome: EvaluationOutcome) -> AlertEvent |
             failure_type=worst.evaluator,
             description=desc[:300],
             eval_score=worst.score,
+            prompt_hash=phash,
         )
 
     try:

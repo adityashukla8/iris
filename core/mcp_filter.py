@@ -97,11 +97,12 @@ def phoenix_mcp_before_tool_callback(
     'MCP error -32602 ... too_big', which wastes a whole tool round-trip.
     Mutates args in place; returning None proceeds with the clamped call.
     """
+    _LIMIT_CLAMP = 30
     try:
         limit = args.get("limit")
-        if isinstance(limit, (int, float)) and limit > 100:
-            print(f"[MCP FILTER] clamping {getattr(tool, 'name', '?')} limit {limit} → 100")
-            args["limit"] = 100
+        if isinstance(limit, (int, float)) and limit > _LIMIT_CLAMP:
+            print(f"[MCP FILTER] clamping {getattr(tool, 'name', '?')} limit {limit} → {_LIMIT_CLAMP}")
+            args["limit"] = _LIMIT_CLAMP
     except Exception:
         pass
     return None

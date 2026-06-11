@@ -127,3 +127,4 @@ class AlertEvent(BaseModel):
     failure_type: str
     description: str
     eval_score: float | None = None
+    prompt_hash: str | None = None  # which system-prompt version produced this trace

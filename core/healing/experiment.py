@@ -129,6 +129,8 @@ RESPONDER_PROMPT = """\
 Patient context: {context}
 Clinical question: {question}
 
+Answer in plain prose (no markdown, no headings, no asterisks).
+
 Your answer:"""
 
 

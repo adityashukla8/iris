@@ -287,10 +287,11 @@
     .case-latency { font-size: .6875rem; font-variant-numeric: tabular-nums; color: var(--gray-500); background: var(--gray-100); padding: 2px 8px; border-radius: 4px; }
 
     .case-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
-    .case-io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .case-section { display: flex; flex-direction: column; gap: 6px; }
     .case-section-label { font-size: .625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); display: flex; align-items: center; gap: 6px; }
-    .case-text { font-size: .8125rem; color: var(--gray-700); background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; max-height: 160px; overflow-y: auto; }
+    .case-text { font-size: .8125rem; color: var(--gray-700); background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+    .case-text.case-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .75rem; color: var(--gray-600); }
+    .case-prompt-hash { font-size: .625rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--gray-500); background: var(--gray-100); border: 1px solid var(--gray-200); padding: 1px 6px; border-radius: 4px; }
     .case-text.output-critical { border: 1px solid var(--red-600); }
     .case-text.output-warning  { border: 1px solid var(--amber-700); }
 
@@ -312,7 +313,7 @@
 
     .eval-cards-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 10px;
       width: 100%;
       min-width: 0;
@@ -593,7 +594,7 @@
     .sim-mode-hint { font-size: .6875rem; color: var(--gray-400); }
 
     @media (max-width: 1280px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr; } .case-io-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(3,1fr); } .grid-3 { grid-template-columns: 1fr; } }
     @media (max-width: 900px)  { .trace-list-panel { width: 260px; } }
     @media (max-width: 640px)  { .stats-row { grid-template-columns: repeat(2,1fr); } .main { padding: 12px; } .grid-2 { grid-template-columns: 1fr; } .grid-healing { grid-template-columns: 1fr; } .trace-inspector { flex-direction: column; } .trace-list-panel { width: 100%; height: 220px; } }
 
@@ -614,7 +615,7 @@
     .sim-overlay[hidden] { display: none !important; }
 
     .sim-modal {
-      background: var(--white); border: 1px solid var(--gray-200);
+      background: var(--white); border: none;
       border-radius: 14px; width: 100%; max-width: 960px;
       box-shadow: 0 24px 64px rgba(0,0,0,.18), 0 8px 20px rgba(0,0,0,.1);
       display: flex; flex-direction: column;
@@ -659,12 +660,13 @@
     }
     .sim-toolbar-left { display: flex; gap: 5px; align-items: center; }
     .sim-quick-btn {
-      padding: 2px 9px; border-radius: 4px; font-size: .6875rem; font-weight: 500;
-      background: var(--gray-100); color: var(--gray-600);
+      height: 22px; display: inline-flex; align-items: center;
+      padding: 0 9px; border-radius: 4px; font-size: .6875rem; font-weight: 500;
+      background: var(--gray-100); color: var(--gray-600); white-space: nowrap;
       border: 1px solid var(--gray-200); cursor: pointer; transition: all .12s;
     }
     .sim-quick-btn:hover { background: var(--gray-200); color: var(--gray-800); }
-    .sim-count-label { font-size: .6875rem; color: var(--gray-400); font-variant-numeric: tabular-nums; }
+    .sim-count-label { font-size: .6875rem; color: var(--gray-400); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .sim-list-scroll { flex: 1; overflow-y: auto; }
 
     /* Individual scenario card — list row */
@@ -677,18 +679,10 @@
     .sim-scenario-card:last-child { border-bottom: none; }
     .sim-scenario-card:hover { background: var(--gray-50); }
     .sim-scenario-card.active { background: var(--gray-100); }
-    /* Left severity rail */
-    .sim-scenario-card::before {
-      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-      background: var(--gray-300);
-    }
-    .sim-scenario-card.sev-critical::before { background: var(--red-600); }
-    .sim-scenario-card.sev-warning::before  { background: var(--amber-700); }
-    .sim-scenario-card.sev-pass::before     { background: var(--green-700); }
 
     .sim-card-row {
       display: flex; align-items: flex-start; gap: 9px;
-      padding: 9px 12px 9px 14px;
+      padding: 9px 12px;
     }
     .sim-checkbox-wrap { flex-shrink: 0; margin-top: 2px; }
     .sim-checkbox {
@@ -706,20 +700,20 @@
     .sim-card-body { flex: 1; min-width: 0; }
     .sim-card-top { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; flex-wrap: wrap; }
     .sim-snum {
-      font-size: .5rem; font-weight: 700; letter-spacing: .07em;
+      font-size: .5625rem; font-weight: 700; letter-spacing: .07em;
       text-transform: uppercase; color: var(--gray-400); white-space: nowrap;
     }
     .sim-sev-chip {
-      display: inline-flex; align-items: center; padding: 1px 5px;
-      border-radius: 3px; font-size: .4375rem; font-weight: 700;
+      display: inline-flex; align-items: center; padding: 1px 6px;
+      border-radius: 3px; font-size: .5625rem; font-weight: 700;
       letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
     }
     .chip-critical { background: #FFF1F1; color: #C43434; border: 1px solid #FFD4D4; }
     .chip-warning  { background: #FFFBEB; color: #C07818; border: 1px solid #FEE9A0; }
     .chip-pass     { background: #EDFBF3; color: #1A9652; border: 1px solid #D6F5E3; }
     .sim-qtype-chip {
-      display: inline-flex; padding: 1px 5px; border-radius: 3px;
-      font-size: .4375rem; font-weight: 500; background: var(--gray-100);
+      display: inline-flex; padding: 1px 6px; border-radius: 3px;
+      font-size: .5625rem; font-weight: 500; background: var(--gray-100);
       color: var(--gray-500); border: 1px solid var(--gray-200); white-space: nowrap;
     }
     .sim-card-title {
@@ -822,7 +816,7 @@
 
     .td-drawer {
       position: fixed; top: 0; right: 0; bottom: 0; z-index: 801;
-      width: 580px; max-width: calc(100vw - 48px);
+      width: 40vw; min-width: 420px; max-width: calc(100vw - 48px);
       background: var(--white);
       border-left: 1px solid var(--gray-200);
       box-shadow: -6px 0 32px rgba(0,0,0,.10), -1px 0 4px rgba(0,0,0,.05);
@@ -832,6 +826,12 @@
     }
     .td-drawer.open { transform: translateX(0); }
     .td-drawer.expanded { width: min(860px, calc(100vw - 48px)); }
+    .td-resize-handle {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      cursor: ew-resize; z-index: 20; background: transparent;
+      transition: background .12s;
+    }
+    .td-resize-handle:hover, .td-resize-handle.dragging { background: var(--gray-300); }
 
     .td-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -871,10 +871,12 @@
     /* Alert item — clickable when it has a trace */
     .alert-item.has-trace { cursor: pointer; }
     .alert-item.has-trace:hover { background: var(--blue-50); }
-    .alert-inspect-hint {
-      display: inline-flex; align-items: center; gap: 3px;
-      font-size: .5625rem; color: var(--gray-400); margin-top: 3px;
+    .alert-chevron {
+      align-self: center; flex-shrink: 0; color: var(--gray-300);
+      display: flex; align-items: center; transition: color .12s, transform .12s;
     }
+    .alert-item.has-trace:hover .alert-chevron { color: var(--gray-600); transform: translateX(2px); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   </style>
 </head>
 <body>
@@ -1014,7 +1016,7 @@
             <span class="panel-meta" id="cmpPromptChips"></span>
           </div>
           <div class="panel-body" id="cmpBody" style="max-height:none;overflow-y:visible;">
-            <div class="empty"><div class="empty-text">Run scenarios in Recorded mode, let a heal deploy, then re-run in Live Agent mode to see the before/after.</div></div>
+            <div class="empty"><div class="empty-text">Run scenarios in Synthetic Response mode, let a heal deploy, then re-run in Live Generation mode to see the before/after.</div></div>
           </div>
         </div>
 
@@ -1254,6 +1256,14 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function fmtPct(v) { return (v * 100).toFixed(1) + '%'; }
+  // Live-generated outputs sometimes arrive as markdown; render as clean prose
+  function stripMd(s) {
+    return String(s || '')
+      .replace(/^#{1,6}\s+/gm, '')              // headings
+      .replace(/\*\*([^*]+)\*\*/g, '$1')        // bold
+      .replace(/\*([^*\n]+)\*/g, '$1')          // italic
+      .replace(/^\s*[-*]\s+/gm, '• ');     // list markers → bullets
+  }
 
   // ── Tab Navigation ───────────────────────────────────────────────
   function showTab(name) {
@@ -1302,9 +1312,10 @@
             ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
             ${d.failure_type ? `<span class="badge badge-neutral">${esc(d.failure_type)}</span>` : ''}
             ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
-            ${hasTrace ? `<span class="alert-inspect-hint"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Inspect trace</span>` : ''}
+            ${d.prompt_hash ? `<span class="badge badge-neutral mono" title="System prompt version (content hash)">prompt ${esc(d.prompt_hash.slice(0, 6))}</span>` : ''}
           </div>
-        </div>`;
+        </div>
+        ${hasTrace ? `<div class="alert-chevron" title="Open in Trace Inspector"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>` : ''}`;
       feed.insertBefore(el, feed.firstChild);
     };
   }
@@ -1466,28 +1477,29 @@
         </div>
       </div>
       <div class="case-body">
+        ${ctxParts.length ? `
+        <div class="case-section">
+          <div class="case-section-label">Patient Context</div>
+          <div class="ctx-chips">${ctxParts.join('')}</div>
+        </div>` : ''}
         ${t.system_prompt ? `
         <div class="case-section">
-          <div class="case-section-label">System Prompt</div>
-          <div class="case-text" style="font-family:monospace;font-size:.75rem;white-space:pre-wrap;color:var(--gray-600);">${esc(t.system_prompt)}</div>
-        </div>` : ''}
-        <div class="case-io-grid">
-          <div class="case-section">
-            <div class="case-section-label">Input Prompt</div>
-            <div class="case-text">${esc(t.input_prompt || '—')}</div>
+          <div class="case-section-label">
+            System Prompt
+            ${t.prompt_hash ? `<span class="case-prompt-hash mono" title="Prompt version (content hash)">${esc(t.prompt_hash.slice(0, 6))}</span>` : ''}
           </div>
-          ${ctxParts.length ? `
-            <div class="case-section">
-              <div class="case-section-label">Patient Context</div>
-              <div class="ctx-chips">${ctxParts.join('')}</div>
-            </div>` : '<div></div>'}
+          <div class="case-text case-mono">${esc(t.system_prompt)}</div>
+        </div>` : ''}
+        <div class="case-section">
+          <div class="case-section-label">Input Prompt</div>
+          <div class="case-text">${esc(t.input_prompt || '—')}</div>
         </div>
         <div class="case-section">
           <div class="case-section-label">
             AI Output
             <span class="badge badge-${sev} badge-sm">${sev.toUpperCase()}</span>
           </div>
-          <div class="case-text${outputCls}">${esc(t.output_text || '—')}</div>
+          <div class="case-text${outputCls}">${esc(stripMd(t.output_text) || '—')}</div>
         </div>
         <div class="case-section">
           <div class="case-section-label">
@@ -1905,7 +1917,7 @@
     return `
       <div class="cmp-col">
         <div class="cmp-col-label">${label}
-          <span class="cmp-mode-chip">${esc(run.mode || '')}</span>
+          <span class="cmp-mode-chip">${esc(run.mode === 'live' ? 'live generation' : run.mode === 'recorded' ? 'synthetic' : (run.mode || ''))}</span>
           <span class="cmp-mode-chip mono">${esc((run.prompt_hash || '').slice(0, 6) || '—')}</span>
         </div>
         <div class="cmp-rate">${pct}% pass</div>
@@ -1923,7 +1935,7 @@
       const chips = document.getElementById('cmpPromptChips');
       if (!d.comparison) {
         chips.textContent = '';
-        body.innerHTML = `<div class="empty"><div class="empty-text">Run scenarios in Recorded mode, let a heal deploy, then re-run in Live Agent mode to see the before/after.</div></div>`;
+        body.innerHTML = `<div class="empty"><div class="empty-text">Run scenarios in Synthetic Response mode, let a heal deploy, then re-run in Live Generation mode to see the before/after.</div></div>`;
         return;
       }
       const c = d.comparison;
@@ -2422,7 +2434,7 @@
     const n = _simSelected.size;
     document.getElementById('simSelCount').textContent = n;
     document.getElementById('simRunBtn').disabled = n === 0;
-    document.getElementById('simCountLabel').textContent = `${n} of ${SIM_SCENARIOS.length} selected`;
+    document.getElementById('simCountLabel').textContent = `${n}/${SIM_SCENARIOS.length}`;
   }
 
   let _simMode = 'recorded';
@@ -2432,8 +2444,8 @@
     document.getElementById('simModeRecorded').classList.toggle('active', mode === 'recorded');
     document.getElementById('simModeLive').classList.toggle('active', mode === 'live');
     document.getElementById('simModeHint').textContent = mode === 'live'
-      ? 'Outputs generated by Gemini under the current production prompt from Phoenix'
-      : 'Replays captured agent outputs';
+      ? 'Gemini answers each scenario fresh, under the agent’s current production prompt fetched from Phoenix'
+      : 'Replays the pre-scripted unsafe outputs shown above — fixed failure cases for demo purposes';
   }
 
   async function runSimulation() {
@@ -2445,7 +2457,7 @@
     document.getElementById('simMainContent').hidden = true;
     document.getElementById('simRunningOverlay').hidden = false;
     document.getElementById('simOverlayTitle').textContent =
-      _simMode === 'live' ? 'Running Live Agent…' : 'Running Scenarios…';
+      _simMode === 'live' ? 'Running Live Generation…' : 'Running Scenarios…';
     document.getElementById('simOverlaySub').innerHTML = _simMode === 'live'
       ? `Generating <strong>${_simTotal}</strong> ${_simTotal === 1 ? 'response' : 'responses'} with Gemini under the current production prompt, then evaluating each.<br><span style="font-size:.75rem;color:var(--gray-400);">Watch the Activity Log for real-time updates.</span>`
       : `Injecting <strong>${_simTotal}</strong> ${_simTotal === 1 ? 'scenario' : 'scenarios'} into the live IRIS pipeline.<br><span style="font-size:.75rem;color:var(--gray-400);">Watch the Activity Log for real-time updates.</span>`;
@@ -2553,20 +2565,52 @@
   function toggleDrawerExpand() {
     _drawerExpanded = !_drawerExpanded;
     const drawer = document.getElementById('traceDrawer');
+    drawer.style.width = '';   // manual drag width yields to the toggle
     drawer.classList.toggle('expanded', _drawerExpanded);
     const btn = document.getElementById('tdExpandBtn');
     if (btn) btn.title = _drawerExpanded ? 'Collapse' : 'Expand';
   }
 
-  document.getElementById('traceDrawerBackdrop').addEventListener('click', closeTraceDrawer);
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeTraceDrawer();
+  // Drawer event wiring — the drawer markup sits AFTER this script block in the
+  // document, so getElementById is null at script-eval time; defer to DOM ready.
+  document.addEventListener('DOMContentLoaded', function () {
+    // Drag the drawer's left edge to resize
+    const drawer = document.getElementById('traceDrawer');
+    const handle = document.getElementById('tdResizeHandle');
+    let dragging = false;
+    handle.addEventListener('mousedown', function (e) {
+      dragging = true;
+      handle.classList.add('dragging');
+      drawer.style.transition = 'none';
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'ew-resize';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      const w = Math.min(Math.max(window.innerWidth - e.clientX, 420), window.innerWidth - 48);
+      drawer.style.width = w + 'px';
+    });
+    document.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      drawer.style.transition = '';
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    });
+
+    document.getElementById('traceDrawerBackdrop').addEventListener('click', closeTraceDrawer);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeTraceDrawer();
+    });
   });
 </script>
 
 <!-- ── Trace Detail Drawer ─────────────────────────────────────────── -->
 <div class="td-backdrop" id="traceDrawerBackdrop"></div>
 <div class="td-drawer" id="traceDrawer" role="dialog" aria-modal="true" aria-label="Trace Inspector">
+  <div class="td-resize-handle" id="tdResizeHandle" title="Drag to resize"></div>
 
   <div class="td-header">
     <div class="td-header-left">
@@ -2670,7 +2714,7 @@
                 <button class="sim-quick-btn" onclick="simClearAll()">None</button>
                 <button class="sim-quick-btn" onclick="simSelectQtype('drug_dosage')" title="Scenarios in the drug_dosage cluster — the cluster self-healing targets first">Dosage cluster</button>
               </div>
-              <span class="sim-count-label" id="simCountLabel">9 of 9</span>
+              <span class="sim-count-label" id="simCountLabel">9/9</span>
             </div>
             <div class="sim-list-scroll" id="simGrid"><!-- populated by JS --></div>
           </div>
@@ -2690,10 +2734,10 @@
         <div class="sim-sel-info"><span class="sim-sel-count" id="simSelCount">9</span> scenario(s) selected</div>
         <div class="sim-mode-wrap">
           <div class="sim-mode-toggle">
-            <button type="button" class="sim-mode-btn active" id="simModeRecorded" onclick="setSimMode('recorded')">Recorded</button>
-            <button type="button" class="sim-mode-btn" id="simModeLive" onclick="setSimMode('live')">Live Agent</button>
+            <button type="button" class="sim-mode-btn active" id="simModeRecorded" onclick="setSimMode('recorded')">Synthetic Response</button>
+            <button type="button" class="sim-mode-btn" id="simModeLive" onclick="setSimMode('live')">Live Generation</button>
           </div>
-          <div class="sim-mode-hint" id="simModeHint">Replays captured agent outputs</div>
+          <div class="sim-mode-hint" id="simModeHint">Replays the pre-scripted unsafe outputs shown above — fixed failure cases</div>
         </div>
         <button class="sim-run-btn" id="simRunBtn" onclick="runSimulation()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
