@@ -1138,104 +1138,15 @@
     <div class="tab-pane" data-tab="pipeline" hidden>
       <main class="main">
 
-        <!-- Architecture Diagram -->
+        <!-- Workflow Diagram -->
         <div class="panel" style="margin-bottom:14px;">
           <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot dot-gray"></div>IRIS Architecture — Live Pipeline</div>
-            <span class="panel-meta">how your event flows through the system</span>
+            <div class="panel-title"><div class="panel-dot dot-gray"></div>End-to-End Workflow</div>
+            <span class="panel-meta">click to view full size</span>
           </div>
-          <div class="pipe-flow">
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">1 — Input</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-external">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                  ORION — Upstream Clinical AI
-                </div>
-                <span class="pipe-arrow">→</span>
-                <span class="pipe-connector">POST /event · input_prompt · output_text · retrieved_context · tool_calls</span>
-                <span class="pipe-arrow">→</span>
-                <div class="pipe-node node-iris">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  IRIS SUPERVISOR — FastAPI
-                </div>
-              </div>
-            </div>
-
-            <div class="pipe-down">↓ asyncio.gather — 7 parallel Gemini 2.5-flash evaluations</div>
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">2 — Parallel Evaluation (all 7 run concurrently)</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-eval">dosage_boundary</div>
-                <div class="pipe-node node-eval">factual_hallucination</div>
-                <div class="pipe-node node-eval">drug_interaction</div>
-                <div class="pipe-node node-eval">allergy_contraindication</div>
-                <div class="pipe-node node-eval">context_gap</div>
-                <div class="pipe-node node-eval">attribution</div>
-                <div class="pipe-node node-eval">surgical_phase</div>
-              </div>
-            </div>
-
-            <div class="pipe-down">↓ EvalResult[] — score (0–10) · severity · reasoning_chain · confidence · flagged_claims</div>
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">3 — Observability + Alert Dispatch</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-phoenix">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  write_phoenix_span_annotation → Arize Phoenix OTel
-                </div>
-                <span class="pipe-arrow" style="color:var(--gray-300);">+</span>
-                <div class="pipe-node node-iris">SSE push → Live Traces → Dashboard</div>
-              </div>
-            </div>
-
-            <div class="pipe-down">↓ Phoenix MCP: get-spans / get-span-annotations — Pattern Detector reads its own traces</div>
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">4 — Pattern Detection (ADK Agent + Phoenix MCP)</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-adk">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  pattern_detector — LlmAgent (Gemini 2.5-flash)
-                </div>
-                <span class="pipe-arrow">→</span>
-                <span class="pipe-mcp-label">MCP: get-spans · get-span-annotations · list-traces · list-projects</span>
-              </div>
-            </div>
-
-            <div class="pipe-down">↓ healing_required = true → failure cluster above threshold (hallucination_rate &gt; 15%, n ≥ 5)</div>
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">5 — Self-Healer DIAGNOSE Phase (ADK Agent + Phoenix MCP)</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-adk">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-                  self_healer — LlmAgent (Gemini 2.5-flash)
-                </div>
-                <span class="pipe-arrow">→</span>
-                <span class="pipe-mcp-label">MCP: get-latest-prompt · list-prompt-versions · add-dataset-examples · get-dataset-examples</span>
-              </div>
-            </div>
-
-            <div class="pipe-down">↓ HealingDiagnosis JSON — failure_analysis · current_prompt_text · failing_span_ids</div>
-
-            <div class="pipe-stage">
-              <div class="pipe-stage-label">6 — Healing Pipeline (Python async)</div>
-              <div class="pipe-nodes-row">
-                <div class="pipe-node node-python">TextGrad Mutation</div>
-                <span class="pipe-arrow">→</span>
-                <div class="pipe-node node-python">Validate (5 examples)</div>
-                <span class="pipe-arrow">→</span>
-                <div class="pipe-node node-python">Human Gate / Auto-approve</div>
-                <span class="pipe-arrow">→</span>
-                <div class="pipe-node node-phoenix">Deploy → Phoenix prompt v{N+1}</div>
-              </div>
-            </div>
-
-          </div>
+          <a href="/static/images/workflow.png" target="_blank" rel="noopener" style="display:block;cursor:zoom-in;padding:12px;">
+            <img src="/static/images/workflow.png" alt="IRIS end-to-end workflow diagram" loading="lazy" style="width:100%;height:auto;display:block;border-radius:8px;">
+          </a>
         </div>
 
       </main>
