@@ -71,6 +71,9 @@
 
     /* ── Layout ────────────────────────────────────────────────── */
     .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+    /* Nav and footer span the full viewport width */
+    .nav .container,
+    .footer .container { max-width: none; padding: 0 40px; }
 
     /* ── Shared typography ─────────────────────────────────────── */
     .eyebrow {
@@ -222,8 +225,8 @@
     ─────────────────────────────────────────────────────────── */
     .nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(255,255,255,.97); backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--lt-line);
+      background: rgba(10,15,30,.82); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
     }
     .nav-inner {
       display: flex; align-items: center;
@@ -233,7 +236,7 @@
     .nav-logo {
       display: flex; align-items: center; gap: 10px;
       font-family: var(--display); font-weight: 700; font-size: 1.0625rem;
-      letter-spacing: .04em; color: var(--lt-title);
+      letter-spacing: .04em; color: var(--text);
     }
     .nav-logo-mark {
       width: 32px; height: 32px; border-radius: 9px;
@@ -245,19 +248,19 @@
     .nav-links { display: flex; align-items: center; gap: 26px; list-style: none; }
     .nav-links a {
       font-size: .8438rem; font-weight: 500;
-      color: var(--lt-body); transition: color .15s;
+      color: var(--text-2); transition: color .15s;
     }
-    .nav-links a:hover { color: var(--lt-title); }
+    .nav-links a:hover { color: var(--text); }
     .nav-right { display: flex; align-items: center; gap: 14px; }
     .nav-status {
       display: flex; align-items: center; gap: 7px;
       font-family: var(--mono); font-size: .6875rem; font-weight: 500;
-      color: #16A34A; letter-spacing: .04em;
+      color: var(--green); letter-spacing: .04em;
     }
     .status-dot {
       width: 6px; height: 6px; border-radius: 50%;
-      background: #16A34A; flex-shrink: 0;
-      box-shadow: 0 0 8px rgba(22,163,74,.55);
+      background: var(--green); flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(74,222,128,.7);
       animation: statusBlink 2.6s ease-in-out infinite;
     }
     @keyframes statusBlink { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
@@ -669,12 +672,20 @@
     /* ───────────────────────────────────────────────────────────
        FOOTER
     ─────────────────────────────────────────────────────────── */
-    .footer { padding: 30px 0; border-top: 1px solid var(--lt-line); background: var(--lt-bg-2); }
-    .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-    .footer-text  { font-family: var(--mono); font-size: .6875rem; color: var(--lt-muted); }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { font-size: .8125rem; color: var(--lt-body); transition: color .15s; }
-    .footer-links a:hover { color: var(--lt-title); }
+    .footer { padding: 28px 0; border-top: 1px solid var(--line); background: var(--bg-deep); }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--display); font-weight: 700; font-size: 1rem;
+      letter-spacing: .04em; color: var(--text);
+    }
+    .footer-logo-mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: radial-gradient(circle at 50% 40%, rgba(59,130,246,.55), rgba(59,130,246,.12) 70%);
+      border: 1px solid rgba(96,165,250,.35);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .footer-copy { font-family: var(--mono); font-size: .6875rem; color: var(--text-3); }
 
     /* ───────────────────────────────────────────────────────────
        RESPONSIVE
@@ -715,6 +726,7 @@
     }
     @media (max-width: 420px) {
       .container { padding: 0 16px; }
+      .nav .container, .footer .container { padding: 0 16px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -752,7 +764,7 @@
           <div class="status-dot"></div>
           LIVE
         </div>
-        <a href="/dashboard" class="btn btn-primary" style="padding:8px 16px;font-size:.8438rem;background:#0F172A;color:#fff;">Live Dashboard</a>
+        <a href="/dashboard" class="btn btn-primary" style="padding:8px 16px;font-size:.8438rem;">Live Dashboard</a>
       </div>
     </div>
   </div>
@@ -1482,11 +1494,16 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-inner">
-      <div class="footer-text">IRIS &copy; 2026 &mdash; Built for the Google Rapid Agent &times; Arize Hackathon</div>
-      <div class="footer-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="https://app.phoenix.arize.com" target="_blank">Phoenix</a>
+      <div class="footer-logo">
+        <div class="footer-logo-mark">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        IRIS
       </div>
+      <div class="footer-copy">IRIS &copy; 2026 &mdash; Google Rapid Agent &times; Arize Hackathon</div>
     </div>
   </div>
 </footer>
