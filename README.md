@@ -14,6 +14,10 @@ Demo Video: [Iris Demo](https://youtu.be/vlp-cjAwNNU)
 
 ---
 
+![IRIS Architecture Diagram](diagrams/rapid_agents_architecture_aditya_shukla.png)
+
+---
+
 ## How it works
 
 ```
