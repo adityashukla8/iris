@@ -1,262 +1,301 @@
-# IRIS — Inference Risk and Integrity Supervisor
+# IRIS - Inference Risk and Integrity Supervisor
 
-**An autonomous multi-agent clinical AI safety supervisor built on Google ADK + Arize Phoenix.**
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-IRIS watches every output from clinical AI agents in real time, runs five specialized safety evaluations, detects failure patterns across a shift, and autonomously rewrites the agent's prompt to prevent recurrence — all without human intervention.
+A self-healing observability layer for clinical AI. IRIS evaluates every output from clinical agents in real time across 7 safety evaluators, traces everything to Arize Phoenix, detects recurring failure patterns using its own observability data, and autonomously rewrites the failing system prompt - validating the fix before it goes live.
 
-> Built for the Google Cloud Rapid Agent Hackathon (Arize Phoenix Track)
+Built for the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/) - Arize Phoenix Track.
 
 ---
 
-## What IRIS Does
+## How it works
 
 ```
 Clinical AI Agent
-        │ IrisEvent (POST /event)
-        ▼
-┌─────────────────────────────────────────────────────────┐
-│                    IRIS Supervisor                       │
-│                                                         │
-│  Orchestrator (ADK LlmAgent)                            │
-│       │                                                 │
-│       ├──▶ Safety Evaluator ──▶ 5 Evaluators:           │
-│       │        ├── Factual Hallucination (RxNorm+LLM)   │
-│       │        ├── Dosage Boundary (OpenFDA+LLM)        │
-│       │        ├── Attribution (cross-patient check)    │
-│       │        ├── Context Gap (missing patient vars)   │
-│       │        └── Surgical Phase (phase consistency)   │
-│       │              │                                  │
-│       │         Phoenix OTel ──▶ Arize Phoenix Cloud    │
-│       │                                                 │
-│       ├──▶ Pattern Detector ──▶ Phoenix MCP get-spans   │
-│       │        │ failure cluster detected               │
-│       ▼        ▼                                        │
-│    Alert ◀── Self-Healer ──▶ Phoenix MCP upsert-prompt  │
-│  Dispatcher        │  (autonomous prompt mutation)      │
-│       │            └──▶ Phoenix dataset + experiment    │
-│       ▼                                                 │
-│  OR Dashboard (SSE live feed)                           │
-└─────────────────────────────────────────────────────────┘
+      | POST /event (IrisEvent)
+      v
++---------------------------------------------------------------------+
+|                         IRIS Supervisor                             |
+|                                                                     |
+|  7 Safety Evaluators (concurrent, Gemini 2.5 Flash + RxNorm/FDA)   |
+|    factual_hallucination, dosage_boundary, drug_interaction,        |
+|    allergy_contraindication, attribution, context_gap,              |
+|    surgical_phase                                                   |
+|           |                                                         |
+|    OTel spans + REST annotations --> Arize Phoenix Cloud            |
+|           |                                                         |
+|  Alert Dispatch (SSE) --> Dashboard live feed                       |
+|           |                                                         |
+|  [on critical cluster] Event-driven scan trigger                    |
+|           |                                                         |
+|  Pattern Detector (ADK LlmAgent + Phoenix MCP get-spans)            |
+|           |                                                         |
+|  Diagnosis (Gemini - root cause from real failing traces)           |
+|           |                                                         |
+|  Mutation Engine (TextGrad-style: per-example gradients + synth)    |
+|           |                                                         |
+|  Experiment Validation (candidate prompt vs real failures, seed=42) |
+|           |                                                         |
+|  Deploy to Phoenix (versioned, tagged production/candidate)         |
++---------------------------------------------------------------------+
+      |
+      v
+Clinical AI Agent runs under improved prompt
 ```
+
+---
+
+## What makes it different
+
+Most observability tools tell you something went wrong after the fact. IRIS:
+
+1. **Catches failures in real time** - 7 evaluators run concurrently on every agent output, grounded in RxNorm and OpenFDA.
+2. **Closes the loop automatically** - when a failure cluster crosses the threshold, IRIS reads its own Phoenix spans via MCP, diagnoses the root cause, mutates the system prompt, and validates the fix against real captured failures before deploying it.
+3. **Makes the improvement measurable** - run baseline scenarios (synthetic responses at first, for demo purposes), trigger a heal, then re-run in Live Generation mode (agent generates under the new prompt pushed to Phoenix in real time). The Before/After comparison panel shows pass rate delta and prompt hash change side by side.
 
 ---
 
 ## Quickstart
 
+**Prerequisites:** Python 3.11+, a Google Cloud project with Vertex AI enabled, an Arize Phoenix Cloud account.
+
 ```bash
-# 1. Clone and set up environment
-git clone <repo>
+# 1. Clone
+git clone https://github.com/adityashukla8/iris.git
 cd iris
-conda create -n iris python=3.11 -y && conda activate iris
+
+# 2. Install
 pip install -e ".[dev]"
 
-# 2. Configure credentials
+# 3. Configure credentials
 cp .env.example .env
-# Edit .env: GOOGLE_API_KEY, PHOENIX_API_KEY, PHOENIX_CLIENT_URL
+# Edit .env: GOOGLE_CLOUD_PROJECT, PHOENIX_API_KEY, PHOENIX_CLIENT_URL
 
-# 3. Start IRIS
-uvicorn core.main:app --port 8080 --reload
+# 4. Start
+uvicorn core.main:app --port 8081 --reload
 
-# 4. Open dashboard
-open http://localhost:8080/
+# 5. Open the dashboard
+open http://localhost:8081/
 
-# 5. Run demo scenarios (5 clinical failure scenarios)
-python demo/mock_agents/simulator.py --url http://localhost:8080
+# 6. Run demo scenarios
+python demo/mock_agents/simulator.py --url http://localhost:8081
 ```
 
 ---
 
-## Integration Contract
+## The self-improvement loop (demo flow)
 
-Any clinical AI agent integrates with IRIS in under 10 lines:
-
-```python
-from sdk.client import IrisClient
-from sdk.models import IrisEvent, QueryType
-
-async with IrisClient("http://iris.internal:8080") as iris:
-    result = await iris.submit(IrisEvent(
-        agent_name="care-advisor-v2",
-        query_type=QueryType.DRUG_DOSAGE,
-        input_prompt=user_query,
-        output_text=agent_response,
-        retrieved_context={"patient_id": "PT-001", "creatinine_clearance": 34.1, ...},
-    ))
-
-    if result.get("severity") == "critical":
-        halt_and_escalate()
-```
-
-Or for agents that don't import the SDK:
-
-```bash
-curl -X POST http://iris.internal:8080/event \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_name": "care-advisor-v2",
-    "query_type": "drug_dosage",
-    "input_prompt": "What dose of vancomycin?",
-    "output_text": "Vancomycin 8000mg IV...",
-    "retrieved_context": {"patient_id": "PT-001", "creatinine_clearance": 34.1}
-  }'
-```
+1. Open the dashboard at `/dashboard`
+2. Click **Run Scenarios** - select **Synthetic Response** mode - run all 9 or selective scenarios. These are pre-scripted unsafe outputs; most will score critical.
+3. Wait for the activity log to show "event-driven scan triggered" - or click **Run Scan** manually.
+4. Watch the self-healing pipeline: pattern detection, diagnosis, mutation, experiment validation, prompt deployed to Phoenix.
+5. Click **Run Scenarios** again - switch to **Live Generation** mode. IRIS now generates each answer in real time under the healed prompt (registered in and fetched via Arize Phoenix).
+6. The **Agent Improvement** panel on the Overview tab shows pass rate before and after, critical delta, and the prompt hash that changed.
 
 ---
 
 ## Evaluators
 
-| Evaluator | What It Catches | Query Types | Knowledge Source |
-|-----------|----------------|-------------|-----------------|
-| **Factual Hallucination** | Drug names not in RxNorm, invented procedures, impossible values | All | RxNorm API + Gemini LLM Judge |
-| **Dosage Boundary** | Doses outside FDA-approved range, missing renal adjustment | `drug_dosage`, `drug_interaction` | OpenFDA API + Gemini LLM Judge |
-| **Attribution** | Cross-patient data contamination, claims not traceable to patient record | All (with patient context) | Gemini LLM Judge |
-| **Context Gap** | Clinical questions answered without required patient variables | All | Gemini (dynamic inference, no hardcoded tables) |
-| **Surgical Phase** | Recommendations inappropriate for current surgical phase | All (when `surgical_phase` present) | Gemini LLM Judge |
+| Evaluator | What it catches | Knowledge source |
+|---|---|---|
+| `factual_hallucination` | Drug names not in RxNorm; impossible values; invented procedures | RxNorm API + Gemini LLM judge |
+| `dosage_boundary` | Doses outside FDA-approved range; missing renal adjustment | OpenFDA API + Gemini LLM judge |
+| `drug_interaction` | Dangerous drug-drug combinations in the recommended regimen | OpenFDA + Gemini LLM judge |
+| `allergy_contraindication` | Drug recommended from a class the patient is allergic to | Allergy context + Gemini LLM judge |
+| `attribution` | Claims not traceable to the patient record; cross-patient contamination | Gemini LLM judge |
+| `context_gap` | Clinical question answered without required patient variables | Gemini (dynamic inference) |
+| `surgical_phase` | Recommendations inappropriate for the current surgical phase | Phase taxonomy + Gemini LLM judge |
 
-All evaluators return a standard `EvalResult`:
-```json
-{
-  "evaluator": "dosage_boundary",
-  "score": 1.5,
-  "severity": "critical",
-  "passed": false,
-  "rationale": "Vancomycin 8000mg exceeds FDA max. CKD patient requires 50% dose reduction.",
-  "flagged_claims": ["vancomycin 8000mg exceeds recommended maximum of 4000mg/day"],
-  "metadata": {"llm_judged": true, "drug_mentions": 1}
-}
+All evaluators run at `temperature=0.0, seed=42` for deterministic, reproducible scoring. Threshold: >= 7.0 pass / 5.0-6.99 warning / < 5.0 critical.
+
+---
+
+## ADK agents and MCP
+
+IRIS uses two ADK `LlmAgent` instances that introspect its own observability data through the Arize Phoenix MCP server (`@arizeai/phoenix-mcp@4.0.8`):
+
+**pattern_detector** - reads recent spans and annotations to identify failure clusters. Uses `get-spans` and `get-span-annotations`. Falls back to deterministic clustering if the MCP call fails.
+
+**mcp_probe** - a general-purpose read agent exposed at `POST /mcp/chat`. Gives you a conversational interface to your Phoenix data: spans, prompts, datasets, experiments, evaluations. 10 read-only MCP tools.
+
+A `before_tool_callback` clamps MCP `limit` args and an `after_tool_callback` strips 40+ bloat attributes from responses (50-80% size reduction) before the LLM context sees them.
+
+---
+
+## API reference
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/event` | Submit an IrisEvent for evaluation |
+| `GET` | `/stream/alerts` | SSE stream of live safety alerts |
+| `GET` | `/stream/activity` | SSE stream of pipeline activity |
+| `GET` | `/status` | Shift stats - traces, alerts, heals |
+| `GET` | `/traces` | Recent trace feed (last 200) |
+| `GET` | `/traces/{trace_id}` | Single trace detail |
+| `POST` | `/scan` | Trigger immediate self-healing scan |
+| `GET` | `/simulate/comparison` | Before/after simulation run comparison |
+| `POST` | `/simulate` | Run demo scenarios (`mode: recorded` or `live`) |
+| `POST` | `/mcp/chat` | Conversational Phoenix MCP probe |
+| `GET` | `/healing/candidates` | Pending heal candidates awaiting approval |
+| `POST` | `/healing/approve/{id}` | Approve a candidate prompt |
+| `POST` | `/healing/reject/{id}` | Reject a candidate prompt |
+| `GET` | `/healing/history` | History of completed heals |
+| `GET` | `/analytics` | Evaluator heatmap and severity breakdown |
+| `GET` | `/prompts/{agent}/production` | Current production prompt for an agent |
+
+---
+
+## Connecting a clinical agent
+
+Any agent submits its outputs to IRIS via `POST /event`:
+
+```python
+from sdk.client import IrisClient
+from sdk.models import IrisEvent, QueryType
+
+async with IrisClient("http://localhost:8081") as iris:
+    result = await iris.submit(IrisEvent(
+        agent_name="care-advisor-v2",
+        query_type=QueryType.DRUG_DOSAGE,
+        input_prompt=user_query,
+        output_text=agent_response,
+        retrieved_context={
+            "patient_id": "PT-001",
+            "creatinine_clearance": 34.1,
+            "current_medications": ["lisinopril 10mg"],
+            "allergies": ["penicillin"]
+        },
+    ))
+```
+
+Or via curl without the SDK:
+
+```bash
+curl -X POST http://localhost:8081/event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_name": "care-advisor-v2",
+    "query_type": "drug_dosage",
+    "input_prompt": "What dose of gentamicin for this patient?",
+    "output_text": "Gentamicin 240mg IV every 8 hours...",
+    "retrieved_context": {"patient_id": "PT-001", "creatinine_clearance": 18.0}
+  }'
 ```
 
 ---
 
-## Self-Healing (Hackathon Differentiator)
-
-When the Pattern Detector identifies ≥5 failures of the same type from the same agent, the Self-Healer executes a 9-step autonomous repair sequence via Arize Phoenix MCP:
-
-1. **Retrieve** the 10 worst-scoring spans via `get-spans`
-2. **Confirm** scores via `get-span-annotations`
-3. **Log** 5 failure examples to Phoenix dataset (`add-dataset-examples`)
-4. **Check** prior experiments for recent healing attempts
-5. **Read** the current active prompt via `get-latest-prompt`
-6. **Construct** a targeted constraint for the failure type
-7. **Write** the new prompt version via `upsert-prompt`
-8. **Record** the healing event to dashboard + shift report
-9. **Validate** improvement after the next 10 spans arrive
-
-The injected constraints are failure-specific, not generic:
-- Drug dosage failures → `"CRITICAL: Always verify stated dose against FDA maximum daily dose."`
-- Hallucination failures → `"CRITICAL: Only state drug names that exist in RxNorm. Verify before every mention."`
-- Context gap failures → `"CRITICAL: Before answering dosage questions, confirm creatinine_clearance is present."`
-
----
-
-## Arize Phoenix Observability
-
-Every evaluation result is written to Arize Phoenix Cloud via two paths:
-
-1. **OTel span attributes** (primary): written as `iris.eval.{evaluator}.score`, `.severity`, `.passed`, `.rationale` on the ADK span — always fires
-2. **REST span annotations** (secondary): structured annotations via `/v1/span_annotations` — best-effort
-
-View traces at: `https://app.phoenix.arize.com/s/<your-space>/projects/iris-clinical`
-
----
-
-## API Reference
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/event` | Submit an IrisEvent for evaluation |
-| `GET` | `/stream/alerts` | SSE stream of live safety alerts |
-| `GET` | `/status` | Shift stats (traces, alerts, self-heals) |
-| `GET` | `/traces` | Recent trace feed (last 200) |
-| `POST` | `/scan` | Trigger immediate pattern scan |
-| `GET` | `/` | OR dashboard (live feed) |
-
----
-
-## Project Structure
+## Project structure
 
 ```
 iris/
-├── sdk/
-│   ├── models.py          # IrisEvent, EvalResult, AlertEvent (Pydantic v2)
-│   └── client.py          # IrisClient — async HTTP client for agents
 ├── core/
 │   ├── agents/
-│   │   ├── orchestrator.py       # Root ADK LlmAgent
-│   │   ├── safety_evaluator.py   # Runs all 5 evaluators
-│   │   ├── pattern_detector.py   # Phoenix MCP read tools
-│   │   ├── self_healer.py        # Phoenix MCP write tools (9-step)
-│   │   ├── alert_dispatcher.py   # Routes alerts to dashboard
-│   │   └── tools/eval_tools.py   # ADK function tools wrapping evaluators
+│   │   ├── pattern_detector.py   # ADK LlmAgent; Phoenix MCP get-spans
+│   │   └── mcp_probe.py          # ADK LlmAgent; 10 read-only MCP tools
 │   ├── evaluators/
 │   │   ├── base.py               # EvalPlugin ABC
 │   │   ├── factual_hallucination.py
 │   │   ├── dosage_boundary.py
+│   │   ├── drug_interaction.py
+│   │   ├── allergy_contraindication.py
 │   │   ├── attribution.py
 │   │   ├── context_gap.py
-│   │   └── surgical_phase.py
+│   │   ├── surgical_phase.py
+│   │   └── service.py            # Concurrent evaluation orchestration
+│   ├── healing/
+│   │   ├── scan.py               # Scan entry point; lock + debounce + cooldown
+│   │   ├── diagnose.py           # Root cause from real failing traces
+│   │   ├── mutation_engine.py    # TextGrad-style prompt mutation
+│   │   ├── experiment.py         # Counterfactual validation gate
+│   │   ├── pipeline.py           # Deploy to Phoenix; human-in-the-loop option
+│   │   ├── prompt_manager.py     # Phoenix prompt CRUD
+│   │   └── prompt_identity.py    # Content-hash versioning
 │   ├── knowledge/
-│   │   ├── rxnorm.py      # RxNorm API + LLM drug extraction
-│   │   └── fda_labels.py  # OpenFDA label client (cached)
+│   │   ├── rxnorm.py             # RxNorm API + LLM drug extraction
+│   │   └── fda_labels.py         # OpenFDA label client (cached)
 │   ├── phoenix/
-│   │   └── client.py      # Dual-path span annotation
-│   ├── config.py
-│   ├── state.py           # In-process alert bus + shift stats
-│   └── main.py            # FastAPI app + OTel registration
+│   │   ├── client.py             # REST span annotations
+│   │   └── tracing.py            # OTel provider registration
+│   ├── mcp_filter.py             # Before/after tool callbacks; strips bloat attrs
+│   ├── alerts.py                 # Alert dispatch + event-driven scan trigger
+│   ├── config.py                 # Pydantic Settings
+│   ├── state.py                  # In-memory alert bus; recent traces deque
+│   └── main.py                   # FastAPI app; all route handlers
+├── sdk/
+│   ├── models.py                 # IrisEvent, EvalResult, AlertEvent (Pydantic v2)
+│   └── client.py                 # IrisClient - async HTTP client
 ├── dashboard/
-│   └── templates/         # Jinja2 + HTMX, dark OR-ambient theme
+│   └── templates/
+│       ├── index.html            # Homepage
+│       └── dashboard.html        # Live operations dashboard
 ├── demo/
-│   ├── mock_agents/simulator.py  # 9 clinical failure scenarios
-│   └── patients/                 # 3 synthetic FHIR patients
+│   ├── mock_agents/
+│   │   ├── simulator.py          # 9 clinical failure scenarios (recorded mode)
+│   │   └── live_agent.py         # Live Gemini generation under current prompt
+│   └── patients/                 # Synthetic patient records
 ├── tests/
-│   ├── test_evaluators.py
-│   └── test_pipeline.py
-├── pyproject.toml
-└── Dockerfile
+├── Dockerfile
+├── cloudbuild.yaml
+└── pyproject.toml
 ```
 
 ---
 
-## Environment Variables
+## Environment variables
 
 ```env
-GOOGLE_API_KEY=...          # Gemini 2.5 Pro API key
-PHOENIX_API_KEY=...         # Arize Phoenix system key (JWT)
-PHOENIX_CLIENT_URL=...      # https://app.phoenix.arize.com/s/<space>
-IRIS_PORT=8080
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+
+PHOENIX_API_KEY=...              # Arize Phoenix system key
+PHOENIX_CLIENT_URL=https://app.phoenix.arize.com/s/your-space
+
+IRIS_PORT=8081
 IRIS_ENV=development
+
+# Self-healing thresholds
+HEALING_AUTO_APPROVE=true        # false = queue for human review
+HEALING_IMPROVEMENT_THRESHOLD=1.5
+PATTERN_MIN_SAMPLES=3
+PATTERN_WINDOW_MINUTES=60
 ```
 
----
+Models are also configurable via env:
 
-## Running Tests
-
-```bash
-# Unit tests (evaluators — requires GOOGLE_API_KEY)
-pytest tests/test_evaluators.py -v --asyncio-mode=auto
-
-# Integration tests (full pipeline)
-pytest tests/test_pipeline.py -v
-
-# All tests
-pytest tests/ -v --asyncio-mode=auto
+```env
+GEMINI_MODEL=gemini-2.5-flash          # live agent + healing pipeline
+EVAL_GEMINI_MODEL=gemini-2.5-flash     # evaluator judges
+MCP_GEMINI_MODEL=gemini-2.5-pro        # pattern detector (needs Pro for MCP tool schemas)
 ```
 
 ---
 
 ## Deploying to Cloud Run
 
+Cloud Build handles the full deploy pipeline. The `cloudbuild.yaml` at the repo root builds the Docker image, pushes to Artifact Registry, and deploys to Cloud Run with `--min-instances=1` (keeps state warm for SSE and the npx MCP server) and `--max-instances=1` (in-memory state requires a single instance).
+
 ```bash
-gcloud run deploy iris \
-  --source . \
-  --region us-central1 \
-  --port 8080 \
-  --set-env-vars GOOGLE_API_KEY=${GOOGLE_API_KEY},PHOENIX_API_KEY=${PHOENIX_API_KEY},PHOENIX_CLIENT_URL=${PHOENIX_CLIENT_URL} \
-  --allow-unauthenticated
+gcloud builds submit --config cloudbuild.yaml \
+  --substitutions=_REGION=us-central1 .
 ```
+
+Required secrets in Secret Manager: `PHOENIX_API_KEY`, `PHOENIX_CLIENT_URL`.
+
+The Cloud Run service account needs `roles/aiplatform.user` for Vertex AI Gemini access.
+
+---
+
+## Built with
+
+- [Google ADK 2.x](https://google.github.io/adk-docs/) - agent runtime; `LlmAgent`, `Runner`, `McpToolset`
+- [Gemini 2.5 Flash + Pro](https://deepmind.google/technologies/gemini/) via Vertex AI - evaluator judges and MCP agents
+- [Arize Phoenix](https://phoenix.arize.com/) - OTel spans, prompt versioning, datasets, experiments, MCP server
+- [RxNorm API](https://lhncbc.nlm.nih.gov/RxNav/) (NLM) - drug name validation
+- [OpenFDA API](https://open.fda.gov/) - drug label and dosage grounding
+- FastAPI + Server-Sent Events - API layer and real-time dashboard
 
 ---
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE)
+Apache 2.0 - see [LICENSE](LICENSE). Copyright 2026 Aditya Shukla.
