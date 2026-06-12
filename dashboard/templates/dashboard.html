@@ -47,7 +47,10 @@
     a { color: inherit; text-decoration: none; }
 
     /* ── Layout ─────────────────────────────────────────────────── */
-    .layout { display: grid; grid-template-rows: 58px 41px 1fr; height: 100vh; overflow: hidden; }
+    .layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar  { height: 58px; flex-shrink: 0; }
+    .tab-nav { height: 41px; flex-shrink: 0; }
+    .tab-content { flex: 1; overflow: hidden; }
 
     /* ── Top Bar ────────────────────────────────────────────────── */
     .topbar {
@@ -80,7 +83,7 @@
     .tab-btn.active { color: #1D4ED8; border-bottom-color: #1D4ED8; font-weight: 600; }
 
     /* ── Tab Content ────────────────────────────────────────────── */
-    .tab-content { overflow: hidden; height: 100%; }
+    .tab-content { overflow: hidden; }
     .tab-pane { height: 100%; }
     .tab-pane[hidden] { display: none !important; }
     .tab-pane[data-tab="overview"]  { overflow-y: auto; }
@@ -907,9 +910,9 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Trigger Scan
       </button>
-      <button class="btn-sm btn-ghost" id="resetBtn" onclick="resetSession()" title="Clear all traces, stats, and activity — start a clean session">
+      <button class="btn-sm btn-ghost" id="resetBtn" onclick="resetSession()" title="Clear all traces, stats, and activity to start a fresh demo run — does not affect Phoenix data">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-        Reset
+        Reset for New Demo
       </button>
       <a href="/" class="btn-sm btn-ghost" style="padding:6px 10px;" title="Home">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg>
@@ -922,6 +925,15 @@
     <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
     <button class="tab-btn" data-tab="pipeline" onclick="showTab('pipeline')">Pipeline</button>
   </nav>
+
+  <!-- Demo banner -->
+  <div id="demoBanner" style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:7px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.75rem;color:#1D4ED8;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>This is a shared live demo - state is visible to all visitors. <strong>Click "Reset for New Demo" before your run</strong> to start with a clean slate.</span>
+    </div>
+    <button onclick="document.getElementById('demoBanner').remove()" style="background:none;border:none;cursor:pointer;color:#3B82F6;font-size:.75rem;font-family:var(--font);white-space:nowrap;padding:0;flex-shrink:0;">Dismiss</button>
+  </div>
 
   <!-- Tab Content -->
   <div class="tab-content">
@@ -1769,7 +1781,7 @@
   }
 
   async function resetSession() {
-    if (!confirm('Reset session? This clears all traces, stats, activity, and healing history on the server. Phoenix data (spans, prompts) is untouched.')) return;
+    if (!confirm('Reset for new demo? This clears all traces, stats, activity, and healing history so you start fresh. Phoenix data (spans, prompts) is untouched.')) return;
     const btn = document.getElementById('resetBtn');
     btn.disabled = true;
     try {
