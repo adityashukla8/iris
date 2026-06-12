@@ -14,6 +14,21 @@ from sdk.models import AlertEvent, SelfHealEvent
 alert_bus: asyncio.Queue[AlertEvent] = asyncio.Queue(maxsize=500)
 self_heal_bus: asyncio.Queue[SelfHealEvent] = asyncio.Queue(maxsize=100)
 
+# ── Alert fan-out (SSE) ────────────────────────────────────────────────────────
+# One queue per connected dashboard client. A single shared queue would split
+# alerts across clients (each .get() consumes the item for everyone else), which
+# made Live Traces show only a subset of events per device.
+_alert_subscribers: list[asyncio.Queue] = []
+
+
+def push_alert(alert: AlertEvent) -> None:
+    """Broadcast an alert to every connected SSE client."""
+    for q in list(_alert_subscribers):
+        try:
+            q.put_nowait(alert)
+        except Exception:
+            pass
+
 recent_traces: deque[dict] = deque(maxlen=200)
 
 # ── Activity log (ADK event stream + healing pipeline events) ─────────────────

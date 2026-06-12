@@ -1203,11 +1203,87 @@
     });
   }
 
+  // ── Live Traces feed ─────────────────────────────────────────────
+  function buildAlertItem(d, tsText) {
+    const sev = d.severity || 'info';
+    const el = document.createElement('div');
+    const hasTrace = !!d.trace_id;
+    el.className = 'alert-item' + (hasTrace ? ' has-trace' : '');
+    if (hasTrace) {
+      el.dataset.traceId = d.trace_id;
+      el.onclick = () => openTraceDrawer(d.trace_id);
+    }
+    el.innerHTML = `
+      <div class="sev-icon sev-${sev}">${SEV_ICON[sev] || SEV_ICON.info}</div>
+      <div class="alert-body">
+        <div class="alert-top">
+          <span class="alert-agent">${esc(d.agent_name || '—')}</span>
+          <span class="alert-time">${tsText}</span>
+        </div>
+        <div class="alert-desc">${esc(d.description || d.failure_type || '')}</div>
+        <div class="alert-badges">
+          <span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span>
+          ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
+          ${d.failure_type ? `<span class="badge badge-neutral">${esc(d.failure_type)}</span>` : ''}
+          ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
+          ${d.prompt_hash ? `<span class="badge badge-neutral mono" title="System prompt version (content hash)">prompt ${esc(d.prompt_hash.slice(0, 6))}</span>` : ''}
+        </div>
+      </div>
+      ${hasTrace ? `<div class="alert-chevron" title="Open in Trace Inspector"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>` : ''}`;
+    return el;
+  }
+
+  function updateAlertCount() {
+    const feed = document.getElementById('alertFeed');
+    const n = feed.querySelectorAll('.alert-item').length;
+    document.getElementById('alertCount').textContent = n + (n === 1 ? ' trace' : ' traces');
+  }
+
+  // Convert a /traces row into the alert shape buildAlertItem expects
+  function traceToAlert(t) {
+    const evals = (t.evaluations || []).filter(e => !e.skipped);
+    const failing = evals.filter(e => e.passed === false);
+    const worst = failing.length
+      ? failing.reduce((a, b) => (Number(a.score) <= Number(b.score) ? a : b))
+      : null;
+    return {
+      trace_id: t.trace_id,
+      severity: t.severity || 'info',
+      agent_name: t.agent_name,
+      query_type: t.query_type,
+      failure_type: worst ? worst.evaluator : 'none',
+      description: worst
+        ? `IRIS: ${worst.evaluator} flagged ${t.agent_name} ${t.query_type}.`
+        : `${t.agent_name} ${t.query_type}: all safety checks passed.`,
+      eval_score: worst ? worst.score : Math.max(...evals.map(e => Number(e.score) || 0), 0) || null,
+      prompt_hash: t.prompt_hash,
+    };
+  }
+
+  // Rebuild the feed from server truth — covers page loads after traces already
+  // arrived and any events missed during an SSE reconnect gap.
+  async function loadTraceFeed() {
+    try {
+      const r = await fetch('/traces?limit=50');
+      const d = await r.json();
+      const traces = d.traces || [];
+      const feed = document.getElementById('alertFeed');
+      if (!traces.length) return;
+      feed.innerHTML = '';
+      traces.forEach(t => feed.appendChild(buildAlertItem(traceToAlert(t),
+        new Date(t.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }))));
+      updateAlertCount();
+    } catch (_) {}
+  }
+
   // ── SSE ──────────────────────────────────────────────────────────
   function connectSSE() {
     const sse = new EventSource('/stream/alerts');
     const statusEl = document.getElementById('sseStatus');
-    sse.onopen = () => { statusEl.textContent = 'Live'; };
+    sse.onopen = () => {
+      statusEl.textContent = 'Live';
+      loadTraceFeed(); // fill anything missed while disconnected
+    };
     sse.onerror = () => {
       statusEl.textContent = 'Reconnecting';
       sse.close();
@@ -1216,34 +1292,12 @@
     sse.onmessage = (e) => {
       const d = JSON.parse(e.data);
       if (d.type === 'heartbeat') return;
-      alertCount++;
-      document.getElementById('alertCount').textContent = alertCount + (alertCount === 1 ? ' trace' : ' traces');
-      const sev = d.severity || 'info';
-      const ts  = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
       const feed = document.getElementById('alertFeed');
       if (feed.querySelector('.empty')) feed.innerHTML = '';
-      const el = document.createElement('div');
-      const hasTrace = !!d.trace_id;
-      el.className = 'alert-item' + (hasTrace ? ' has-trace' : '');
-      if (hasTrace) el.onclick = () => openTraceDrawer(d.trace_id);
-      el.innerHTML = `
-        <div class="sev-icon sev-${sev}">${SEV_ICON[sev] || SEV_ICON.info}</div>
-        <div class="alert-body">
-          <div class="alert-top">
-            <span class="alert-agent">${esc(d.agent_name || '—')}</span>
-            <span class="alert-time">${ts}</span>
-          </div>
-          <div class="alert-desc">${esc(d.description || d.failure_type || '')}</div>
-          <div class="alert-badges">
-            <span class="badge ${BADGE[sev] || 'badge-info'}">${sev}</span>
-            ${d.query_type ? `<span class="badge badge-neutral">${esc(d.query_type)}</span>` : ''}
-            ${d.failure_type ? `<span class="badge badge-neutral">${esc(d.failure_type)}</span>` : ''}
-            ${d.eval_score != null ? `<span class="badge badge-neutral">score ${Number(d.eval_score).toFixed(1)}</span>` : ''}
-            ${d.prompt_hash ? `<span class="badge badge-neutral mono" title="System prompt version (content hash)">prompt ${esc(d.prompt_hash.slice(0, 6))}</span>` : ''}
-          </div>
-        </div>
-        ${hasTrace ? `<div class="alert-chevron" title="Open in Trace Inspector"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>` : ''}`;
-      feed.insertBefore(el, feed.firstChild);
+      if (d.trace_id && feed.querySelector(`[data-trace-id="${d.trace_id}"]`)) return; // already backfilled
+      const ts = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      feed.insertBefore(buildAlertItem(d, ts), feed.firstChild);
+      updateAlertCount();
     };
   }
 
@@ -1904,6 +1958,7 @@
   function refreshAll() {
     fetchStatus();
     fetchTraces();
+    loadTraceFeed();
     fetchHealingCandidates();
     fetchHealingHistory();
     fetchAnalytics();
@@ -1917,6 +1972,7 @@
   refreshAll();
   setInterval(fetchStatus,            10000);
   setInterval(fetchTraces,            10000);
+  setInterval(loadTraceFeed,          10000);
   setInterval(fetchAnalytics,         10000);
   setInterval(fetchHealingCandidates, 15000);
   setInterval(fetchHealingHistory,    30000);

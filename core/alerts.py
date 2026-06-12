@@ -20,10 +20,10 @@ import time
 from core.config import settings
 from core.evaluators.service import EvaluationOutcome
 from core.state import (
-    alert_bus,
     is_cluster_in_cooldown,
     last_scan_time,
     push_activity,
+    push_alert,
     recent_traces,
     scan_lock,
 )
@@ -75,10 +75,7 @@ def dispatch_alert(event: IrisEvent, outcome: EvaluationOutcome) -> AlertEvent |
             prompt_hash=phash,
         )
 
-    try:
-        alert_bus.put_nowait(alert)
-    except Exception:
-        pass
+    push_alert(alert)
 
     level = "critical" if alert.severity is Severity.CRITICAL else "warn" if alert.severity is Severity.WARNING else "info"
     push_activity(f"Alert dispatched — {alert.severity.value}: {alert.failure_type}", level)

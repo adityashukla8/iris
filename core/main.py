@@ -41,6 +41,7 @@ from core.healing.prompt_identity import agent_prompt_name, prompt_hash
 from core.healing.scan import run_self_healing_scan
 from core.state import (
     _activity_subscribers,
+    _alert_subscribers,
     activity_log,
     alert_bus,
     healing_candidates,
@@ -210,15 +211,29 @@ async def get_production_prompt(agent_name: str) -> dict:
 
 @app.get("/stream/alerts")
 async def alert_stream():
-    """SSE stream of safety alerts for the dashboard."""
+    """SSE stream of safety alerts for the dashboard.
+
+    Per-client subscriber queue (same pattern as /stream/activity): a single
+    shared queue would deliver each alert to only ONE of the connected clients,
+    splitting the feed across devices/tabs.
+    """
+    q: asyncio.Queue = asyncio.Queue(maxsize=200)
+    _alert_subscribers.append(q)
+
     async def event_generator():
-        while True:
+        try:
+            while True:
+                try:
+                    alert = await asyncio.wait_for(q.get(), timeout=30.0)
+                    data = json.dumps(alert.model_dump(mode="json"))
+                    yield f"data: {data}\n\n"
+                except asyncio.TimeoutError:
+                    yield "data: {\"type\": \"heartbeat\"}\n\n"
+        finally:
             try:
-                alert = await asyncio.wait_for(alert_bus.get(), timeout=30.0)
-                data = json.dumps(alert.model_dump(mode="json"))
-                yield f"data: {data}\n\n"
-            except asyncio.TimeoutError:
-                yield "data: {\"type\": \"heartbeat\"}\n\n"
+                _alert_subscribers.remove(q)
+            except ValueError:
+                pass
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
